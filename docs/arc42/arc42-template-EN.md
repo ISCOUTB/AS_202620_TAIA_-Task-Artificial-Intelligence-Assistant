@@ -1,5 +1,5 @@
 ---
-date: July 2025
+date: august 2026
 title: "![arc42](images/arc42-logo.png) Template"
 ---
 
