@@ -1,25 +1,38 @@
 UTILIDAD
 │
-├── Usabilidad
-│   ├── Interacción natural
-│   │   └── Registro mediante lenguaje natural
-│   │       └── Escenario: registro correcto de información académica
+├── Exactitud
 │   │
-│   └── Accesibilidad
-│       └── Captura rápida
-│           └── Escenario: registro desde Telegram sin abrir Flutter
+│   └── Interpretación correcta de información académica
+│       │
+│       └── S1. Registro correcto de información académica
+│
+├── Disponibilidad / Puntualidad
+│   │
+│   └── Entrega oportuna de información
+│       │
+│       └── S2. Entrega puntual de recordatorios
 │
 ├── Rendimiento
-│   └── Tiempo de respuesta
-│       └── Procesamiento de solicitudes
-│           └── Escenario: respuesta del asistente ante un mensaje
+│   │
+│   └── Tiempo de respuesta del asistente
+│       │
+│       └── S3. Respuesta del asistente ante un mensaje
 │
 ├── Seguridad
-│   └── Confidencialidad
-│       └── Aislamiento de información
-│           └── Escenario: acceso únicamente a datos del propio estudiante
+│   │
+│   └── Confidencialidad y aislamiento de información
+│       │
+│       └── S4. Acceso únicamente a datos del propio estudiante
 │
 └── Mantenibilidad
-    └── Modificabilidad
-        └── Independencia del LLM
-            └── Escenario: sustitución del modelo de IA
+    │
+    └── Independencia del proveedor de IA
+        │
+        └── S5. Sustitución del modelo de IA
+
+Escenario - Impacto - Riesgo técnico - Prioridad
+S1 - Registro correcto - Alto - Alto - Alta
+S2 - Recordatorios puntuales - Alto - Alto - Alta
+S3 - Respuesta del asistente - Alto - Medio/Alto - Alta
+S4 - Aislamiento de datos - Muy alto - Muy alto - Crítica
+S5 - Sustitución del modelo IA - Medio - Medio - Media

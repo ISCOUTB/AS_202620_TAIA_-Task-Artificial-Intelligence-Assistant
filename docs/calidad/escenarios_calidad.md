@@ -3,57 +3,49 @@ ESCENARIOS DE CALIDAD
 
  # Escenario 1 — Registro correcto de información académica 
 
- 
-
  Fuente - El estudiante 
 
- Estímulo - Escribe en lenguaje natural una tarea que tiene que hacer (materia, fecha, qué es) 
+ Estímulo - Escribe en lenguaje natural información correspondiente a una tarea, examen, materia o clase/evento.
 
- Ambiente - Uso normal, con el backend corriendo 
+ Artefacto - El servicio que interpreta el mensaje con el LLM y registro de TAIA
 
- Artefacto - El servicio que interpreta el mensaje con el LLM 
+ Entorno - sistema desplegado, con el servicio de IA disponible.
 
- Respuesta - Extrae los datos de la tarea y se los muestra al estudiante para que confirme o corrija antes de guardarlos 
+ Respuesta - TAIA identifica los campos relevantes, solicita confirmación cuando corresponda y registra la información correctamente en PostgreSQL. 
 
- Medida - Al menos el 90% de los campos bien extraídos en una muestra de mensajes de prueba, lo que falla se puede corregir en la confirmación sin perder el registro 
+ Medida - Al menos el 90 % de los campos esperados deben ser identificados y registrados correctamente en una muestra de 100 mensajes académicos representativos.
 
  Restricción relacionada - el contexto que se le manda al LLM no puede ser muy grande porque las cuotas gratuitas son limitadas, así que tampoco se le puede pedir demasiado "razonamiento" extra para mejorar la extracción 
 
  Justificación - Registrar sin fricción es lo que hace diferente a TAIA; si falla mucho la interpretación, el estudiante deja de confiar y vuelve a anotar las cosas a mano 
 
- # Escenario 2 — Registro desde telegram sin abrir flutter 
+ # Escenario 2 — Entrega puntual de recordatorios
 
- 
- Fuente - El estudiante 
+ Fuente - sistema de TAIA
 
- Estímulo - Quiere anotar o revisar una tarea en un momento donde no puede o no le da tiempo de abrir la app 
+ Estímulo - llega el momento programado para un recordatorio.
 
- Ambiente - Uso normal, con Telegram disponible 
+ Artefacto - servicio de recordatorios/notificaciones.
 
- Artefacto - El bot de Telegram 
+ Entorno - sistema desplegado y operativo.
 
- Respuesta - Puede registrar y consultar tareas completamente desde Telegram, sin necesitar la app 
+ Respuesta - TAIA envía el recordatorio al canal configurado por el estudiante.
 
- Medida - Todas las funciones básicas de registro y consulta funcionan desde Telegram; registrar una tarea toma máximo 3 mensajes 
-
- Restricción relacionada - El canal de registro depende de Telegram, que es de un tercero 
-
- Justificación - Como Telegram no lo controla el equipo, si algún día falla, la app en Flutter tiene que poder cubrir lo mismo (RF-04) para que el sistema no quede inutilizable 
+ Medida - al menos el 95 % de los recordatorios deben ser entregados dentro de un margen de ±1 minuto respecto a la hora programada, en una prueba de, por ejemplo, 100 recordatorios.
 
 # Escenario 3 — Respuesta del asistente ante un mensaje 
 
- 
  Fuente - El estudiante 
 
- Estímulo - Manda un mensaje para que el bot lo procese 
+ Estímulo - El estudiante envía una consulta o instrucción válida al asistente de TAIA.
 
- Ambiente - Uso normal, carga típica de decenas de usuarios 
+ Artefacto - Backend de TAIA y servicio de interpretación mediante LLM
 
- Artefacto - El servicio de interpretación LLM junto con el bot 
+ Entorno - Sistema desplegado, con el backend, Telegram y el servicio de IA disponibles.
 
  Respuesta - Procesa el mensaje y devuelve una respuesta 
 
- Medida - Menos de 7 segundos en el 95% de los casos 
+ Medida - El 95 % de las solicitudes deberá recibir una respuesta en un tiempo ≤ 7 segundos, medido desde la recepción del mensaje por el backend hasta el envío de la respuesta al canal del estudiante, bajo condiciones normales de operación.
 
  Restricción relacionada - hosting gratuito, sin garantía de recursos dedicados 
 
@@ -62,37 +54,35 @@ ESCENARIOS DE CALIDAD
 
 # Escenario 4 — Acceso unicamente a datos del propio estudiante
 
-
- Fuente - El estudiante (incluyendo quien intente sacarle info a otro usuario manipulando al LLM) 
+ Fuente - El estudiante autenticado
 
  Estímulo - Manda un mensaje pidiendo, directa o indirectamente, información de otra persona 
  
- Ambiente - Uso normal, con varios usuarios usando el sistema a la vez 
-
  Artefacto - La capa que arma el contexto para el LLM, más la persistencia 
 
- Respuesta - El contexto que se le manda al LLM ya viene filtrado por usuario antes de cada llamada; ninguna respuesta muestra datos de otro 
+ Entorno - Sistema desplegado y con múltiples estudiantes registrados.
 
- Medida - Cero filtraciones de datos entre usuarios en las pruebas, incluyendo pruebas de prompt injection 
+ Respuesta - TAIA devuelve únicamente información asociada al estudiante autenticado y rechaza cualquier intento de acceder a información perteneciente a otro estudiante
+
+ Medida - En una prueba de 100 intentos de acceso, incluyendo solicitudes legítimas y solicitudes que intenten consultar información perteneciente a otros estudiantes, el sistema deberá permitir únicamente los accesos autorizados y rechazar el 100 % de los intentos de acceso no autorizados, sin exponer datos de otros usuarios.
 
  Restricción relacionada - No sale directo de una restricción técnica, sino del objetivo de calidad #3 y del riesgo propio de usar un LLM con contexto en cada petición 
 
  Justificación - Es un despliegue con datos académicos reales de estudiantes de la universidad, una fuga entre usuarios sería grave y le quitaría toda la confianza al sistema 
 
 # Escenario 5 — Sustitucion del modelo de IA 
-
  
  Fuente - El equipo de desarrollo 
 
  Estímulo - Se decide cambiar Gemini por otro proveedor de LLM 
 
- Ambiente - Momento de mantenimiento, fuera de producción 
+ Artefacto - Componente de integración con el LLM
 
- Artefacto - El adaptador del puerto LLM 
+ Entorno - Sistema implementado y funcionando con un proveedor/modelo de IA.
 
- Respuesta - Se hace un nuevo adaptador que cumple la misma interfaz, sin tocar el resto del sistema 
+ Respuesta - El equipo puede incorporar un nuevo proveedor/modelo mediante la implementación o configuración del adaptador correspondiente, sin modificar los componentes principales de TAIA encargados de la lógica académica, persistencia y gestión de usuarios
 
- Medida - El cambio queda solo en la capa de adaptador, sin tocar dominio ni casos de uso
+ Medida - l cambio de proveedor/modelo deberá requerir modificaciones únicamente en el componente adaptador de IA y su configuración, sin modificar la lógica de negocio ni el esquema de persistencia, y deberá poder completarse en ≤ 4 horas de trabajo de desarrollo.
 
  Restricción relacionada - El proveedor de LLM tiene que ser intercambiable
 

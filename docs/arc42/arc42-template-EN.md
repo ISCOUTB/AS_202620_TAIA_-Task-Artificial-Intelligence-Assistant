@@ -52,18 +52,16 @@ de extender el sistema a otras. El volumen esperado en la primera etapa es de
 
 | ID | Requisito | Horizonte |
 |---|---|---|
-| RF-01 | Registrar una tarea desde Telegram escribiendo en lenguaje natural | MVP |
-| RF-02 | Confirmar o corregir la interpretación del LLM antes de persistir la tarea | MVP |
-| RF-03 | Consultar las tareas registradas desde Telegram | MVP |
-| RF-04 | Registrar y consultar tareas desde la aplicación Flutter mediante formulario | MVP |
-| RF-05 | Notificar por Telegram las tareas próximas a vencer | MVP |
-| RF-06 | Generar propuestas de horario de estudio a partir del horario de clases del estudiante, entre las cuales el estudiante elige | MVP |
-| RF-07 | Mostrar consejos de estudio en la aplicación | MVP |
-| RF-08 | Temporizador Pomodoro en la aplicación | MVP |
-| RF-09 | Sistema de recompensas por constancia (árbol que crece con las sesiones completadas) | Deseable, posterior al MVP |
-| RF-10 | Registro y control de gastos | Fuera de alcance; extensión futura |
+| RF-01 | El sistema debe permitir registrar información académica mediante lenguaje natural | MVP |
+| RF-02 | El sistema debe permitir consultar la información académica propia del estudiante | MVP |
+| RF-03 | El sistema debe interpretar solicitudes del estudiante mediante un servicio de inteligencia artificial | MVP |
+| RF-04 | El sistema debe validar la información interpretada antes de almacenarla | MVP |
+| RF-05 | El sistema debe generar y entregar recordatorios asociados a la información académica registrada | MVP |
+| RF-06 | El sistema debe mantener aislada la información académica de cada estudiante | MVP |
+| RF-07 | El sistema debe permitir la interacción mediante Telegram y la aplicación cliente | MVP |
+| RF-08 | Sistema de recompensas por constancia (árbol que crece con las sesiones completadas) | Deseable, posterior al MVP |
 
-RF-09 es **deseable, no comprometido**: se abordará después del MVP y su
+RF-08 es **deseable, no comprometido**: se abordará después del MVP y su
 ausencia no invalida el producto. RF-10 está **fuera del alcance actual**; se
 contempla como evolución y solo se abordará si el tiempo lo permite, por lo que
 no condiciona el diseño del MVP.
@@ -75,18 +73,17 @@ sirve de base para el resto de la construcción.
 
 ## Quality Goals {#_quality_goals}
 
-Los tres objetivos están ordenados por prioridad. Las métricas son propuestas
-del equipo, sujetas a ajuste una vez existan mediciones reales.
+Los objetivos de calidad de TAIA se priorizan de acuerdo con su impacto sobre la utilidad del sistema y el riesgo técnico asociado.
 
-| # | Objetivo de calidad | Motivación | Escenario / métrica |
+| Priority | Quality Goal | Description | Related Scenario |
 |---|---|---|---|
-| 1 | **Usabilidad y rapidez de captura** | Es la razón de ser del producto: si registrar una tarea por Telegram no es claramente más rápido que abrir la aplicación, TAIA no resuelve nada | Registrar una tarea desde Telegram requiere como máximo 2 mensajes del usuario —el enunciado y la confirmación— y el bot responde con la interpretación en menos de 5 segundos en el percentil 95 |
-| 2 | **Disponibilidad y puntualidad de las notificaciones** | Una notificación que no llega, o que llega tarde, es peor que no tener notificaciones: el estudiante deja de confiar en el sistema y vuelve a su método anterior | El recordatorio se entrega dentro de una ventana de ±10 minutos respecto a la hora programada en al menos el 95 % de los casos, incluso cuando el backend estuvo inactivo por la capa gratuita de hosting |
-| 3 | **Privacidad y aislamiento entre usuarios** | El sistema maneja información académica personal y usa un LLM que recibe contexto en cada petición; una fuga entre usuarios destruiría la confianza y sería inaceptable en un despliegue universitario | Ninguna petición devuelve datos de un usuario distinto al autenticado, incluidos los intentos de inducir al LLM a revelarlos mediante el propio mensaje. El contexto enviado al modelo se construye siempre después de filtrar por identidad |
+| 1 | **Seguridad y privacidad** | Garantizar que cada estudiante pueda acceder únicamente a su propia información académica y que los intentos de acceso no autorizado sean rechazados. | S4 — Acceso únicamente a datos del propio estudiante |
+| 2 | **Exactitud** | Garantizar que la información académica expresada en lenguaje natural sea interpretada y registrada correctamente. | S1 — Registro correcto de información académica |
+| 3 | **Puntualidad** | Garantizar que los recordatorios académicos sean entregados cerca de la hora programada. | S2 — Entrega puntual de recordatorios |
+| 4 | **Rendimiento** | Mantener tiempos de respuesta adecuados para las interacciones con el asistente. | S3 — Respuesta del asistente ante un mensaje |
+| 5 | **Mantenibilidad** | Permitir la sustitución del proveedor o modelo de IA sin modificar la lógica de negocio principal ni la persistencia del sistema. | S5 — Sustitución del modelo de IA |
 
-La portabilidad del proveedor de LLM, aunque relevante, se trata como
-**restricción y decisión de diseño** —sección 2 y el ADR correspondiente— y no
-como objetivo de calidad, para mantener esta lista acotada a tres prioridades.
+Los objetivos se consideran prioritarios porque TAIA gestiona información académica personal, depende de servicios externos para la interpretación mediante IA y requiere ofrecer una interacción suficientemente rápida y confiable para resultar útil al estudiante.
 
 ## Stakeholders {#_stakeholders}
 
@@ -135,18 +132,150 @@ prohíbe al construir el sistema.
 # Context and Scope {#section-context-and-scope}
 
 ## Business Context {#_business_context}
+TAIA se sitúa entre el estudiante y los servicios necesarios para gestionar su información académica.
 
-**\<Diagram or Table\>**
+El estudiante utiliza TAIA para registrar y consultar información académica y para recibir recordatorios. TAIA interpreta las solicitudes expresadas en lenguaje natural, procesa las operaciones correspondientes y mantiene la información asociada al estudiante.
 
-**\<optionally: Explanation of external domain interfaces\>**
+El contexto de negocio está compuesto por el siguiente intercambio principal:
+
+[source,text]
+----
++------------------+
+|    Estudiante    |
++--------+---------+
+         |
+         | registra / consulta información
+         | y recibe recordatorios
+         v
++--------------------------+
+|           TAIA           |
+| Task Artificial          |
+| Intelligence Assistant   |
++-----------+--------------+
+            |
+            | interpretación de lenguaje natural
+            v
++--------------------------+
+| Servicio de IA (Gemini)  |
++--------------------------+
+
+TAIA <----> Telegram
+        mensajes y recordatorios
+----
+
+==== Interfaces externas del contexto de negocio
+
+[cols="2,4", options="header"]
+|===
+| Sistema / actor | Relación con TAIA
+
+| Estudiante
+| Utiliza TAIA para registrar y consultar información académica y recibir recordatorios.
+
+| Telegram
+| Proporciona un canal conversacional para recibir mensajes del estudiante y enviar respuestas y recordatorios.
+
+| Servicio de IA (Gemini)
+| Proporciona la interpretación de solicitudes expresadas mediante lenguaje natural.
+|===
 
 ## Technical Context {#_technical_context}
 
-**\<Diagram or Table\>**
+TAIA se integra con servicios externos mediante interfaces tecnológicas específicas. El backend actúa como punto central de procesamiento y validación de las solicitudes.
 
-**\<optionally: Explanation of technical interfaces\>**
+[cols="2,2,4", options="header"]
+|===
+| Sistema / interfaz | Tecnología / canal | Propósito
+
+| Aplicación cliente
+| Flutter / HTTP
+| Permitir al estudiante interactuar con las funcionalidades de TAIA.
+
+| Telegram
+| Telegram Bot API / Webhook
+| Recibir mensajes del estudiante y enviar respuestas y recordatorios.
+
+| Servicio de IA
+| API de Gemini / HTTP
+| Interpretar solicitudes expresadas en lenguaje natural y producir información estructurada para su posterior validación.
+
+| Persistencia
+| PostgreSQL / conexión de base de datos
+| Almacenar y consultar la información académica gestionada por TAIA.
+|===
+
+==== Flujo técnico principal
+
+[source,text]
+----
+Estudiante
+    |
+    +----------------------+
+    |                      |
+    v                      v
+Flutter                Telegram
+    |                      |
+    +----------+-----------+
+               |
+               | HTTP / Webhook
+               v
+        +-------------+
+        |  FastAPI    |
+        |   Backend   |
+        +------+------+ 
+               |
+       +-------+-------+
+       |               |
+       v               v
+   Gemini API      PostgreSQL
+       |
+       v
+Interpretación
+estructurada
+       |
+       v
+Validación y reglas
+de negocio en TAIA
+----
+
+El servicio de IA se utiliza como mecanismo de interpretación y no como componente autorizado para acceder directamente a la persistencia.
 
 **\<Mapping Input/Output to Channels\>**
+
+[cols="2,3,3", options="header"]
+|===
+| Entrada / salida | Canal | Uso
+
+| Mensaje del estudiante
+| Telegram Bot API
+| Entrada de solicitudes expresadas en lenguaje natural.
+
+| Solicitud desde la aplicación
+| HTTP hacia FastAPI
+| Entrada de operaciones académicas desde el cliente Flutter.
+
+| Respuesta del asistente
+| Telegram / aplicación cliente
+| Confirmación, resultado de una operación o respuesta a una consulta.
+
+| Recordatorio académico
+| Telegram y/o canal configurado
+| Entrega de información asociada a un evento programado.
+
+| Información estructurada generada por IA
+| API de Gemini hacia FastAPI
+| Resultado de interpretación que debe ser validado antes de utilizarse.
+
+| Datos académicos persistidos
+| PostgreSQL
+| Almacenamiento y consulta de la información gestionada por TAIA.
+|===
+
+## Scope
+
+El alcance del MVP de TAIA comprende la gestión de información académica básica —tareas, exámenes, materias y clases/eventos—, la interacción mediante lenguaje natural, la consulta de información propia y la generación y entrega de recordatorios.
+
+Las capacidades avanzadas de IA, como RAG, embeddings, búsqueda semántica y otras extensiones, quedan fuera del alcance del MVP y podrán incorporarse en etapas posteriores.
 
 # Solution Strategy {#section-solution-strategy}
 
