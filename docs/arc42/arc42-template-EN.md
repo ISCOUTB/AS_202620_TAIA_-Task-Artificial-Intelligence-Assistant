@@ -134,12 +134,11 @@ prohíbe al construir el sistema.
 ## Business Context {#_business_context}
 TAIA se sitúa entre el estudiante y los servicios necesarios para gestionar su información académica.
 
-El estudiante utiliza TAIA para registrar y consultar información académica y para recibir recordatorios. TAIA interpreta las solicitudes expresadas en lenguaje natural, procesa las operaciones correspondientes y mantiene la información asociada al estudiante.
+El estudiante utiliza TAIA para **registrar y consultar información académica**, así como para **recibir recordatorios**. TAIA interpreta las solicitudes expresadas en lenguaje natural, procesa las operaciones correspondientes y mantiene la información asociada al estudiante.
 
-El contexto de negocio está compuesto por el siguiente intercambio principal:
+### Intercambio principal
 
-[source,text]
-----
+```text
 +------------------+
 |    Estudiante    |
 +--------+---------+
@@ -161,121 +160,104 @@ El contexto de negocio está compuesto por el siguiente intercambio principal:
 
 TAIA <----> Telegram
         mensajes y recordatorios
-----
+```
 
-==== Interfaces externas del contexto de negocio
+### Interfaces externas del contexto de negocio
 
-[cols="2,4", options="header"]
-|===
-| Sistema / actor | Relación con TAIA
+| Sistema / Actor | Relación con TAIA |
+|---|---|
+| **Estudiante** | Utiliza TAIA para registrar y consultar información académica y recibir recordatorios. |
+| **Telegram** | Proporciona un canal conversacional para recibir mensajes del estudiante y enviar respuestas y recordatorios. |
+| **Servicio de IA (Gemini)** | Proporciona la interpretación de solicitudes expresadas mediante lenguaje natural. |
 
-| Estudiante
-| Utiliza TAIA para registrar y consultar información académica y recibir recordatorios.
-
-| Telegram
-| Proporciona un canal conversacional para recibir mensajes del estudiante y enviar respuestas y recordatorios.
-
-| Servicio de IA (Gemini)
-| Proporciona la interpretación de solicitudes expresadas mediante lenguaje natural.
-|===
+---
 
 ## Technical Context {#_technical_context}
 
 TAIA se integra con servicios externos mediante interfaces tecnológicas específicas. El backend actúa como punto central de procesamiento y validación de las solicitudes.
 
-[cols="2,2,4", options="header"]
-|===
-| Sistema / interfaz | Tecnología / canal | Propósito
+### Interfaces técnicas
 
-| Aplicación cliente
-| Flutter / HTTP
-| Permitir al estudiante interactuar con las funcionalidades de TAIA.
+| Sistema / Interfaz | Tecnología / Canal | Propósito |
+|---|---|---|
+| **Aplicación cliente** | Flutter / HTTP | Permitir al estudiante interactuar con las funcionalidades de TAIA. |
+| **Telegram** | Telegram Bot API / Webhook | Recibir mensajes del estudiante y enviar respuestas y recordatorios. |
+| **Servicio de IA** | API de Gemini / HTTP | Interpretar solicitudes expresadas en lenguaje natural y producir información estructurada para su posterior validación. |
+| **Persistencia** | PostgreSQL / conexión de base de datos | Almacenar y consultar la información académica gestionada por TAIA. |
 
-| Telegram
-| Telegram Bot API / Webhook
-| Recibir mensajes del estudiante y enviar respuestas y recordatorios.
+### Flujo técnico principal
 
-| Servicio de IA
-| API de Gemini / HTTP
-| Interpretar solicitudes expresadas en lenguaje natural y producir información estructurada para su posterior validación.
+```text
+                         Estudiante
+                         /        \
+                        /          \
+                       v            v
+                   Flutter       Telegram
+                       |            |
+                       |            |
+                       +-----+------+
+                             |
+                             | HTTP / Webhook
+                             v
+                      +-------------+
+                      |   FastAPI   |
+                      |   Backend   |
+                      +------+------+
+                             |
+                   +---------+---------+
+                   |                   |
+                   v                   v
+              Gemini API          PostgreSQL
+                   |
+                   v
+          Interpretación
+           estructurada
+                   |
+                   v
+        Validación y reglas
+          de negocio en TAIA
+```
 
-| Persistencia
-| PostgreSQL / conexión de base de datos
-| Almacenar y consultar la información académica gestionada por TAIA.
-|===
+> **Nota:** El servicio de IA se utiliza únicamente como mecanismo de interpretación y **no está autorizado para acceder directamente a la persistencia**.
 
-==== Flujo técnico principal
-
-[source,text]
-----
-Estudiante
-    |
-    +----------------------+
-    |                      |
-    v                      v
-Flutter                Telegram
-    |                      |
-    +----------+-----------+
-               |
-               | HTTP / Webhook
-               v
-        +-------------+
-        |  FastAPI    |
-        |   Backend   |
-        +------+------+ 
-               |
-       +-------+-------+
-       |               |
-       v               v
-   Gemini API      PostgreSQL
-       |
-       v
-Interpretación
-estructurada
-       |
-       v
-Validación y reglas
-de negocio en TAIA
-----
-
-El servicio de IA se utiliza como mecanismo de interpretación y no como componente autorizado para acceder directamente a la persistencia.
+---
 
 **\<Mapping Input/Output to Channels\>**
 
-[cols="2,3,3", options="header"]
-|===
-| Entrada / salida | Canal | Uso
 
-| Mensaje del estudiante
-| Telegram Bot API
-| Entrada de solicitudes expresadas en lenguaje natural.
+| Entrada / Salida | Canal | Uso |
+|---|---|---|
+| **Mensaje del estudiante** | Telegram Bot API | Entrada de solicitudes expresadas en lenguaje natural. |
+| **Solicitud desde la aplicación** | HTTP hacia FastAPI | Entrada de operaciones académicas desde el cliente Flutter. |
+| **Respuesta del asistente** | Telegram / aplicación cliente | Confirmación, resultado de una operación o respuesta a una consulta. |
+| **Recordatorio académico** | Telegram y/o canal configurado | Entrega de información asociada a un evento programado. |
+| **Información estructurada generada por IA** | API de Gemini → FastAPI | Resultado de interpretación que debe ser validado antes de utilizarse. |
+| **Datos académicos persistidos** | PostgreSQL | Almacenamiento y consulta de la información gestionada por TAIA. |
 
-| Solicitud desde la aplicación
-| HTTP hacia FastAPI
-| Entrada de operaciones académicas desde el cliente Flutter.
-
-| Respuesta del asistente
-| Telegram / aplicación cliente
-| Confirmación, resultado de una operación o respuesta a una consulta.
-
-| Recordatorio académico
-| Telegram y/o canal configurado
-| Entrega de información asociada a un evento programado.
-
-| Información estructurada generada por IA
-| API de Gemini hacia FastAPI
-| Resultado de interpretación que debe ser validado antes de utilizarse.
-
-| Datos académicos persistidos
-| PostgreSQL
-| Almacenamiento y consulta de la información gestionada por TAIA.
-|===
+---
 
 ## Scope
 
-El alcance del MVP de TAIA comprende la gestión de información académica básica —tareas, exámenes, materias y clases/eventos—, la interacción mediante lenguaje natural, la consulta de información propia y la generación y entrega de recordatorios.
+El alcance del **MVP de TAIA** comprende la gestión de información académica básica:
 
-Las capacidades avanzadas de IA, como RAG, embeddings, búsqueda semántica y otras extensiones, quedan fuera del alcance del MVP y podrán incorporarse en etapas posteriores.
+- **Tareas**
+- **Exámenes**
+- **Materias**
+- **Clases y eventos**
+- Interacción mediante **lenguaje natural**
+- Consulta de **información propia**
+- Generación y entrega de **recordatorios**
+
+### Fuera del alcance del MVP
+
+Las capacidades avanzadas de inteligencia artificial quedan fuera del alcance de esta primera versión. Entre ellas se encuentran:
+
+- RAG (*Retrieval-Augmented Generation*)
+- Embeddings
+- Búsqueda semántica
+- Otras extensiones avanzadas de IA
+
+Estas capacidades podrán incorporarse en **etapas posteriores** del proyecto.
 
 # Solution Strategy {#section-solution-strategy}
 
