@@ -3,19 +3,7 @@ date: august 2026
 title: "![arc42](images/arc42-logo.png) Template"
 ---
 
-# 
-
-**About arc42**
-
-arc42, the template for documentation of software and system
-architecture.
-
-Template Version 9.0-EN. (based upon AsciiDoc version), July 2025
-
-Created, maintained and © by Dr. Peter Hruschka, Dr. Gernot Starke and
-contributors. See <https://arc42.org>.
-
-# Introduction and Goals {#section-introduction-and-goals}
+# 1. Introduction and Goals {#section-introduction-and-goals}
 
 TAIA (Task Artificial Intelligence Assistant) es un asistente académico para
 estudiantes universitarios. Ofrece dos canales de entrada —un bot de Telegram y
@@ -39,7 +27,7 @@ tiempo de estudio: las herramientas existentes o exigen estructura manual o no
 planifican. La identidad visual del sistema es un pulpo: muchos brazos, muchas
 tareas atendidas a la vez.
 
-## Requirements Overview {#_requirements_overview}
+## 1.1. Requirements Overview {#_requirements_overview}
 
 El sistema recibe mensajes en lenguaje natural, los interpreta mediante un LLM,
 extrae los campos de una tarea académica, pide confirmación al usuario y los
@@ -71,7 +59,7 @@ Telegram → interpretación con el LLM → confirmación del usuario → persis
 en PostgreSQL → visualización en la aplicación. A-01 atraviesa todas las capas y
 sirve de base para el resto de la construcción.
 
-## Quality Goals {#_quality_goals}
+## 1.2. Quality Goals {#_quality_goals}
 
 Los objetivos de calidad de TAIA se priorizan de acuerdo con su impacto sobre la utilidad del sistema y el riesgo técnico asociado.
 
@@ -85,7 +73,7 @@ Los objetivos de calidad de TAIA se priorizan de acuerdo con su impacto sobre la
 
 Los objetivos se consideran prioritarios porque TAIA gestiona información académica personal, depende de servicios externos para la interpretación mediante IA y requiere ofrecer una interacción suficientemente rápida y confiable para resultar útil al estudiante.
 
-## Stakeholders {#_stakeholders}
+## 1.3. Stakeholders {#_stakeholders}
 
 | Rol | Quién | Expectativa |
 |---|---|---|
@@ -93,7 +81,7 @@ Los objetivos se consideran prioritarios porque TAIA gestiona información acad�
 | Equipo de desarrollo | Luis Mendoza, Deiner Gonzales, Valeria Berrio, Mark Pastrana | Una arquitectura comprensible y documentada que puedan construir entre cuatro personas dentro del plazo del curso |
 | Docente evaluador | Profesor del curso de Arquitectura de Software | Documentación arquitectónica trazable (requisito → C4 → ADR → código → pruebas → evidencia) y uso de IA registrado |
 
-# Architecture Constraints {#section-architecture-constraints}
+# 2. Architecture Constraints {#section-architecture-constraints}
 
 Para cada restricción se indica su implicación arquitectónica: qué obliga o qué
 prohíbe al construir el sistema.
@@ -129,9 +117,9 @@ prohíbe al construir el sistema.
 | Código, identificadores y mensajes de commit en inglés; comentarios y documentación en español | Convención propuesta, aún no fijada por el equipo |
 | `README.md` está codificado en UTF-16 LE; el resto del repositorio en UTF-8 | Las herramientas y scripts que procesen el repositorio deben contemplar esa diferencia |
 
-# Context and Scope {#section-context-and-scope}
+# 3. Context and Scope {#section-context-and-scope}
 
-## Business Context {#_business_context}
+## 3.1. Business Context {#_business_context}
 TAIA se sitúa entre el estudiante y los servicios necesarios para gestionar su información académica.
 
 El estudiante utiliza TAIA para **registrar y consultar información académica**, así como para **recibir recordatorios**. TAIA interpreta las solicitudes expresadas en lenguaje natural, procesa las operaciones correspondientes y mantiene la información asociada al estudiante.
@@ -172,7 +160,7 @@ TAIA <----> Telegram
 
 ---
 
-## Technical Context {#_technical_context}
+## 3.2. Technical Context {#_technical_context}
 
 TAIA se integra con servicios externos mediante interfaces tecnológicas específicas. El backend actúa como punto central de procesamiento y validación de las solicitudes.
 
@@ -236,7 +224,7 @@ TAIA se integra con servicios externos mediante interfaces tecnológicas especí
 
 ---
 
-## Scope
+## 3.3. Scope
 
 El alcance del **MVP de TAIA** comprende la gestión de información académica básica:
 
@@ -259,11 +247,67 @@ Las capacidades avanzadas de inteligencia artificial quedan fuera del alcance de
 
 Estas capacidades podrán incorporarse en **etapas posteriores** del proyecto.
 
-# Solution Strategy {#section-solution-strategy}
+# 4. Solution Strategy {#section-solution-strategy}
 
-# Building Block View {#section-building-block-view}
+TAIA adopta un **monolito modular con organización hexagonal en los módulos que presentan dependencias externas relevantes**. Esta estrategia busca mantener una arquitectura sencilla para el MVP, evitando la complejidad operativa de una arquitectura distribuida, mientras establece límites que permitan evolucionar el sistema y sustituir dependencias externas cuando sea necesario.
 
-## Whitebox Overall System {#_whitebox_overall_system}
+## 4.1. Architectural Style
+
+El sistema se implementará como un único monolito desplegable, dividido en módulos con responsabilidades claramente definidas.
+
+Dentro de los módulos que interactúan con sistemas externos se utilizará el principio de **puertos y adaptadores**. Los puertos definirán las interfaces que necesita la lógica de negocio, mientras que los adaptadores contendrán los detalles específicos de tecnologías y proveedores externos.
+
+Las principales dependencias externas consideradas son:
+
+- Telegram Bot API como canal de comunicación.
+- Gemini como proveedor inicial de inteligencia artificial.
+- PostgreSQL como mecanismo de persistencia.
+
+La lógica de negocio no dependerá directamente de las APIs concretas de estos proveedores cuando exista una probabilidad relevante de sustitución.
+
+## 4.2. Architectural Principles
+
+### Separación de responsabilidades
+
+Cada módulo tendrá una responsabilidad definida y deberá evitar dependencias innecesarias sobre otros módulos.
+
+### Aislamiento de dependencias externas
+
+Las integraciones con servicios externos se realizarán mediante interfaces y adaptadores cuando su sustitución o evolución sea relevante para el sistema.
+
+### Dominio independiente de infraestructura
+
+Las reglas de negocio no deberán depender directamente de detalles de Telegram, Gemini o PostgreSQL.
+
+### Validación antes de persistencia
+
+La información interpretada por el servicio de inteligencia artificial deberá ser validada por el backend antes de modificar la información persistida.
+
+### Seguridad por contexto de usuario
+
+Las operaciones sobre información académica deberán ejecutarse dentro del contexto del estudiante correspondiente, evitando el acceso cruzado entre usuarios.
+
+## 4.3. Quality-Driven Strategy
+
+Las principales decisiones arquitectónicas se relacionan con los escenarios de calidad definidos para TAIA:
+
+| Quality Goal | Estrategia arquitectónica |
+|---|---|
+| **S1 — Exactitud** | Separación entre interpretación de IA, validación y reglas de negocio antes de persistir información. |
+| **S2 — Puntualidad** | Módulo de recordatorios separado de la lógica de interacción, permitiendo gestionar su programación y entrega de forma independiente. |
+| **S3 — Rendimiento** | Mantener una arquitectura monolítica con comunicación interna directa y evitar complejidad distribuida innecesaria. |
+| **S4 — Seguridad** | Centralizar las reglas de autorización y mantener el acceso a información académica dentro del contexto del estudiante. |
+| **S5 — Mantenibilidad** | Utilizar puertos y adaptadores para aislar las dependencias externas, especialmente el proveedor de inteligencia artificial. |
+
+## 4.4. Deployment Strategy
+
+Durante esta etapa TAIA se mantendrá como una **única unidad desplegable**. Esta decisión reduce la complejidad operacional del MVP y evita introducir comunicación entre servicios, despliegues independientes y mecanismos de observabilidad distribuida que no son necesarios para el alcance actual.
+
+La modularización interna permitirá evolucionar posteriormente partes específicas del sistema si el crecimiento del dominio, la carga o las necesidades de operación justifican una separación adicional.
+
+# 5. Building Block View {#section-building-block-view}
+
+## 5.1. Whitebox Overall System {#_whitebox_overall_system}
 
 ***\<Overview Diagram\>***
 
@@ -337,7 +381,7 @@ Important Interfaces
 
 *\<white box template\>*
 
-# Runtime View {#section-runtime-view}
+# 6. Runtime View {#section-runtime-view}
 
 ## \<Runtime Scenario 1\> {#_runtime_scenario_1}
 
@@ -352,7 +396,7 @@ Important Interfaces
 
 ## \<Runtime Scenario n\> {#_runtime_scenario_n}
 
-# Deployment View {#section-deployment-view}
+# 7. Deployment View {#section-deployment-view}
 
 ## Infrastructure Level 1 {#_infrastructure_level_1}
 
@@ -386,7 +430,7 @@ Mapping of Building Blocks to Infrastructure
 
 *\<diagram + explanation\>*
 
-# Cross-cutting Concepts {#section-concepts}
+# 8. Cross-cutting Concepts {#section-concepts}
 
 ## *\<Concept 1\>* {#_concept_1}
 
@@ -402,17 +446,17 @@ Mapping of Building Blocks to Infrastructure
 
 *\<explanation\>*
 
-# Architecture Decisions {#section-design-decisions}
+# 9. Architecture Decisions {#section-design-decisions}
 
-# Quality Requirements {#section-quality-scenarios}
+# 10. Quality Requirements {#section-quality-scenarios}
 
 ## Quality Requirements Overview {#_quality_requirements_overview}
 
 ## Quality Scenarios {#_quality_scenarios}
 
-# Risks and Technical Debts {#section-technical-risks}
+# 11. Risks and Technical Debts {#section-technical-risks}
 
-# Glossary {#section-glossary}
+# 12. Glossary {#section-glossary}
 
 +----------------------+-----------------------------------------------+
 | Term                 | Definition                                    |

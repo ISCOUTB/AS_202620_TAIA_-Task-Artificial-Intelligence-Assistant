@@ -1,3 +1,4 @@
+```text
 UTILIDAD
 │
 ├── Exactitud
@@ -29,10 +30,11 @@ UTILIDAD
     └── Independencia del proveedor de IA
         │
         └── S5. Sustitución del modelo de IA
-
-Escenario - Impacto - Riesgo técnico - Prioridad
-S1 - Registro correcto - Alto - Alto - Alta
-S2 - Recordatorios puntuales - Alto - Alto - Alta
-S3 - Respuesta del asistente - Alto - Medio/Alto - Alta
-S4 - Aislamiento de datos - Muy alto - Muy alto - Crítica
-S5 - Sustitución del modelo IA - Medio - Medio - Media
+```
+| Escenario | Impacto | Riesgo técnico | Prioridad |
+|---|---|---|---|
+| S1 - Registro correcto | Alto | Alto | Alta |
+| S2 - Recordatorios puntuales | Alto | Alto | Alta |
+| S3 - Respuesta del asistente | Alto | Media/Alta | Alta |
+| S4 - Aislamiento de datos | Alto | critico | Critica |
+| S5 - Sustitución del modelo IA | Medio | Medio | Media |
