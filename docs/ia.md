@@ -79,3 +79,19 @@ La IA ayudó a:
 * Se descartó definitivamente el enfoque de aplicación de finanzas.
 * Se modificó el aspecto A-01, que inicialmente estaba enfocado únicamente en el registro de tareas desde Telegram, para abarcar la captura inteligente de diferentes tipos de información académica.
 * Se evitó incluir RAG, embeddings y base de datos vectorial dentro del MVP, dejándolos como funcionalidades futuras.
+
+## Entrada 03
+
+**Fecha:** 2026-08-23
+
+**Herramienta:** ClaudeCode (Anthropic)
+
+**Objetivo:** Ajustar el c4 de contexto a lo recomendado por el docente.
+
+### Solicitud realizada
+
+Se solicitó un cambio en el codigo realizado para la creación del diagrama de contexto del c4. Se cambió de structurizr a mermaid como indicaba los ajustes correspondientes por el docente.
+
+### Resultado generado
+
+Se creó satisfactoriamente un documento markdown con el codigo de mermaid que describa el diagrama de contexto tal como se habia creado con structurizr y luego importado como png
