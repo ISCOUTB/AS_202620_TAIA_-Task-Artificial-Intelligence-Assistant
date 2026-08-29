@@ -74,15 +74,15 @@ ESCENARIOS DE CALIDAD
  
  Fuente - El equipo de desarrollo 
 
- Estímulo - Se decide cambiar Gemini por otro proveedor de LLM 
+ Estímulo - El proveedor o modelo de inteligencia artificial utilizado por TAIA deja de estar disponible, cambia sus condiciones de uso o se requiere migrar a otro proveedor.
 
  Artefacto - Componente de integración con el LLM
 
- Entorno - Sistema implementado y funcionando con un proveedor/modelo de IA.
+ Entorno - Durante el mantenimiento y evolución del sistema.
 
- Respuesta - El equipo puede incorporar un nuevo proveedor/modelo mediante la implementación o configuración del adaptador correspondiente, sin modificar los componentes principales de TAIA encargados de la lógica académica, persistencia y gestión de usuarios
+ Respuesta - El sistema debe permitir sustituir el proveedor de IA mediante el cambio o incorporación del adaptador correspondiente, manteniendo sin modificaciones las reglas de negocio y la interfaz utilizada por la aplicación.
 
- Medida - l cambio de proveedor/modelo deberá requerir modificaciones únicamente en el componente adaptador de IA y su configuración, sin modificar la lógica de negocio ni el esquema de persistencia, y deberá poder completarse en ≤ 4 horas de trabajo de desarrollo.
+ Medida - La sustitución del proveedor de IA deberá requerir cambios en máximo 2 archivos del adaptador, sin modificar archivos pertenecientes al dominio ni a las reglas de negocio.
 
  Restricción relacionada - El proveedor de LLM tiene que ser intercambiable
 

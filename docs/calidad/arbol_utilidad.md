@@ -7,7 +7,7 @@ UTILIDAD
 │       │
 │       └── S1. Registro correcto de información académica
 │
-├── Disponibilidad / Puntualidad
+├── Puntualidad
 │   │
 │   └── Entrega oportuna de información
 │       │
