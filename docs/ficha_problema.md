@@ -27,3 +27,13 @@ TAIA es una aplicación móvil desarrollada en Flutter con un asistente de intel
 ## Alcance del MVP
 
 El primer incremento implementará el registro de tareas desde Telegram, su almacenamiento en PostgreSQL y la visualización de las tareas pendientes en la aplicación móvil. Este aspecto servirá como corte vertical inicial del sistema y base para la evolución del resto de funcionalidades. En etapas posteriores, el sistema podrá incorporar seguimiento de sesiones de estudio, metas académicas, estadísticas, planificación automática y recomendaciones personalizadas. También se contempla como evolución futura el procesamiento de documentos académicos mediante embeddings y RAG.
+
+## Tensiones de calidad
+
+### Exactitud vs. Rendimiento
+
+Una mayor validación de la información académica interpretada por el modelo de inteligencia artificial favorece la exactitud de los datos registrados, pero puede incrementar el tiempo de procesamiento y respuesta del sistema. TAIA priorizará la exactitud de la información antes de almacenarla, aceptando un costo moderado en el tiempo de respuesta cuando sea necesario.
+
+### Seguridad vs. Rendimiento
+
+Los controles necesarios para garantizar que cada estudiante acceda únicamente a su propia información académica pueden agregar validaciones y procesamiento adicional. TAIA priorizará la seguridad y el aislamiento de los datos de cada usuario frente a una reducción marginal del rendimiento.
