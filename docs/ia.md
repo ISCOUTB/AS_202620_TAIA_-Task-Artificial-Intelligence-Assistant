@@ -113,3 +113,27 @@ Se creó satisfactoriamente un documento Markdown con el código Mermaid que des
 
 El equipo revisó el diagrama generado y confirmó que representa los elementos y relaciones definidos para el contexto de TAIA, incluyendo el estudiante, TAIA, Telegram y Gemini. También se verificó que el código Mermaid quedara almacenado en el repositorio como documentación versionable.
 
+
+
+
+## Entrada 04
+
+**Fecha:** 2026-08-29
+
+**Herramienta:** Claude (Anthropic), vía claude.ai
+
+**Objetivo:** Recibir apoyo en el proceso de redacción de la documentación del corte vertical ejecutable en el README y en el llenado de la fila del aspecto A-01 en aspectos.
+
+### Solicitud realizada
+
+Se pidió apoyo para avanzar en la redacción de la sección del README que documenta el corte vertical ejecutable (alcance, endpoints, ejemplo de uso) y en el llenado de la fila A-01 de la tabla de aspectos.
+
+### Resultado generado
+
+Como parte del proceso, la IA sirvió de apoyo para:
+
+* Avanzar en la redacción de un borrador de la sección "Corte vertical: registro de tareas (A-01)" del README (descripción del alcance, tabla de endpoints y ejemplo de uso con curl).
+* Proponer un borrador de contenido para las columnas Requisito, C4, ADR, Código y Pruebas de la fila A-01 en aspectos, dejando "Evidencia" como pendiente.
+* Identificar algunos enlaces de esa fila que no apuntaban correctamente a archivos del repositorio.
+
+

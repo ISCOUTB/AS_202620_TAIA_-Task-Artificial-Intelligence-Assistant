@@ -42,9 +42,52 @@ La información registrada podrá ser consultada y gestionada desde la aplicaci�
 
 ## Estado
 
-El proyecto se encuentra en la etapa de construcción del esqueleto arquitectónico correspondiente a la Entrega 3.
+El proyecto avanza de la etapa de esqueleto arquitectónico (Entrega 3) a un primer **corte vertical ejecutable** correspondiente al aspecto **A-01 — Captura inteligente de información académica** (RF-01, RF-02).
 
-En esta etapa no se implementa lógica de negocio. El objetivo es disponer de una base ejecutable que permita iniciar el desarrollo de las funcionalidades en las siguientes entregas. (Evidencia S3).
+Este incremento implementa el registro y la consulta de tareas académicas, atravesando las tres capas del módulo `academic` definidas en ADR-0001: `domain`, `application` y `adapters`. Es un corte **parcial**: expone el registro de tareas mediante HTTP con un adaptador de persistencia en memoria, en lugar del flujo completo Telegram → Gemini → PostgreSQL descrito en `docs/ficha_problema.md`. La interpretación con Gemini, el canal de Telegram y la persistencia en PostgreSQL se incorporarán en entregas posteriores sustituyendo únicamente los adaptadores correspondientes, sin modificar el dominio ni los casos de uso.
+
+
+### Corte vertical: registro de tareas (A-01)
+
+**Alcance de este incremento**
+
+- `domain/task.py`: entidad `Task` y las reglas de validación mínimas (título obligatorio, longitud máxima).
+- `application/register_task.py` y `application/list_tasks.py`: casos de uso que orquestan la creación y la consulta de tareas contra el puerto `TaskRepository`.
+- `application/ports.py`: puerto `TaskRepository`, la interfaz que aísla la aplicación de la tecnología de persistencia concreta.
+- `adapters/in_memory_task_repository.py`: adaptador de persistencia **en memoria**, temporal. Se sustituirá por un adaptador de PostgreSQL sin tocar el dominio ni la aplicación.
+- `adapters/api.py`: adaptador de entrada HTTP (router de FastAPI) que expone los endpoints y traduce entre esquemas Pydantic y entidades de dominio.
+
+**Endpoints**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/academic/tasks` | Registra una tarea académica (RF-01). |
+| `GET` | `/academic/tasks` | Lista las tareas registradas (RF-02). |
+
+**Ejemplo de uso**
+
+```bash
+curl -X POST http://127.0.0.1:8000/academic/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Entregar proyecto de programación", "due_date": "2026-09-07", "subject": "Programación"}'
+```
+
+Respuesta esperada:
+
+```json
+{
+  "id": "a24a243a-5931-465a-8303-f32153832d10",
+  "title": "Entregar proyecto de programación",
+  "due_date": "2026-09-07",
+  "subject": "Programación",
+  "description": null,
+  "status": "pending"
+}
+```
+
+```bash
+curl http://127.0.0.1:8000/academic/tasks
+```
 
 ## Arquitectura
 
@@ -126,8 +169,13 @@ Las pruebas automatizadas se ejecutan desde la raíz del repositorio con:
 
 pytest backend/tests
 
-La prueba actual verifica que el endpoint de comprobación del backend responde correctamente.
+Incluyen:
+
+- `test_entrega3.py`: verifica que el endpoint de comprobación del backend (`/health`) responde correctamente.
+- `test_academic_task_domain.py`: pruebas unitarias de la entidad de dominio `Task` (creación válida, validaciones, cambio de estado).
+- `test_academic_register_task.py`: pruebas de integración del corte vertical A-01 a través de la API HTTP (registrar tarea, rechazo de datos inválidos, consulta de tareas registradas).
 
 Resultado esperado:
 
-1 passed
+9 passed
+
