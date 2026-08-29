@@ -86,12 +86,30 @@ La IA ayudó a:
 
 **Herramienta:** ClaudeCode (Anthropic)
 
-**Objetivo:** Ajustar el c4 de contexto a lo recomendado por el docente.
+**Objetivo:** Ajustar el C4 de contexto a lo recomendado por el docente.
 
 ### Solicitud realizada
 
-Se solicitó un cambio en el codigo realizado para la creación del diagrama de contexto del c4. Se cambió de structurizr a mermaid como indicaba los ajustes correspondientes por el docente.
+Se solicitó un cambio en el código utilizado para la creación del diagrama de contexto C4. Se cambió de Structurizr a Mermaid, de acuerdo con los ajustes correspondientes indicados por el docente.
 
 ### Resultado generado
 
-Se creó satisfactoriamente un documento markdown con el codigo de mermaid que describa el diagrama de contexto tal como se habia creado con structurizr y luego importado como png
+Se creó satisfactoriamente un documento Markdown con el código Mermaid que describe el diagrama de contexto que anteriormente se había creado con Structurizr y posteriormente importado como PNG.
+
+### Aceptado
+
+* Uso de Mermaid como formato para expresar el diagrama de contexto C4.
+* Conservación de los elementos principales del diagrama de contexto previamente definido.
+* Uso de un archivo Markdown como fuente editable y versionable del diagrama.
+* Inclusión del diagrama Mermaid dentro de la documentación del proyecto.
+
+### Rechazado o modificado
+
+* Se modificó la implementación anterior basada en Structurizr y se reemplazó por Mermaid.
+* Se dejó de utilizar el PNG como única fuente del diagrama, manteniendo el código Mermaid como fuente editable.
+* Se ajustó la representación del diagrama para alinearla con las recomendaciones realizadas por el docente.
+
+### Verificación realizada
+
+El equipo revisó el diagrama generado y confirmó que representa los elementos y relaciones definidos para el contexto de TAIA, incluyendo el estudiante, TAIA, Telegram y Gemini. También se verificó que el código Mermaid quedara almacenado en el repositorio como documentación versionable.
+

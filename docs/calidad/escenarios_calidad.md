@@ -87,3 +87,7 @@ ESCENARIOS DE CALIDAD
  Restricción relacionada - El proveedor de LLM tiene que ser intercambiable
 
  Justificación - Los proveedores cambian sus condiciones de tier gratuito seguido, sin esto, un cambio de cuotas en Gemini podría dejar el sistema sin modelo funcional a mitad de semestre 
+
+**Decisión arquitectónica relacionada:**
+
+[ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)

@@ -14,8 +14,10 @@
 
 **Resultado esperado:** El sistema interpreta el mensaje mediante Gemini, identifica la intención y transforma la información en datos estructurados. El backend valida la información y la almacena en PostgreSQL para que pueda ser consultada y gestionada posteriormente desde la aplicación Flutter.
 
-**Escenario de calidad relacionado:**  
-[S1 — Registro correcto de información académica](ruta/al/escenario.md)
+## Escenario de calidad relacionado
 
-**Decisión arquitectónica relacionada:**  
+[S1 — Registro correcto de información académica](calidad/escenarios_calidad.md#escenario-1--registro-correcto-de-información-académica)
+
+## Decisión arquitectónica relacionada
+
 [ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)

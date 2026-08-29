@@ -1,3 +1,17 @@
+# ADR-0001 — Monolito modular con organización hexagonal selectiva
+
+## Contexto
+
+TAIA necesita una arquitectura que permita desarrollar el MVP con una complejidad operativa reducida, manteniendo al mismo tiempo la capacidad de evolucionar y sustituir dependencias externas.
+
+El sistema presenta dependencias con servicios externos como **Telegram**, utilizado como canal conversacional y de notificaciones; **Un LLM**, utilizado para la interpretación de lenguaje natural; y **PostgreSQL**, utilizado para la persistencia de la información académica.
+
+Estas dependencias pueden cambiar por razones técnicas, económicas o funcionales. En particular, el proveedor de inteligencia artificial puede modificar sus modelos, cuotas o condiciones de uso. Por esta razón, la arquitectura debe evitar que la lógica de negocio dependa directamente de una implementación concreta.
+
+Al mismo tiempo, TAIA se encuentra en una etapa de MVP y es desarrollado por un equipo de cuatro personas dentro del calendario académico del curso. Por lo tanto, no se considera conveniente introducir desde el inicio una arquitectura distribuida o microservicios, debido a la complejidad adicional de despliegue, comunicación, observabilidad y operación que implicaría.
+
+La arquitectura debe buscar un equilibrio entre **simplicidad para el desarrollo inicial** y **capacidad de evolución ante cambios en las dependencias externas**.
+
 ## Comparación de escenarios
 
 | Escenario / Criterio | Capas | Hexagonal | Monolito modular |
@@ -52,9 +66,7 @@ Cambiar Gemini por otro proveedor implica sustituir el adaptador sin modificar e
 
 ### Monolito modular con organización hexagonal solo en los módulos que tienen dependencias externas.
 
-TAIA no necesita **microservicios ni una arquitectura distribuida** desde un inicio. El sistema todavía es pequeño, el número de funcionalidades es limitado y el objetivo es comenzar con una base sencilla que permita avanzar rápidamente sin introducir complejidad operativa innecesaria.
-
-Adoptar microservicios desde esta etapa implicaría añadir mecanismos como comunicación entre servicios, gestión de despliegues independientes, observabilidad distribuida, configuración adicional y posibles problemas de consistencia entre servicios. Estos elementos no aportan suficiente valor para las necesidades actuales de TAIA y podrían dificultar el desarrollo y mantenimiento del MVP. Sin embargo, TAIA sí presenta un problema arquitectónico importante: **Existen varias dependencias externas que pueden cambiar**
+TAIA presenta un problema arquitectónico importante: **Existen varias dependencias externas que pueden cambiar**
 
 Entre ellas se encuentran *Telegram*, utilizado como canal de comunicación; *Gemini*, utilizado para la interpretación de lenguaje natural; y *PostgreSQL*, utilizado para la persistencia de la información académica. Estas dependencias forman parte de la infraestructura del sistema y podrían cambiar por razones técnicas, económicas o funcionales.
 
@@ -67,6 +79,14 @@ Por ejemplo, la interacción con el servicio de IA puede abstraerse mediante un 
 Esta combinación permite obtener un equilibrio entre **simplicidad y capacidad de evolución**. El monolito mantiene la arquitectura sencilla para el MVP, mientras que los puertos y adaptadores reducen el acoplamiento con las dependencias externas más relevantes.
 
 Además, esta decisión permite que la arquitectura **evolucione gradualmente**. Si en el futuro algún módulo alcanza un nivel de complejidad o carga que justifique separarlo, puede extraerse del monolito con menor impacto gracias a los límites establecidos previamente.
+
+## Alternativas descartadas
+
+### Microservicios
+
+Se descarta para la etapa inicial porque TAIA no necesita **microservicios ni una arquitectura distribuida** desde un inicio. El sistema todavía es pequeño, el número de funcionalidades es limitado y el objetivo es comenzar con una base sencilla que permita avanzar rápidamente sin introducir complejidad operativa innecesaria.
+
+Adoptar microservicios desde esta etapa implicaría añadir mecanismos como comunicación entre servicios, gestión de despliegues independientes, observabilidad distribuida, configuración adicional y posibles problemas de consistencia entre servicios. Estos elementos no aportan suficiente valor para las necesidades actuales de TAIA y podrían dificultar el desarrollo y mantenimiento del MVP.
 
 ## Consecuencias
 
