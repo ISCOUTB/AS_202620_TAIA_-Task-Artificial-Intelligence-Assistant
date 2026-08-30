@@ -137,3 +137,48 @@ Como parte del proceso, la IA sirvió de apoyo para:
 * Identificar algunos enlaces de esa fila que no apuntaban correctamente a archivos del repositorio.
 
 
+# Entrada 05
+
+**Fecha:** 2026-08-30
+
+**Herramienta:** ChatGPT (OpenAI)
+
+**Objetivo:** Revisar y actualizar la documentación y las pruebas correspondientes al corte vertical de la semana 4.
+
+### Solicitud realizada
+
+Se solicitó apoyo para revisar la coherencia entre la arquitectura documentada y la implementación actual del proyecto, incluyendo las secciones 5, 6, 9, 10 y 12 de arc42, el C4 nivel 2, la tabla de aspectos y las pruebas automatizadas del corte vertical A-01.
+
+### Resultado generado
+
+La IA ayudó a:
+
+* Revisar la correspondencia entre el C4 nivel 2 y la estructura actual del backend.
+* Complementar y corregir redaccion sección 5 de arc42, correspondiente a los bloques de construcción.
+* Complementar y corregir redaccion sección 6 de arc42, correspondiente a la vista de ejecución.
+* Actualizar la sección 9 de arc42 con la referencia al ADR-0001.
+* Actualizar la sección 10 de arc42 con los cinco escenarios de calidad definidos para TAIA.
+* Iniciar la sección 12 de arc42 con un glosario de términos propios del sistema.
+* Revisar la trazabilidad del aspecto A-01 en `docs/aspectos.md`.
+* Revisar el README para que la documentación de las pruebas corresponda con el estado actual del repositorio.
+
+### Aceptado
+
+* Mantener las pruebas existentes de las semanas anteriores.
+* Utilizar `test_academic_register_task.py` como evidencia de las pruebas asociadas al corte vertical A-01.
+* Mantener `test_entrega3.py` como evidencia correspondiente a la entrega anterior.
+* Completar la trazabilidad de A-01 mediante Requisito → C4 → ADR → Código → Pruebas → Evidencia.
+* Documentar en arc42 la arquitectura implementada actualmente sin presentar como implementadas las integraciones futuras con Telegram, Gemini, PostgreSQL y Flutter.
+
+### Rechazado o modificado
+
+* Se descartó crear una prueba adicional cuando se determinó que `test_academic_register_task.py` ya podía utilizarse como evidencia del recorrido implementado.
+* No se eliminó `test_entrega3.py`, para conservar la evidencia histórica de la entrega anterior.
+* Se modificó la documentación para diferenciar entre la arquitectura objetivo y el corte vertical actualmente implementado.
+* Se evitó presentar como implementados componentes que todavía corresponden a incrementos posteriores.
+
+### Verificación realizada
+
+El equipo revisó el repositorio actualizado y contrastó la documentación arquitectónica con la estructura actual del backend. Se verificó que el corte vertical implementado corresponde al registro y consulta de tareas mediante la API y que las pruebas existentes se mantienen separadas entre dominio, caso de uso y pruebas de la entrega anterior.
+
+Queda pendiente verificar mediante ejecución de `pytest` que todas las pruebas se encuentren en verde y utilizar dicha ejecución como evidencia de la entrega.

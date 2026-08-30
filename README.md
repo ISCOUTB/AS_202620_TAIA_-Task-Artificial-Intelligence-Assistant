@@ -169,13 +169,13 @@ Las pruebas automatizadas se ejecutan desde la raíz del repositorio con:
 
 pytest backend/tests
 
-Incluyen:
+Las pruebas cubren:
 
-- `test_entrega3.py`: verifica que el endpoint de comprobación del backend (`/health`) responde correctamente.
-- `test_academic_task_domain.py`: pruebas unitarias de la entidad de dominio `Task` (creación válida, validaciones, cambio de estado).
-- `test_academic_register_task.py`: pruebas de integración del corte vertical A-01 a través de la API HTTP (registrar tarea, rechazo de datos inválidos, consulta de tareas registradas).
+- reglas del dominio de tareas;
+- caso de uso de registro y consulta de tareas;
+- comprobación del estado del backend.
 
-Resultado esperado:
+El corte vertical A-01 se verifica mediante:
 
-9 passed
+backend/tests/test_academic_register_task.py
 
