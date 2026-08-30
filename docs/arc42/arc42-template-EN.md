@@ -315,92 +315,333 @@ La modularización interna permitirá evolucionar posteriormente partes específ
 
 ## 5.1. Whitebox Overall System {#_whitebox_overall_system}
 
-***\<Overview Diagram\>***
+El backend de TAIA se organiza como un monolito modular. Para el primer corte vertical, correspondiente al aspecto A-01, se implementa el módulo académico mediante una organización hexagonal selectiva.
 
-Motivation
+El objetivo de esta estructura es separar la entrada HTTP, los casos de uso, las reglas del dominio y los mecanismos de persistencia. De esta manera, la lógica de negocio no depende directamente de FastAPI ni de una tecnología concreta de persistencia.
 
-:   *\<text explanation\>*
+### Vista general
 
-Contained Building Blocks
+```text
+                         API TAIA
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Módulo Academic   │
+                  │                   │
+                  │ ┌───────────────┐ │
+                  │ │   Adapters    │ │
+                  │ │    / API      │ │
+                  │ └───────┬───────┘ │
+                  │         │         │
+                  │         ▼         │
+                  │ ┌───────────────┐ │
+                  │ │ Application   │ │
+                  │ │ Use Cases     │ │
+                  │ └───────┬───────┘ │
+                  │         │         │
+                  │         ▼         │
+                  │ ┌───────────────┐ │
+                  │ │    Domain     │ │
+                  │ │     Task      │ │
+                  │ └───────┬───────┘ │
+                  │         │         │
+                  │         ▼         │
+                  │ ┌───────────────┐ │
+                  │ │ Repository    │ │
+                  │ │     Port      │ │
+                  │ └───────┬───────┘ │
+                  └──────────┼────────┘
+                             │
+                             ▼
+                  InMemoryTaskRepository
+```
 
-:   *\<Description of contained building block (black boxes)\>*
+### Motivation
 
-Important Interfaces
+La separación permite que el caso de uso de registro de tareas dependa de una abstracción de persistencia y no de una implementación concreta.
 
-:   *\<Description of important interfaces\>*
+Esto permite que el adaptador utilizado actualmente en memoria pueda ser reemplazado posteriormente por un adaptador para PostgreSQL sin modificar las reglas principales del dominio.
 
-### \<Name black box 1\> {#_name_black_box_1}
+### Contained Building Blocks
 
-*\<Purpose/Responsibility\>*
+| Bloque                 | Responsabilidad                                                                        | Ubicación                                           |
+| ---------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| API / Adapter          | Recibir solicitudes HTTP, transformar los datos de entrada y devolver respuestas HTTP. | `backend/app/modules/academic/adapters/`            |
+| Application            | Ejecutar los casos de uso de TAIA y coordinar las operaciones necesarias.              | `backend/app/modules/academic/application/`         |
+| Domain                 | Representar la información académica y aplicar las reglas propias del dominio.         | `backend/app/modules/academic/domain/`              |
+| Repository Port        | Definir la abstracción que necesita la aplicación para almacenar y consultar tareas.   | `backend/app/modules/academic/application/ports.py` |
+| InMemoryTaskRepository | Implementar el puerto de persistencia para el corte vertical actual.                   | `backend/app/modules/academic/adapters/`            |
 
-*\<Interface(s)\>*
+### Important Interfaces
 
-*\<(Optional) Quality/Performance Characteristics\>*
+Las principales interfaces del módulo son:
 
-*\<(Optional) Directory/File Location\>*
+* **API HTTP:** expone las operaciones de registro y consulta de tareas.
+* **RegisterTaskUseCase:** representa el caso de uso de registro de una tarea.
+* **ListTasksUseCase:** representa el caso de uso de consulta de tareas.
+* **TaskRepository:** puerto mediante el cual los casos de uso acceden a la persistencia.
 
-*\<(Optional) Fulfilled Requirements\>*
+La interfaz `TaskRepository` es especialmente importante porque desacopla la aplicación del mecanismo concreto de almacenamiento.
 
-*\<(optional) Open Issues/Problems/Risks\>*
+## 5.2. API / Adapter {#_api_adapter}
 
-### \<Name black box 2\> {#_name_black_box_2}
+### Responsabilidad
 
-*\<black box template\>*
+El adaptador de API recibe las solicitudes HTTP y las transforma en llamadas a los casos de uso del módulo académico.
 
-### \<Name black box n\> {#_name_black_box_n}
+No contiene las reglas principales del dominio. Su responsabilidad es actuar como frontera entre FastAPI y la aplicación.
 
-*\<black box template\>*
+### Interfaces
 
-### \<Name interface 1\> {#_name_interface_1}
+Expone endpoints HTTP para:
 
-...​
+* Registrar una tarea.
+* Consultar las tareas registradas.
 
-### \<Name interface m\> {#_name_interface_m}
+### Ubicación
 
-## Level 2 {#_level_2}
+`backend/app/modules/academic/adapters/`
 
-### White Box *\<building block 1\>* {#_white_box_building_block_1}
+### Relación con requisitos
 
-*\<white box template\>*
+Contribuye al cumplimiento de **RF-01**, al proporcionar la entrada necesaria para el registro de información académica.
 
-### White Box *\<building block 2\>* {#_white_box_building_block_2}
+## 5.3. Application {#_application}
 
-*\<white box template\>*
+### Responsabilidad
 
-...​
+La capa de aplicación contiene los casos de uso que coordinan las operaciones del módulo académico.
 
-### White Box *\<building block m\>* {#_white_box_building_block_m}
+En el corte vertical actual se implementan:
 
-*\<white box template\>*
+* `RegisterTaskUseCase`
+* `ListTasksUseCase`
 
-## Level 3 {#_level_3}
+Los casos de uso reciben información validada desde la interfaz, crean o consultan entidades del dominio y utilizan el puerto de persistencia correspondiente.
 
-### White Box \<\_building block x.1\_\> {#_white_box_building_block_x_1}
+### Interfaces
 
-*\<white box template\>*
+La aplicación depende de `TaskRepository`, definido como puerto.
 
-### White Box \<\_building block x.2\_\> {#_white_box_building_block_x_2}
+### Ubicación
 
-*\<white box template\>*
+`backend/app/modules/academic/application/`
 
-### White Box \<\_building block y.1\_\> {#_white_box_building_block_y_1}
+### Relación con requisitos
 
-*\<white box template\>*
+Constituye el núcleo del recorrido correspondiente al aspecto **A-01** y al requisito **RF-01**.
+
+## 5.4. Domain {#_domain}
+
+### Responsabilidad
+
+El dominio representa las entidades y reglas propias de la información académica gestionada por TAIA.
+
+En el corte actual se utiliza la entidad `Task`, que representa una tarea académica registrada por el estudiante.
+
+El dominio no depende directamente de FastAPI, PostgreSQL, Telegram ni Gemini.
+
+### Ubicación
+
+`backend/app/modules/academic/domain/`
+
+### Características
+
+El dominio valida las condiciones necesarias para crear una tarea válida y mantiene las reglas que deben cumplirse independientemente de la tecnología utilizada para recibir o almacenar la información.
+
+## 5.5. Repository Port {#_repository_port}
+
+### Responsabilidad
+
+`TaskRepository` define las operaciones de persistencia requeridas por los casos de uso.
+
+Este componente constituye el puerto de salida del módulo académico.
+
+La aplicación depende de esta abstracción en lugar de conocer directamente el mecanismo utilizado para almacenar las tareas.
+
+### Ubicación
+
+`backend/app/modules/academic/application/ports.py`
+
+### Importancia arquitectónica
+
+Este puerto implementa el principio definido en el ADR-0001 de aislar las dependencias externas y mantener las reglas de negocio independientes de la infraestructura.
+
+## 5.6. InMemoryTaskRepository {#_inmemory_task_repository}
+
+### Responsabilidad
+
+`InMemoryTaskRepository` proporciona la implementación de persistencia utilizada por el primer corte vertical.
+
+Permite ejecutar y probar el recorrido completo sin introducir todavía la dependencia de una instancia de PostgreSQL.
+
+### Ubicación
+
+`backend/app/modules/academic/adapters/`
+
+### Estado
+
+Es una implementación temporal para el corte vertical actual.
+
+En una siguiente evolución será posible incorporar un adaptador de PostgreSQL que implemente el mismo puerto `TaskRepository`.
+
+### Relación con la arquitectura
+
+El reemplazo del repositorio en memoria por PostgreSQL no debería requerir cambios en las reglas del dominio ni en los casos de uso, siempre que el nuevo adaptador respete el contrato definido por `TaskRepository`.
+
+## 5.7. Límites del corte vertical
+
+El corte vertical actual atraviesa los siguientes bloques:
+
+```text
+HTTP
+  ↓
+API / Adapter
+  ↓
+Application
+  ↓
+Domain
+  ↓
+TaskRepository
+  ↓
+InMemoryTaskRepository
+```
+
+Este recorrido constituye la implementación ejecutable actual de **A-01**.
+
+Las integraciones con **Telegram**, **Gemini**, **PostgreSQL** y la aplicación **Flutter** forman parte de la arquitectura objetivo del sistema, pero no se consideran implementaciones completas dentro de este corte.
+
+Por tanto, la documentación de esta sección distingue entre los bloques actualmente ejecutables y los componentes previstos para las siguientes iteraciones.
 
 # 6. Runtime View {#section-runtime-view}
 
-## \<Runtime Scenario 1\> {#_runtime_scenario_1}
+La vista de ejecución describe el recorrido de una solicitud dentro del corte vertical implementado para el aspecto **A-01 — Captura inteligente de información académica**.
 
--   *\<insert runtime diagram or textual description of the scenario\>*
+El escenario seleccionado es el **registro de una tarea académica mediante la API HTTP**. Este recorrido permite demostrar que la solicitud atraviesa la interfaz, la lógica de aplicación, el dominio y la persistencia mediante el puerto definido por la arquitectura.
 
--   *\<insert description of the notable aspects of the interactions
-    between the building block instances depicted in this diagram.\>*
+## 6.1. Escenario — Registro de una tarea
 
-## \<Runtime Scenario 2\> {#_runtime_scenario_2}
+### Flujo de ejecución
 
-## ...​
+```text
+Estudiante / Cliente HTTP
+          │
+          │ POST /tasks
+          ▼
+┌─────────────────────┐
+│ Academic API Adapter│
+│     FastAPI         │
+└──────────┬──────────┘
+           │
+           │ datos de la solicitud
+           ▼
+┌─────────────────────┐
+│ RegisterTaskUseCase │
+│    Application      │
+└──────────┬──────────┘
+           │
+           │ crear tarea
+           ▼
+┌─────────────────────┐
+│       Task          │
+│       Domain        │
+└──────────┬──────────┘
+           │
+           │ TaskRepository
+           ▼
+┌─────────────────────────┐
+│ InMemoryTaskRepository  │
+│       Adapter           │
+└──────────┬──────────────┘
+           │
+           │ tarea almacenada
+           ▼
+       Respuesta HTTP
+```
 
-## \<Runtime Scenario n\> {#_runtime_scenario_n}
+### Descripción del escenario
+
+1. El cliente envía una solicitud HTTP para registrar una tarea.
+2. El adaptador de API de FastAPI recibe la solicitud y transforma los datos de entrada al formato utilizado por la aplicación.
+3. `RegisterTaskUseCase` ejecuta el caso de uso de registro.
+4. El caso de uso crea una instancia válida de la entidad `Task`.
+5. La aplicación utiliza el puerto `TaskRepository` para solicitar el almacenamiento de la tarea.
+6. `InMemoryTaskRepository` implementa actualmente ese puerto y almacena la tarea.
+7. El adaptador de API devuelve una respuesta HTTP indicando el resultado de la operación.
+
+## 6.2. Escenario — Consulta de tareas
+
+El segundo flujo implementado permite consultar las tareas registradas.
+
+```text
+Cliente HTTP
+     │
+     │ GET /tasks
+     ▼
+Academic API Adapter
+     │
+     ▼
+ListTasksUseCase
+     │
+     ▼
+TaskRepository
+     │
+     ▼
+InMemoryTaskRepository
+     │
+     ▼
+Lista de tareas
+     │
+     ▼
+Respuesta HTTP
+```
+
+El adaptador recibe la solicitud de consulta y delega la operación al `ListTasksUseCase`. Este utiliza el puerto `TaskRepository` para recuperar las tareas almacenadas y devuelve el resultado al adaptador, que lo transforma en una respuesta HTTP.
+
+## 6.3. Manejo de validaciones
+
+Durante el registro, los datos pasan por las reglas correspondientes del dominio antes de ser almacenados.
+
+```text
+Solicitud HTTP
+      │
+      ▼
+API Adapter
+      │
+      ▼
+RegisterTaskUseCase
+      │
+      ▼
+Validación / creación de Task
+      │
+      ├──── Inválida ────► Error / respuesta HTTP
+      │
+      ▼
+TaskRepository
+      │
+      ▼
+Persistencia
+```
+
+De esta manera, una tarea que no cumple las condiciones definidas por el dominio no continúa hasta la persistencia.
+
+## 6.4. Límites del escenario actual
+
+El escenario descrito corresponde al **corte vertical ejecutable actual**.
+
+Actualmente el flujo llega hasta `InMemoryTaskRepository`. PostgreSQL todavía no forma parte del recorrido ejecutable de este incremento.
+
+De igual manera, la interpretación mediante Gemini y la captura mediante Telegram corresponden a integraciones previstas para las siguientes iteraciones. El corte actual utiliza una entrada HTTP para demostrar el recorrido extremo a extremo de la lógica implementada.
+
+Esta delimitación permite validar primero la estructura interna del sistema y posteriormente sustituir o incorporar los adaptadores externos sin modificar el núcleo de la lógica de negocio.
+
+## 6.5. Relación con pruebas
+
+El escenario de registro se encuentra cubierto mediante pruebas automatizadas del módulo académico.
+
+Las pruebas verifican el recorrido de la solicitud a través de la API y la ejecución del caso de uso hasta el repositorio utilizado por el corte vertical.
+
+Esto permite comprobar que los bloques descritos en esta vista no son únicamente elementos documentales, sino componentes que participan en un flujo ejecutable del sistema.
 
 # 7. Deployment View {#section-deployment-view}
 
@@ -452,22 +693,222 @@ Mapping of Building Blocks to Infrastructure
 
 *\<explanation\>*
 
-# 9. Architecture Decisions {#section-design-decisions}
+# 9. Architecture Decisions {#section-architecture-decisions}
 
-# 10. Quality Requirements {#section-quality-scenarios}
+Las decisiones arquitectónicas relevantes de TAIA se documentan mediante ADR (Architecture Decision Records). Los ADR contienen el contexto, las alternativas consideradas, la decisión adoptada y sus consecuencias.
 
-## Quality Requirements Overview {#_quality_requirements_overview}
+## 9.1. ADR-0001 — Monolito modular con organización hexagonal selectiva
 
-## Quality Scenarios {#_quality_scenarios}
+**Estado:** Aceptado
+
+**Decisión:** TAIA utilizará un **monolito modular con organización hexagonal selectiva en los módulos que presentan dependencias externas relevantes**.
+
+La aplicación se mantendrá como un único sistema desplegable durante el MVP, evitando la complejidad operativa de una arquitectura distribuida. Dentro de los módulos donde exista una dependencia externa susceptible de cambio se utilizarán puertos y adaptadores para reducir el acoplamiento.
+
+La decisión se aplica especialmente a las integraciones con:
+
+* Gemini, como proveedor de inteligencia artificial.
+* Telegram, como canal conversacional y de notificaciones.
+* PostgreSQL, como mecanismo de persistencia.
+
+En el corte vertical actual, esta decisión se refleja en el módulo académico mediante la separación entre `application`, `domain` y `adapters`, así como mediante el puerto `TaskRepository` y su implementación `InMemoryTaskRepository`.
+
+**Motivación:** La arquitectura debe mantener la simplicidad necesaria para el MVP y, al mismo tiempo, permitir sustituir dependencias externas sin modificar las reglas de negocio.
+
+**Relación con requisitos y calidad:** La decisión contribuye principalmente a **S5 — Sustitución del modelo de IA**, escenario de calidad relacionado con la mantenibilidad y la independencia del proveedor.
+
+**ADR relacionado:**
+[ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)
+
+## 9.2. Decisiones pendientes
+
+Las decisiones sobre la implementación concreta de algunos mecanismos de infraestructura se documentarán mediante nuevos ADR cuando sean necesarias.
+
+Entre ellas se encuentra la selección definitiva del mecanismo de despliegue y la implementación de los adaptadores concretos para PostgreSQL, Telegram y Gemini.
+
+Estos elementos no forman parte del recorrido ejecutable del corte vertical actual y, por tanto, no se presentan como decisiones ya implementadas.
+
+# 10. Quality Requirements {#section-quality-requirements}
+
+Los requisitos de calidad de TAIA se expresan mediante escenarios medibles. Estos escenarios permiten evaluar el comportamiento esperado del sistema y sirven como referencia para las decisiones arquitectónicas y las pruebas.
+
+## 10.1. Quality Tree
+
+La utilidad del sistema se descompone en las siguientes características de calidad:
+
+```text
+UTILIDAD
+│
+├── Exactitud
+│   │
+│   └── Interpretación correcta de información académica
+│       │
+│       └── S1. Registro correcto de información académica
+│
+├── Disponibilidad / Puntualidad
+│   │
+│   └── Entrega oportuna de información
+│       │
+│       └── S2. Entrega puntual de recordatorios
+│
+├── Rendimiento
+│   │
+│   └── Tiempo de respuesta del asistente
+│       │
+│       └── S3. Respuesta del asistente ante un mensaje
+│
+├── Seguridad
+│   │
+│   └── Confidencialidad y aislamiento de información
+│       │
+│       └── S4. Acceso únicamente a datos del propio estudiante
+│
+└── Mantenibilidad
+    │
+    └── Independencia del proveedor de IA
+        │
+        └── S5. Sustitución del modelo de IA
+```
+
+## 10.2. Escenarios de calidad
+
+### S1 — Registro correcto de información académica
+
+**Fuente:** El estudiante.
+
+**Estímulo:** Escribe en lenguaje natural información correspondiente a una tarea, examen, materia o clase/evento.
+
+**Artefacto:** Servicio que interpreta el mensaje con el LLM y registro de TAIA.
+
+**Entorno:** Sistema desplegado, con el servicio de IA disponible.
+
+**Respuesta:** TAIA identifica los campos relevantes, solicita confirmación cuando corresponda y registra la información correctamente en PostgreSQL.
+
+**Medida:** Al menos el 90 % de los campos esperados deben ser identificados y registrados correctamente en una muestra de 100 mensajes académicos representativos.
+
+**Restricción relacionada:** El contexto enviado al LLM debe mantenerse controlado debido a las cuotas gratuitas disponibles.
+
+**Justificación:** La captura sin fricción es una característica diferenciadora de TAIA. Una baja exactitud en la interpretación reduciría la confianza del estudiante en el sistema.
+
+### S2 — Entrega puntual de recordatorios
+
+**Fuente:** Sistema de TAIA.
+
+**Estímulo:** Llega el momento programado para un recordatorio.
+
+**Artefacto:** Servicio de recordatorios y notificaciones.
+
+**Entorno:** Sistema desplegado y operativo.
+
+**Respuesta:** TAIA envía el recordatorio al canal configurado por el estudiante.
+
+**Medida:** Al menos el 95 % de los recordatorios deben ser entregados dentro de un margen de ±1 minuto respecto a la hora programada, en una prueba de 100 recordatorios.
+
+**Justificación:** Los recordatorios solo son útiles si se entregan en el momento esperado por el estudiante.
+
+### S3 — Respuesta del asistente ante un mensaje
+
+**Fuente:** El estudiante.
+
+**Estímulo:** El estudiante envía una consulta o instrucción válida al asistente de TAIA.
+
+**Artefacto:** Backend de TAIA y servicio de interpretación mediante LLM.
+
+**Entorno:** Sistema desplegado, con backend, Telegram y servicio de IA disponibles.
+
+**Respuesta:** TAIA procesa el mensaje y devuelve una respuesta al estudiante.
+
+**Medida:** El 95 % de las solicitudes deberá recibir una respuesta en un tiempo ≤ 7 segundos, medido desde la recepción del mensaje por el backend hasta el envío de la respuesta al canal del estudiante, bajo condiciones normales de operación.
+
+**Restricción relacionada:** El sistema utiliza infraestructura gratuita, sin garantía de recursos dedicados, por lo que pueden existir arranques en frío y recursos compartidos.
+
+**Justificación:** Un tiempo de respuesta excesivo afecta la usabilidad del asistente y puede perjudicar los escenarios de registro y consulta.
+
+### S4 — Acceso únicamente a datos del propio estudiante
+
+**Fuente:** El estudiante autenticado.
+
+**Estímulo:** Envía un mensaje solicitando, directa o indirectamente, información perteneciente a otro estudiante.
+
+**Artefacto:** Capa que construye el contexto para el LLM y mecanismo de persistencia.
+
+**Entorno:** Sistema desplegado con múltiples estudiantes registrados.
+
+**Respuesta:** TAIA devuelve únicamente información asociada al estudiante autenticado y rechaza cualquier intento de acceder a información perteneciente a otro estudiante.
+
+**Medida:** En una prueba de 100 intentos de acceso, incluyendo solicitudes legítimas y solicitudes que intenten consultar información perteneciente a otros estudiantes, el sistema deberá permitir únicamente los accesos autorizados y rechazar el 100 % de los intentos no autorizados, sin exponer datos de otros usuarios.
+
+**Restricción relacionada:** El uso de un LLM con contexto generado para cada petición exige controlar explícitamente el aislamiento de los datos.
+
+**Justificación:** TAIA manejará información académica de estudiantes. Una fuga de información entre usuarios afectaría gravemente la seguridad y la confianza en el sistema.
+
+### S5 — Sustitución del modelo de IA
+
+**Fuente:** El equipo de desarrollo.
+
+**Estímulo:** El proveedor o modelo de inteligencia artificial utilizado por TAIA deja de estar disponible, cambia sus condiciones de uso o se requiere migrar a otro proveedor.
+
+**Artefacto:** Componente de integración con el LLM.
+
+**Entorno:** Durante el mantenimiento y evolución del sistema.
+
+**Respuesta:** El sistema debe permitir sustituir el proveedor de IA mediante el cambio o incorporación del adaptador correspondiente, manteniendo sin modificaciones las reglas de negocio y la interfaz utilizada por la aplicación.
+
+**Medida:** La sustitución del proveedor de IA deberá requerir cambios en máximo 2 archivos del adaptador, sin modificar archivos pertenecientes al dominio ni a las reglas de negocio.
+
+**Restricción relacionada:** El proveedor de LLM debe ser intercambiable.
+
+**Justificación:** Los proveedores pueden modificar sus modelos, cuotas o condiciones de uso. El aislamiento del proveedor evita que un cambio de infraestructura obligue a modificar la lógica de negocio de TAIA.
+
+## 10.3. Priorización de escenarios
+
+| Escenario                      | Impacto | Riesgo técnico | Prioridad |
+| ------------------------------ | ------- | -------------- | --------- |
+| S1 — Registro correcto         | Alto    | Alto           | Alta      |
+| S2 — Recordatorios puntuales   | Alto    | Alto           | Alta      |
+| S3 — Respuesta del asistente   | Alto    | Media/Alta     | Alta      |
+| S4 — Aislamiento de datos      | Alto    | Crítico        | Crítica   |
+| S5 — Sustitución del modelo IA | Medio   | Medio          | Media     |
+
+## 10.4. Relación con las decisiones arquitectónicas
+
+Los escenarios de calidad sirven como fundamento para las decisiones arquitectónicas de TAIA.
+
+En particular:
+
+* **S1** influye en la separación entre interpretación, validación y reglas de dominio.
+* **S2** influye en la separación del mecanismo de notificaciones respecto de la lógica de negocio.
+* **S3** establece un objetivo de rendimiento condicionado por el uso de servicios externos y la infraestructura disponible.
+* **S4** exige mantener el aislamiento de la información de cada estudiante y controlar el contexto utilizado por el sistema.
+* **S5** motiva directamente el **ADR-0001**, que establece el uso de puertos y adaptadores para aislar las dependencias externas.
+
+**ADR relacionado:** [ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)
 
 # 11. Risks and Technical Debts {#section-technical-risks}
 
 # 12. Glossary {#section-glossary}
 
-+----------------------+-----------------------------------------------+
-| Term                 | Definition                                    |
-+======================+===============================================+
-| *\<Term-1\>*         | *\<definition-1\>*                            |
-+----------------------+-----------------------------------------------+
-| *\<Term-2\>*         | *\<definition-2\>*                            |
-+----------------------+-----------------------------------------------+
+| Término                         | Definición                                                                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **TAIA**                        | *Task Artificial Intelligence Assistant*. Asistente académico inteligente del proyecto que permite registrar y consultar información académica mediante lenguaje natural y diferentes canales de interacción.            |
+| **Estudiante**                  | Usuario principal de TAIA. Registra tareas e información académica, consulta sus datos y recibe recordatorios.                                                                                                           |
+| **Tarea (Task)**                | Unidad de información académica que representa una actividad que debe realizar el estudiante y que puede incluir datos como título y fecha de entrega.                                                                   |
+| **A-01**                        | Aspecto del sistema correspondiente a la **Captura inteligente de información académica**. Constituye el primer corte vertical del proyecto.                                                                             |
+| **Corte vertical**              | Incremento funcional que atraviesa diferentes partes de la arquitectura, desde una interfaz de entrada hasta la lógica de aplicación, el dominio y la persistencia, permitiendo ejecutar y probar un recorrido completo. |
+| **Módulo académico (Academic)** | Módulo del backend encargado de las funcionalidades relacionadas con la gestión de información académica. En el corte actual contiene la funcionalidad de registro y consulta de tareas.                                 |
+| **Dominio**                     | Parte de la arquitectura que representa las entidades y reglas propias del problema, independientemente de tecnologías externas.                                                                                         |
+| **Caso de uso (Use Case)**      | Componente de la capa de aplicación que representa una operación que el sistema puede ejecutar. En el corte actual se incluyen `RegisterTaskUseCase` y `ListTasksUseCase`.                                               |
+| **Puerto (Port)**               | Interfaz que define una dependencia requerida por la aplicación sin acoplarla a una implementación concreta. En el corte actual, `TaskRepository` define el puerto de persistencia.                                      |
+| **Adaptador (Adapter)**         | Componente que conecta el núcleo de la aplicación con una tecnología o mecanismo externo mediante un puerto.                                                                                                             |
+| **TaskRepository**              | Puerto de persistencia utilizado por los casos de uso para almacenar y consultar tareas sin depender de una implementación concreta.                                                                                     |
+| **InMemoryTaskRepository**      | Adaptador de persistencia utilizado en el corte vertical actual. Almacena las tareas en memoria y permite ejecutar las pruebas sin depender todavía de PostgreSQL.                                                       |
+| **API**                         | Interfaz mediante la cual otros componentes pueden comunicarse con TAIA. En el corte actual corresponde a la API HTTP implementada con FastAPI.                                                                          |
+| **FastAPI**                     | Framework utilizado para implementar la API HTTP del backend de TAIA.                                                                                                                                                    |
+| **Flutter**                     | Tecnología prevista para la aplicación móvil de TAIA. Forma parte de la arquitectura objetivo, pero no está implementada en el corte vertical actual.                                                                    |
+| **Telegram**                    | Canal externo previsto para la captura conversacional de información y el envío de notificaciones al estudiante.                                                                                                         |
+| **Gemini**                      | Proveedor de modelo de lenguaje utilizado como dependencia externa prevista para interpretar mensajes en lenguaje natural.                                                                                               |
+| **PostgreSQL**                  | Sistema de gestión de base de datos previsto para la persistencia de la información académica de TAIA.                                                                                                                   |
+| **LLM**                         | *Large Language Model*. Modelo de lenguaje utilizado por TAIA para interpretar mensajes en lenguaje natural y extraer información estructurada.                                                                          |
+| **ADR**                         | *Architecture Decision Record*. Registro utilizado para documentar una decisión arquitectónica, su contexto, alternativas y consecuencias.                                                                               |
+| **C4**                          | Modelo de documentación de arquitectura utilizado para representar el sistema mediante diferentes niveles de abstracción, incluyendo contexto y contenedores.                                                            |
+| **arc42**                       | Plantilla utilizada para documentar la arquitectura de software de TAIA.                                                                                                                                                 |

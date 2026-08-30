@@ -2,7 +2,7 @@
 
 | ID | Aspecto | Requisito | C4 | ADR | Código | Pruebas | Evidencia |
 |---|---|---|---|---|---|---|---|
-| A-01 | Captura inteligente de información académica | RF-01, RF-02 | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/) | [`test_academic_task_domain.py`](../backend/tests/test_academic_task_domain.py), [`test_academic_register_task.py`](../backend/tests/test_academic_register_task.py) | Pendiente |
+| A-01 | Captura inteligente de información académica | RF-01, RF-02 | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/) | [`test_academic_task_domain.py`](../backend/tests/test_academic_task_domain.py), [`test_academic_register_task.py`](../backend/tests/test_academic_register_task.py) | [Prueba del corte vertical](../backend/tests/test_academic_register_task.py) |
 
 ## Descripción del aspecto A-01
 
@@ -23,3 +23,9 @@
 ## Decisión arquitectónica relacionada
 
 [ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
+
+**## Estado del corte vertical**
+
+El corte vertical actual implementa el registro y consulta de tareas mediante la API HTTP del backend. El recorrido atraviesa el adaptador de API, los casos de uso de la aplicación, la entidad de dominio y el puerto de persistencia, utilizando `InMemoryTaskRepository` como adaptador de persistencia para el incremento actual.
+
+Las integraciones con Telegram, Gemini y PostgreSQL forman parte de la arquitectura objetivo y serán incorporadas en incrementos posteriores.
