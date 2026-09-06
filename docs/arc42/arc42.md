@@ -1,9 +1,9 @@
 ---
-date: august 2026
-title: "![arc42](images/arc42-logo.png) Template"
+date: septiembre 2026
+title: "TAIA — Documentación de Arquitectura"
 ---
 
-# 1. Introduction and Goals {#section-introduction-and-goals}
+# 1. Introducción y objetivos
 
 TAIA (Task Artificial Intelligence Assistant) es un asistente académico para
 estudiantes universitarios. Ofrece dos canales de entrada —un bot de Telegram y
@@ -27,7 +27,7 @@ tiempo de estudio: las herramientas existentes o exigen estructura manual o no
 planifican. La identidad visual del sistema es un pulpo: muchos brazos, muchas
 tareas atendidas a la vez.
 
-## 1.1. Requirements Overview {#_requirements_overview}
+## 1.1. Resumen de requisitos
 
 El sistema recibe mensajes en lenguaje natural, los interpreta mediante un LLM,
 extrae los campos de una tarea académica, pide confirmación al usuario y los
@@ -50,16 +50,16 @@ de extender el sistema a otras. El volumen esperado en la primera etapa es de
 | RF-08 | Sistema de recompensas por constancia (árbol que crece con las sesiones completadas) | Deseable, posterior al MVP |
 
 RF-08 es **deseable, no comprometido**: se abordará después del MVP y su
-ausencia no invalida el producto. RF-10 está **fuera del alcance actual**; se
-contempla como evolución y solo se abordará si el tiempo lo permite, por lo que
-no condiciona el diseño del MVP.
+ausencia no invalida el producto.
 
-El primer corte vertical es el aspecto **A-01**, que realiza RF-01: mensaje en
-Telegram → interpretación con el LLM → confirmación del usuario → persistencia
-en PostgreSQL → visualización en la aplicación. A-01 atraviesa todas las capas y
-sirve de base para el resto de la construcción.
+El primer corte vertical es el aspecto A-01, que implementa actualmente el
+recorrido de registro de tareas mediante la API HTTP → caso de uso →
+dominio → repositorio en memoria. La integración con Telegram, la
+interpretación mediante el LLM, la persistencia en PostgreSQL y la
+visualización en la aplicación forman parte de la arquitectura objetivo y
+serán incorporadas en iteraciones posteriores.
 
-## 1.2. Quality Goals {#_quality_goals}
+## 1.2. Objetivos de calidad
 
 Los objetivos de calidad de TAIA se priorizan de acuerdo con su impacto sobre la utilidad del sistema y el riesgo técnico asociado.
 
@@ -73,7 +73,7 @@ Los objetivos de calidad de TAIA se priorizan de acuerdo con su impacto sobre la
 
 Los objetivos se consideran prioritarios porque TAIA gestiona información académica personal, depende de servicios externos para la interpretación mediante IA y requiere ofrecer una interacción suficientemente rápida y confiable para resultar útil al estudiante.
 
-## 1.3. Stakeholders {#_stakeholders}
+## 1.3. Interesados
 
 | Rol | Quién | Expectativa |
 |---|---|---|
@@ -81,7 +81,7 @@ Los objetivos se consideran prioritarios porque TAIA gestiona información acad�
 | Equipo de desarrollo | Luis Mendoza, Deiner Gonzales, Valeria Berrio, Mark Pastrana | Una arquitectura comprensible y documentada que puedan construir entre cuatro personas dentro del plazo del curso |
 | Docente evaluador | Profesor del curso de Arquitectura de Software | Documentación arquitectónica trazable (requisito → C4 → ADR → código → pruebas → evidencia) y uso de IA registrado |
 
-# 2. Architecture Constraints {#section-architecture-constraints}
+# 2. Restricciones de arquitectura
 
 Para cada restricción se indica su implicación arquitectónica: qué obliga o qué
 prohíbe al construir el sistema.
@@ -117,15 +117,15 @@ prohíbe al construir el sistema.
 | Convención | Implicación arquitectónica |
 |---|---|
 | Documentación del proyecto en español | Se redacta en español con independencia del idioma de las plantillas empleadas |
-| Documentación arquitectónica siguiendo **arc42 v9.0**, escrita dentro de `docs/arc42/arc42-template-EN.md` | Se conservan los encabezados originales en inglés y la numeración de la plantilla |
+| Documentación arquitectónica siguiendo **arc42 v9.0**, escrita dentro de `docs/arc42/arc42.md` | Se conservan los encabezados originales en inglés y la numeración de la plantilla |
 | Diagramas siguiendo el **modelo C4** | Las vistas de contexto, contenedores y componentes se expresan en los niveles de C4 y se enlazan desde el aspecto correspondiente |
 | Decisiones arquitectónicas registradas como **ADR** | Toda decisión estructural —proveedor de LLM, plataforma de despliegue, mecanismo de notificaciones— se documenta como ADR enlazado desde `docs/aspectos.md` |
 | Código, identificadores y mensajes de commit en inglés; comentarios y documentación en español | Convención propuesta, aún no fijada por el equipo |
 | `README.md` está codificado en UTF-16 LE; el resto del repositorio en UTF-8 | Las herramientas y scripts que procesen el repositorio deben contemplar esa diferencia |
 
-# 3. Context and Scope {#section-context-and-scope}
+# 3. Contexto y alcance
 
-## 3.1. Business Context {#_business_context}
+## 3.1. Contexto de negocio
 TAIA se sitúa entre el estudiante y los servicios necesarios para gestionar su información académica.
 
 El estudiante utiliza TAIA para **registrar y consultar información académica**, así como para **recibir recordatorios**. TAIA interpreta las solicitudes expresadas en lenguaje natural, procesa las operaciones correspondientes y mantiene la información asociada al estudiante.
@@ -166,7 +166,7 @@ TAIA <----> Telegram
 
 ---
 
-## 3.2. Technical Context {#_technical_context}
+## 3.2. Contexto técnico
 
 TAIA se integra con servicios externos mediante interfaces tecnológicas específicas. El backend actúa como punto central de procesamiento y validación de las solicitudes.
 
@@ -216,9 +216,6 @@ TAIA se integra con servicios externos mediante interfaces tecnológicas especí
 
 ---
 
-**\<Mapping Input/Output to Channels\>**
-
-
 | Entrada / Salida | Canal | Uso |
 |---|---|---|
 | **Mensaje del estudiante** | Telegram Bot API | Entrada de solicitudes expresadas en lenguaje natural. |
@@ -230,7 +227,7 @@ TAIA se integra con servicios externos mediante interfaces tecnológicas especí
 
 ---
 
-## 3.3. Scope
+## 3.3. Alcance
 
 El alcance del **MVP de TAIA** comprende la gestión de información académica básica:
 
@@ -253,11 +250,11 @@ Las capacidades avanzadas de inteligencia artificial quedan fuera del alcance de
 
 Estas capacidades podrán incorporarse en **etapas posteriores** del proyecto.
 
-# 4. Solution Strategy {#section-solution-strategy}
+# 4. Estrategia de solución
 
 TAIA adopta un **monolito modular con organización hexagonal en los módulos que presentan dependencias externas relevantes**. Esta estrategia busca mantener una arquitectura sencilla para el MVP, evitando la complejidad operativa de una arquitectura distribuida, mientras establece límites que permitan evolucionar el sistema y sustituir dependencias externas cuando sea necesario.
 
-## 4.1. Architectural Style
+## 4.1. Estilo arquitectónico
 
 El sistema se implementará como un único monolito desplegable, dividido en módulos con responsabilidades claramente definidas.
 
@@ -271,7 +268,7 @@ Las principales dependencias externas consideradas son:
 
 La lógica de negocio no dependerá directamente de las APIs concretas de estos proveedores cuando exista una probabilidad relevante de sustitución.
 
-## 4.2. Architectural Principles
+## 4.2. Principios arquitectónicos
 
 ### Separación de responsabilidades
 
@@ -293,7 +290,7 @@ La información interpretada por el servicio de inteligencia artificial deberá 
 
 Las operaciones sobre información académica deberán ejecutarse dentro del contexto del estudiante correspondiente, evitando el acceso cruzado entre usuarios.
 
-## 4.3. Quality-Driven Strategy
+## 4.3. Estrategia orientada a la calidad
 
 Las principales decisiones arquitectónicas se relacionan con los escenarios de calidad definidos para TAIA:
 
@@ -305,15 +302,15 @@ Las principales decisiones arquitectónicas se relacionan con los escenarios de 
 | **S4 — Seguridad** | Centralizar las reglas de autorización y mantener el acceso a información académica dentro del contexto del estudiante. |
 | **S5 — Mantenibilidad** | Utilizar puertos y adaptadores para aislar las dependencias externas, especialmente el proveedor de inteligencia artificial. |
 
-## 4.4. Deployment Strategy
+## 4.4. Estrategia de despliegue
 
 Durante esta etapa TAIA se mantendrá como una **única unidad desplegable**. Esta decisión reduce la complejidad operacional del MVP y evita introducir comunicación entre servicios, despliegues independientes y mecanismos de observabilidad distribuida que no son necesarios para el alcance actual.
 
 La modularización interna permitirá evolucionar posteriormente partes específicas del sistema si el crecimiento del dominio, la carga o las necesidades de operación justifican una separación adicional.
 
-# 5. Building Block View {#section-building-block-view}
+# 5. Vista de bloques de construcción
 
-## 5.1. Whitebox Overall System {#_whitebox_overall_system}
+## 5.1. Vista general del sistema
 
 El backend de TAIA se organiza como un monolito modular. Para el primer corte vertical, correspondiente al aspecto A-01, se implementa el módulo académico mediante una organización hexagonal selectiva.
 
@@ -362,7 +359,7 @@ La separación permite que el caso de uso de registro de tareas dependa de una a
 
 Esto permite que el adaptador utilizado actualmente en memoria pueda ser reemplazado posteriormente por un adaptador para PostgreSQL sin modificar las reglas principales del dominio.
 
-### Contained Building Blocks
+### Bloques de construcción contenidos
 
 | Bloque                 | Responsabilidad                                                                        | Ubicación                                           |
 | ---------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------- |
@@ -372,7 +369,7 @@ Esto permite que el adaptador utilizado actualmente en memoria pueda ser reempla
 | Repository Port        | Definir la abstracción que necesita la aplicación para almacenar y consultar tareas.   | `backend/app/modules/academic/application/ports.py` |
 | InMemoryTaskRepository | Implementar el puerto de persistencia para el corte vertical actual.                   | `backend/app/modules/academic/adapters/`            |
 
-### Important Interfaces
+### Interfaces importantes
 
 Las principales interfaces del módulo son:
 
@@ -383,7 +380,7 @@ Las principales interfaces del módulo son:
 
 La interfaz `TaskRepository` es especialmente importante porque desacopla la aplicación del mecanismo concreto de almacenamiento.
 
-## 5.2. API / Adapter {#_api_adapter}
+## 5.2. API / Adaptador
 
 ### Responsabilidad
 
@@ -406,7 +403,7 @@ Expone endpoints HTTP para:
 
 Contribuye al cumplimiento de **RF-01**, al proporcionar la entrada necesaria para el registro de información académica.
 
-## 5.3. Application {#_application}
+## 5.3. Aplicación
 
 ### Responsabilidad
 
@@ -431,7 +428,7 @@ La aplicación depende de `TaskRepository`, definido como puerto.
 
 Constituye el núcleo del recorrido correspondiente al aspecto **A-01** y al requisito **RF-01**.
 
-## 5.4. Domain {#_domain}
+## 5.4. Dominio
 
 ### Responsabilidad
 
@@ -449,7 +446,7 @@ El dominio no depende directamente de FastAPI, PostgreSQL, Telegram ni Gemini.
 
 El dominio valida las condiciones necesarias para crear una tarea válida y mantiene las reglas que deben cumplirse independientemente de la tecnología utilizada para recibir o almacenar la información.
 
-## 5.5. Repository Port {#_repository_port}
+## 5.5. Puerto de repositorio
 
 ### Responsabilidad
 
@@ -467,7 +464,7 @@ La aplicación depende de esta abstracción en lugar de conocer directamente el 
 
 Este puerto implementa el principio definido en el ADR-0001 de aislar las dependencias externas y mantener las reglas de negocio independientes de la infraestructura.
 
-## 5.6. InMemoryTaskRepository {#_inmemory_task_repository}
+## 5.6. Repositorio en memoria
 
 ### Responsabilidad
 
@@ -513,7 +510,7 @@ Las integraciones con **Telegram**, **Gemini**, **PostgreSQL** y la aplicación 
 
 Por tanto, la documentación de esta sección distingue entre los bloques actualmente ejecutables y los componentes previstos para las siguientes iteraciones.
 
-# 6. Runtime View {#section-runtime-view}
+# 6. Vista de ejecución
 
 La vista de ejecución describe el recorrido de una solicitud dentro del corte vertical implementado para el aspecto **A-01 — Captura inteligente de información académica**.
 
@@ -526,7 +523,7 @@ El escenario seleccionado es el **registro de una tarea académica mediante la A
 ```text
 Estudiante / Cliente HTTP
           │
-          │ POST /tasks
+          │ POST /academic/tasks
           ▼
 ┌─────────────────────┐
 │ Academic API Adapter│
@@ -576,7 +573,7 @@ El segundo flujo implementado permite consultar las tareas registradas.
 ```text
 Cliente HTTP
      │
-     │ GET /tasks
+     │ GET /academic/tasks
      ▼
 Academic API Adapter
      │
@@ -643,57 +640,11 @@ Las pruebas verifican el recorrido de la solicitud a través de la API y la ejec
 
 Esto permite comprobar que los bloques descritos en esta vista no son únicamente elementos documentales, sino componentes que participan en un flujo ejecutable del sistema.
 
-# 7. Deployment View {#section-deployment-view}
+# 7. Vista de despliegue
 
-## Infrastructure Level 1 {#_infrastructure_level_1}
+# 8. Conceptos transversales
 
-***\<Overview Diagram\>***
-
-Motivation
-
-:   *\<explanation in text form\>*
-
-Quality and/or Performance Features
-
-:   *\<explanation in text form\>*
-
-Mapping of Building Blocks to Infrastructure
-
-:   *\<description of the mapping\>*
-
-## Infrastructure Level 2 {#_infrastructure_level_2}
-
-### *\<Infrastructure Element 1\>* {#_infrastructure_element_1}
-
-*\<diagram + explanation\>*
-
-### *\<Infrastructure Element 2\>* {#_infrastructure_element_2}
-
-*\<diagram + explanation\>*
-
-...​
-
-### *\<Infrastructure Element n\>* {#_infrastructure_element_n}
-
-*\<diagram + explanation\>*
-
-# 8. Cross-cutting Concepts {#section-concepts}
-
-## *\<Concept 1\>* {#_concept_1}
-
-*\<explanation\>*
-
-## *\<Concept 2\>* {#_concept_2}
-
-*\<explanation\>*
-
-...​
-
-## *\<Concept n\>* {#_concept_n}
-
-*\<explanation\>*
-
-# 9. Architecture Decisions {#section-architecture-decisions}
+# 9. Decisiones arquitectónicas
 
 Las decisiones arquitectónicas relevantes de TAIA se documentan mediante ADR (Architecture Decision Records). Los ADR contienen el contexto, las alternativas consideradas, la decisión adoptada y sus consecuencias.
 
@@ -728,11 +679,11 @@ Entre ellas se encuentra la selección definitiva del mecanismo de despliegue y 
 
 Estos elementos no forman parte del recorrido ejecutable del corte vertical actual y, por tanto, no se presentan como decisiones ya implementadas.
 
-# 10. Quality Requirements {#section-quality-requirements}
+# 10. Requisitos de calidad
 
 Los requisitos de calidad de TAIA se expresan mediante escenarios medibles. Estos escenarios permiten evaluar el comportamiento esperado del sistema y sirven como referencia para las decisiones arquitectónicas y las pruebas.
 
-## 10.1. Quality Tree
+## 10.1. Árbol de calidad
 
 La utilidad del sistema se descompone en las siguientes características de calidad:
 
@@ -884,9 +835,9 @@ En particular:
 
 **ADR relacionado:** [ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)
 
-# 11. Risks and Technical Debts {#section-technical-risks}
+# 11. Riesgos y deudas técnicas
 
-# 12. Glossary {#section-glossary}
+# 12. Glosario
 
 | Término                         | Definición                                                                                                                                                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -911,4 +862,4 @@ En particular:
 | **LLM**                         | *Large Language Model*. Modelo de lenguaje utilizado por TAIA para interpretar mensajes en lenguaje natural y extraer información estructurada.                                                                          |
 | **ADR**                         | *Architecture Decision Record*. Registro utilizado para documentar una decisión arquitectónica, su contexto, alternativas y consecuencias.                                                                               |
 | **C4**                          | Modelo de documentación de arquitectura utilizado para representar el sistema mediante diferentes niveles de abstracción, incluyendo contexto y contenedores.                                                            |
-| **arc42**                       | Plantilla utilizada para documentar la arquitectura de software de TAIA.                                                                                                                                                 |
+| **arc42** | Marco de documentación utilizado para estructurar la arquitectura de software de TAIA. |
