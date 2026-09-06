@@ -95,7 +95,7 @@ prohíbe al construir el sistema.
 | El proveedor de LLM debe ser **intercambiable** | El sistema depende de una interfaz propia (puerto) y el SDK del proveedor queda aislado tras un adaptador; ningún otro componente puede acoplarse a Gemini directamente |
 | **Costo cero**: toda la infraestructura opera dentro de capas gratuitas | Impone tres límites duros: cuotas de peticiones y tokens del LLM, que obligan a controlar el tamaño del contexto enviado; límites de almacenamiento y conexiones de la base de datos; y un hosting que puede suspender el proceso por inactividad, lo cual afecta a las notificaciones programadas (RF-05) y obliga a un disparo que no dependa de un proceso siempre activo |
 | Despliegue previsto en Render o en la capa gratuita de AWS | La decisión no está cerrada y se documentará en un ADR; hasta entonces el diseño evita depender de servicios propios de un proveedor concreto |
-| El canal de registro depende de un tercero (Telegram) | El equipo no controla su disponibilidad ni sus políticas. La aplicación Flutter debe permitir registrar y consultar tareas por sí sola (RF-04), de modo que una caída de Telegram degrade el sistema en lugar de inutilizarlo |
+| El canal de registro depende de un tercero (Telegram) | El equipo no controla su disponibilidad ni sus políticas. Esta acción debe ser realizada por el propietario de la organización. |
 
 **Restricciones organizacionales**
 
@@ -117,7 +117,7 @@ prohíbe al construir el sistema.
 | Convención | Implicación arquitectónica |
 |---|---|
 | Documentación del proyecto en español | Se redacta en español con independencia del idioma de las plantillas empleadas |
-| Documentación arquitectónica siguiendo **arc42 v9.0**, escrita dentro de `docs/arc42/arc42.md` | Se conservan los encabezados originales en inglés y la numeración de la plantilla |
+| Documentación arquitectónica siguiendo **arc42 v9.0**, escrita dentro de `docs/arc42/arc42.md` | Se conserva la estructura y numeración de la plantilla arc42 v9.0; el contenido se documenta en español. |
 | Diagramas siguiendo el **modelo C4** | Las vistas de contexto, contenedores y componentes se expresan en los niveles de C4 y se enlazan desde el aspecto correspondiente |
 | Decisiones arquitectónicas registradas como **ADR** | Toda decisión estructural —proveedor de LLM, plataforma de despliegue, mecanismo de notificaciones— se documenta como ADR enlazado desde `docs/aspectos.md` |
 | Código, identificadores y mensajes de commit en inglés; comentarios y documentación en español | Convención propuesta, aún no fijada por el equipo |
@@ -642,7 +642,144 @@ Esto permite comprobar que los bloques descritos en esta vista no son únicament
 
 # 7. Vista de despliegue
 
+La arquitectura de despliegue distingue entre la **arquitectura objetivo** y el **corte vertical actualmente ejecutable**.
+
+## 7.1. Arquitectura de despliegue objetivo
+
+TAIA está previsto como un sistema con un backend central desplegado como una única aplicación y con servicios externos separados.
+
+```text
+                         ┌──────────────────┐
+                         │    Estudiante    │
+                         └────────┬─────────┘
+                                  │
+                         ┌────────┴─────────┐
+                         │                  │
+                         ▼                  ▼
+                  ┌─────────────┐    ┌─────────────┐
+                  │ Flutter App │    │   Telegram  │
+                  │   Android   │    │  Bot API    │
+                  └──────┬──────┘    └──────┬──────┘
+                         │                   │
+                         └─────────┬─────────┘
+                                   │
+                              HTTP / Webhook
+                                   │
+                                   ▼
+                         ┌───────────────────┐
+                         │   Backend TAIA    │
+                         │     FastAPI       │
+                         │                   │
+                         │  Monolito modular │
+                         └───────┬───────────┘
+                                 │
+                    ┌────────────┼────────────┐
+                    │            │            │
+                    ▼            ▼            ▼
+              ┌──────────┐ ┌──────────┐ ┌────────────┐
+              │PostgreSQL│ │  Gemini  │ │ Telegram   │
+              │   DB     │ │   API    │ │ Bot API    │
+              └──────────┘ └──────────┘ └────────────┘
+```
+
+El backend concentra la lógica de aplicación y actúa como frontera entre los clientes, los servicios externos y la persistencia. Gemini se utiliza como proveedor externo de interpretación de lenguaje natural y PostgreSQL como mecanismo de persistencia.
+
+El despliegue se plantea inicialmente sobre una infraestructura gratuita, con Render o AWS como alternativas. La decisión definitiva del proveedor de infraestructura queda pendiente de documentarse mediante un ADR específico.
+
+## 7.2. Corte vertical actualmente ejecutable
+
+El primer corte vertical no requiere todavía todos los nodos de la arquitectura objetivo.
+
+```text
+             Cliente HTTP
+                  │
+                  ▼
+          ┌───────────────┐
+          │ FastAPI / TAIA│
+          └───────┬───────┘
+                  │
+                  ▼
+          ┌───────────────┐
+          │ Módulo        │
+          │ Academic      │
+          └───────┬───────┘
+                  │
+                  ▼
+          ┌─────────────────────┐
+          │ InMemoryTaskRepository│
+          └─────────────────────┘
+```
+
+Este es el despliegue necesario para ejecutar y probar actualmente el aspecto A-01. PostgreSQL, Flutter, Telegram y Gemini forman parte de la arquitectura objetivo, pero sus integraciones no son necesarias para ejecutar este corte.
+
+## 7.3. Restricciones de despliegue
+
+El despliegue debe respetar las siguientes restricciones:
+
+* El backend debe poder ejecutarse con infraestructura gratuita durante el desarrollo académico.
+* Las credenciales y secretos de servicios externos no deben almacenarse en el repositorio.
+* La persistencia definitiva debe quedar aislada mediante `TaskRepository`, permitiendo reemplazar el repositorio en memoria por PostgreSQL.
+* El proveedor de LLM debe permanecer aislado mediante un adaptador para facilitar su sustitución.
+* La arquitectura debe considerar que una infraestructura gratuita puede suspender procesos por inactividad, especialmente para las funcionalidades de notificación programada.
+* El backend debe ser el punto de control de acceso a los datos académicos; los servicios externos no acceden directamente a la base de datos.
+
 # 8. Conceptos transversales
+
+Esta sección recoge conceptos y reglas que afectan transversalmente a diferentes partes de la arquitectura de TAIA.
+
+## 8.1. Separación de responsabilidades
+
+TAIA separa las responsabilidades entre adaptadores, aplicación, dominio e infraestructura.
+
+El dominio contiene las reglas propias de la información académica y no depende directamente de FastAPI, Telegram, Gemini o PostgreSQL. Los casos de uso coordinan las operaciones y utilizan puertos para acceder a dependencias externas.
+
+Esta separación corresponde al enfoque de monolito modular con organización hexagonal selectiva definido en el ADR-0001.
+
+## 8.2. Dependencias externas mediante puertos y adaptadores
+
+Las dependencias externas relevantes deben aislarse mediante interfaces propias.
+
+En el corte vertical actual, `TaskRepository` define el puerto de persistencia y `InMemoryTaskRepository` proporciona su implementación.
+
+La misma estrategia se utilizará para las futuras integraciones con proveedores externos, evitando que la lógica de negocio dependa directamente de un SDK concreto.
+
+## 8.3. Validación de información
+
+La información recibida por TAIA debe validarse antes de ser almacenada.
+
+La interpretación realizada por el LLM se considera una entrada para el sistema y no sustituye las reglas de negocio. El dominio mantiene las condiciones que determinan si una tarea puede ser creada.
+
+Por tanto, el LLM no tiene acceso directo a la persistencia ni puede modificar directamente los datos almacenados.
+
+## 8.4. Seguridad y aislamiento de datos
+
+La información académica debe mantenerse asociada al estudiante correspondiente.
+
+El backend constituye el punto de control para las operaciones sobre los datos. Los componentes externos, como Telegram y Gemini, no acceden directamente a la persistencia.
+
+Las futuras operaciones de consulta y modificación deberán verificar la identidad del estudiante antes de acceder a sus datos.
+
+Este concepto responde principalmente al escenario de calidad S4 — Acceso únicamente a datos del propio estudiante.
+
+## 8.5. Configuración y secretos
+
+Las credenciales y configuraciones sensibles de servicios externos deben mantenerse fuera del código fuente y del repositorio.
+
+Los valores dependientes del entorno deberán proporcionarse mediante configuración de despliegue o variables de entorno.
+
+## 8.6. Tolerancia a fallos de servicios externos
+
+Telegram y el proveedor de IA son dependencias externas que pueden presentar indisponibilidad o cambios de comportamiento.
+
+La arquitectura debe limitar su impacto mediante adaptadores y separación de responsabilidades. Una falla de un proveedor externo no debe introducir dependencias directas en las reglas principales del dominio.
+
+## 8.7. Trazabilidad
+
+Los cambios arquitectónicos y los incrementos funcionales se relacionan mediante la cadena:
+
+**Requisito → C4 → ADR → Código → Pruebas → Evidencia**
+
+Los aspectos definidos en `docs/aspectos.md` constituyen el mecanismo principal para mantener esta trazabilidad durante la evolución del proyecto.
 
 # 9. Decisiones arquitectónicas
 
@@ -836,6 +973,86 @@ En particular:
 **ADR relacionado:** [ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)
 
 # 11. Riesgos y deudas técnicas
+
+Los siguientes riesgos y deudas técnicas se identifican a partir del estado actual de la arquitectura y del primer corte vertical implementado.
+
+## 11.1. Integraciones externas pendientes
+
+**Riesgo:** Telegram, Gemini y PostgreSQL forman parte de la arquitectura objetivo, pero todavía no están integrados en el corte vertical actual.
+
+**Impacto:** La solución ejecutable actual no demuestra todavía los flujos completos de interpretación mediante IA, comunicación mediante Telegram ni persistencia definitiva.
+
+**Mitigación:** Incorporar cada integración mediante adaptadores y mantener las reglas del dominio independientes de las tecnologías externas.
+
+**Estado:** Pendiente.
+
+## 11.2. Persistencia temporal en memoria
+
+**Deuda técnica:** `InMemoryTaskRepository` se utiliza actualmente en lugar de PostgreSQL.
+
+**Impacto:** Los datos no tienen persistencia permanente y no se pueden validar todavía aspectos propios de una base de datos real, como concurrencia, conexiones y persistencia entre ejecuciones.
+
+**Mitigación:** Implementar un adaptador PostgreSQL que cumpla el contrato de `TaskRepository`, evitando modificar los casos de uso y las reglas del dominio.
+
+**Estado:** Aceptada temporalmente para el corte vertical A-01.
+
+## 11.3. Proveedor de IA pendiente de aislamiento completo
+
+**Riesgo:** La integración con Gemini todavía no forma parte del recorrido ejecutable actual.
+
+**Impacto:** Todavía no se ha validado en código la sustitución de un proveedor de IA sin modificar la lógica de negocio.
+
+**Mitigación:** Definir un puerto propio para la interpretación de lenguaje natural y encapsular el SDK de Gemini en un adaptador.
+
+**Relación:** S5 — Sustitución del modelo de IA.
+
+**Estado:** Pendiente.
+
+## 11.4. Disponibilidad de infraestructura gratuita
+
+**Riesgo:** La infraestructura gratuita prevista puede suspender servicios por inactividad y presentar límites de uso.
+
+**Impacto:** Las funcionalidades que dependan de ejecución programada, especialmente los recordatorios, podrían no ejecutarse exactamente en el horario esperado.
+
+**Mitigación:** Diseñar el mecanismo de notificaciones teniendo en cuenta las restricciones del entorno gratuito y evaluar posteriormente una estrategia de ejecución programada más adecuada.
+
+**Relación:** S2 — Entrega puntual de recordatorios.
+
+**Estado:** Riesgo abierto.
+
+## 11.5. Aislamiento de información entre estudiantes
+
+**Riesgo:** A medida que se incorporen autenticación, Telegram y persistencia real, existe riesgo de consultar o modificar información perteneciente a otro estudiante.
+
+**Impacto:** Exposición de información académica y fallo del requisito de seguridad.
+
+**Mitigación:** Mantener el control de acceso en el backend, asociar cada operación con el estudiante autenticado y validar la autorización antes de acceder a la persistencia.
+
+**Relación:** S4 — Acceso únicamente a datos del propio estudiante.
+
+**Estado:** Pendiente de implementación y validación completa.
+
+## 11.6. Cuotas y límites del proveedor LLM
+
+**Riesgo:** El uso de Gemini bajo restricciones gratuitas puede limitar la cantidad de solicitudes y tokens disponibles.
+
+**Impacto:** Solicitudes con demasiado contexto pueden superar las cuotas disponibles o aumentar el tiempo de respuesta.
+
+**Mitigación:** Limitar y controlar el contexto enviado al modelo, estructurar las solicitudes y mantener el proveedor aislado para permitir su sustitución.
+
+**Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje; S5 — Sustitución del modelo de IA.
+
+**Estado:** Riesgo abierto.
+
+## 11.7. Evolución del monolito modular
+
+**Deuda técnica:** El sistema se mantiene como un único despliegue.
+
+**Impacto:** Si aumenta significativamente la complejidad o la carga, los módulos podrían requerir un mayor aislamiento.
+
+**Mitigación:** Mantener límites claros entre módulos y dependencias mediante interfaces. Si el crecimiento futuro lo justifica, los módulos podrán evolucionar hacia componentes desplegables de forma independiente.
+
+**Estado:** Decisión aceptada para el MVP.
 
 # 12. Glosario
 
