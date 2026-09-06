@@ -108,3 +108,13 @@ Adoptar microservicios desde esta etapa implicaría añadir mecanismos como comu
 ### Costos aceptados
 
 Se acepta la complejidad adicional de utilizar puertos y adaptadores únicamente en las dependencias externas que presenten mayor probabilidad de cambio. No se busca aplicar arquitectura hexagonal de forma completa a todo TAIA, con el fin de mantener una relación razonable entre mantenibilidad y simplicidad.
+
+## Trazabilidad
+
+- **Aspecto:** A-01 — Captura inteligente de información académica
+- **Requisitos relacionados:** RF-01, RF-02
+- **Escenarios de calidad:** S1 — Registro correcto de información académica; S5 — Sustitución del modelo de IA
+- **C4:** [C4 nivel 1](../c4/C4-C1.md), [C4 nivel 2](../c4/C4-C2.md)
+- **Código relacionado:** `backend/app/modules/academic/`
+- **Pruebas:** [test_academic_register_task.py](../../backend/tests/test_academic_register_task.py), [test_academic_task_domain.py](../../backend/tests/test_academic_task_domain.py)
+- **Evidencia:** [README](../../README.md)
