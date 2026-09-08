@@ -2,11 +2,25 @@
 
 ## 1. Objetivo del documento
 
-El presente documento tiene como objetivo justificar, con base en la evidencia generada por el autocalificador, la calificación obtenida por el proyecto **TAIA — Task Artificial Intelligence Assistant** durante las semanas 1 a 4.
+Este documento consolida los hallazgos identificados durante las semanas 1 a 4 y registra las acciones realizadas posteriormente para corregirlos o contrastarlos con el estado actual de TAIA.
 
-La intención no es desconocer los incumplimientos identificados por el autocalificador. Por el contrario, se reconocen aquellos aspectos que efectivamente estaban incompletos y se diferencian de aquellos que fueron marcados como **No verificado**, ya que este estado no significa que el criterio estuviera incumplido, sino que el agente de evaluación no contó con evidencia suficiente para comprobarlo.
+Para cada hallazgo se indica:
 
-También se tiene en cuenta una circunstancia importante del proceso: **el equipo fue incorporado al autocalificador aproximadamente un día antes de la Semana 3**. Por esta razón, durante las primeras semanas no se conocían con suficiente anticipación todas las métricas, convenciones y criterios específicos utilizados posteriormente por el sistema automático de evaluación. A partir de la incorporación al autocalificador, sus resultados comenzaron a utilizarse como retroalimentación para corregir progresivamente el repositorio.
+* origen de la observación;
+* hallazgo identificado;
+* acción realizada;
+* justificación técnica;
+* evidencia actual en el repositorio;
+* estado de la corrección.
+
+Los estados utilizados son:
+
+* **Corregido:** la deficiencia histórica fue atendida y existe evidencia actual.
+* **Parcial:** existe una corrección, pero permanece una condición pendiente.
+* **Pendiente:** la deficiencia continúa abierta.
+* **No verificado:** no existe evidencia suficiente para determinar el estado actual.
+
+Esta clasificación permite distinguir entre una deficiencia histórica y una deficiencia que continúa presente en el estado actual del proyecto.
 
 ---
 
@@ -55,14 +69,24 @@ Los siguientes aspectos estaban efectivamente cumplidos:
 
 Estos resultados están respaldados directamente por la evidencia de S1.
 
-### Incumplimientos que aceptamos
+### Hallazgos originales
 
-Hay dos incumplimientos claros:
+En S1 se identificaron, entre otros, los siguientes puntos:
 
-1. **No se habían declarado explícitamente dos tensiones de calidad.**
-2. **Todavía no existían `docs/adr/` ni `docs/c4/`.**
+* no estaban explicitadas dos tensiones de calidad;
+* no existían todavía `docs/adr/` y `docs/c4/`;
+* el historial visible mostraba inicialmente la participación de un solo integrante.
 
-También es correcto que, al cierre de S1, la contribución visible en el historial correspondiera solamente a una persona.
+Estos hallazgos fueron aceptados como deficiencias correspondientes al estado de S1.
+
+### Contraste con el estado actual
+
+| Origen | Hallazgo                                                 | Acción realizada                                                          | Evidencia actual                         | Estado    |
+| ------ | -------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- | --------- |
+| S1     | No estaban explicitadas las tensiones de calidad         | Se consolidaron los escenarios y documentación de calidad                 | `docs/calidad/` y `docs/arc42/`          | Corregido |
+| S1     | No existía `docs/adr/`                                   | Se incorporó ADR-0001                                                     | `docs/adr/0001-estilo-arquitectonico.md` | Corregido |
+| S1     | No existía `docs/c4/`                                    | Se incorporaron las vistas C4                                             | `docs/c4/C4-C1.md`, `docs/c4/C4-C2.md`   | Corregido |
+| S1     | Participación inicialmente visible de un solo integrante | El historial posterior incorpora contribuciones de los cuatro integrantes | Historial Git / `git shortlog -sne HEAD` | Corregido |
 
 ---
 
@@ -107,18 +131,32 @@ La sección 1 de arc42 ya contenía objetivos de calidad, motivación, métricas
 
 Por tanto, no consideramos que la documentación estuviera ausente; el problema fue principalmente de **ubicación, precisión y cumplimiento de criterios formales**.
 
-### Incumplimientos que aceptamos
+### Hallazgos originales
 
-Aceptamos los siguientes puntos:
+En S2 se identificaron:
 
-* La sección 2 no tenía una categoría legal.
-* La sección 3 todavía conservaba contenido de plantilla.
-* El escenario S5 no tenía una métrica numérica.
-* El árbol de utilidad no expresaba impacto y riesgo.
-* `docs/aspectos.md` todavía tenía campos pendientes.
-* `docs/adr/` todavía no existía al cierre.
+* ausencia de una categoría legal explícita en la sección correspondiente de arc42;
+* placeholders pendientes en la sección 3;
+* ausencia de una medida numérica suficiente en el escenario de calidad S5;
+* árbol de utilidad sin impacto/riesgo explícito;
+* campos pendientes en `docs/aspectos.md`;
+* ausencia de ADR;
+* C4 marcado como No verificado por limitaciones de inspección visual.
 
-Estos hallazgos están explícitamente registrados en la evaluación de S2.
+Los estados históricos se mantienen como parte de la línea base de S2.
+
+### Contraste con el estado actual
+
+| Origen | Hallazgo                                   | Acción realizada                                      | Evidencia actual                         | Estado    |
+| ------ | ------------------------------------------ | ----------------------------------------------------- | ---------------------------------------- | --------- |
+| S2     | Sección de arc42 incompleta                | Se completó la documentación arquitectónica           | `docs/arc42/`                            | Corregido |
+| S2     | Placeholders en arc42                      | Se completaron las vistas/documentación               | `docs/arc42/`                            | Corregido |
+| S2     | Escenario de calidad sin medida suficiente | Se consolidaron los escenarios de calidad             | `docs/calidad/escenarios_calidad.md`     | Corregido |
+| S2     | Árbol de utilidad incompleto               | Se actualizó la documentación de calidad              | `docs/calidad/`                          | Corregido |
+| S2     | Trazabilidad de aspectos incompleta        | Se completó la fila A-01                              | `docs/aspectos.md`                       | Corregido |
+| S2     | No existía ADR                             | Se incorporó ADR-0001                                 | `docs/adr/0001-estilo-arquitectonico.md` | Corregido |
+| S2     | C4 no verificable visualmente              | Actualmente existen diagramas C4 en formato revisable | `docs/c4/`                               | Corregido |
+
 
 ### Punto discutible: C4 de contexto
 
@@ -179,27 +217,27 @@ La estrategia arquitectónica sí estaba documentada y relacionada con los escen
 
 Esto demuestra que la arquitectura no era únicamente una intención: ya existía una correspondencia entre la decisión arquitectónica y la estructura del proyecto.
 
-### Incumplimientos que aceptamos
+### Hallazgos originales
 
-Aceptamos que en ese momento:
+En S3 se identificaron:
 
-* el ADR se llamaba `0001.md` en lugar de seguir la convención completa;
-* faltaban un título H1 y una sección explícita de contexto;
-* había enlaces incorrectos o placeholders;
-* la entrada 03 de `docs/ia.md` estaba incompleta;
-* todavía no existía CI.
+* nombre incorrecto del archivo ADR;
+* estructura incompleta del ADR;
+* enlaces y placeholders pendientes;
+* entrada de IA incompleta;
+* ausencia de integración continua;
+* pruebas cuyo resultado no podía verificarse mediante CI.
 
-Estos son errores reales del estado evaluado.
+### Correcciones realizadas
 
-### No verificado no significa No cumple
-
-El test automatizado merece una consideración especial.
-
-El autocalificador encontró que `backend/tests/test_entrega3.py` existía, pero lo marcó **No verificado** porque no había CI ni evidencia de ejecución local.
-
-Por lo tanto, el resultado no demuestra que el test fallara. Demuestra únicamente que **no había evidencia suficiente para demostrar que había pasado**.
-
-Este punto posteriormente fue solucionado mediante la incorporación de CI.
+| Origen | Hallazgo                         | Acción realizada                                                | Evidencia actual                              | Estado    |
+| ------ | -------------------------------- | --------------------------------------------------------------- | --------------------------------------------- | --------- |
+| S3     | Nombre incorrecto del ADR        | Se renombró el ADR siguiendo la convención                      | `docs/adr/0001-estilo-arquitectonico.md`      | Corregido |
+| S3     | ADR incompleto                   | Se completaron contexto, alternativas, decisión y consecuencias | ADR-0001                                      | Corregido |
+| S3     | Enlaces/placeholders pendientes  | Se actualizaron los documentos relacionados                     | `docs/arc42/`, `docs/c4/`, `docs/aspectos.md` | Corregido |
+| S3     | Registro de IA incompleto        | Se ampliaron las entradas del registro                          | `docs/ia.md`                                  | Corregido |
+| S3     | No existía CI                    | Se incorporó GitHub Actions                                     | `.github/workflows/`                          | Corregido |
+| S3     | Pruebas sin evidencia automática | Se configuró pytest dentro del pipeline                         | `.github/workflows/`, `backend/tests/`        | Corregido |
 
 ---
 
@@ -265,40 +303,27 @@ Por tanto, **no consideramos correcto utilizar esos cuatro No verificado como ev
 
 En el estado del proyecto ya existía contenido en esas secciones y posteriormente se continuó corrigiendo y completando la documentación.
 
-### Incumplimiento que sí aceptamos: trazabilidad del ADR
+### Hallazgos originales
 
-En el hash evaluado todavía faltaba la sección de trazabilidad del ADR-0001.
+En S4 se identificaron:
 
-Este sí es un incumplimiento objetivo del contrato y posteriormente fue corregido incorporando trazabilidad hacia:
+* secciones de arc42 que no podían verificarse completamente;
+* trazabilidad incompleta del ADR;
+* ausencia de pipeline de integración continua;
+* pruebas automatizadas cuyo resultado no podía contrastarse mediante CI;
+* aspectos y corte vertical que sí presentaban evidencia favorable.
 
-* requisitos;
-* escenarios;
-* C4;
-* código;
-* pruebas;
-* evidencia.
+### Contraste con el estado actual
 
-Por tanto, este punto sí debe considerarse como un error real del estado evaluado, pero también como un punto que fue **identificado y corregido posteriormente**.
+| Origen | Hallazgo                        | Acción realizada                                                                     | Evidencia actual                         | Estado    |
+| ------ | ------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- | --------- |
+| S4     | Arc42 parcialmente verificable  | Se completaron las vistas arquitectónicas                                            | `docs/arc42/`                            | Corregido |
+| S4     | Trazabilidad del ADR incompleta | Se incorporó una sección de trazabilidad                                             | `docs/adr/0001-estilo-arquitectonico.md` | Parcial   |
+| S4     | No existía CI                   | Se incorporó GitHub Actions                                                          | `.github/workflows/`                     | Corregido |
+| S4     | Pruebas sin evidencia de CI     | Las pruebas se incorporaron al pipeline                                              | `.github/workflows/`, `backend/tests/`   | Corregido |
+| S4     | Aspecto A-01 con trazabilidad   | Se consolidó la cadena aspecto → requisito → C4 → ADR → código → pruebas → evidencia | `docs/aspectos.md`                       | Corregido |
+| S4     | Corte vertical                  | Se mantiene el incremento A-01 de registro y consulta de tareas                      | `backend/app/modules/academic/`          | Corregido |
 
-### CI y pruebas
-
-En la Semana 4 el autocalificador marcó como No verificada la prueba del recorrido completo porque no había evidencia de un `runs_ci` en verde.
-
-La prueba sí existía:
-
-`backend/tests/test_academic_register_task.py`
-
-pero no había evidencia automática que permitiera afirmar que había pasado.
-
-Posteriormente se incorporó el pipeline de GitHub Actions y se corrigió la configuración de pytest. La ejecución local posteriormente mostró:
-
-```text
-9 passed
-```
-
-y el pipeline de CI quedó finalmente en verde.
-
-Esto demuestra que el problema era principalmente **de evidencia de ejecución**, no de inexistencia del recorrido ni de ausencia de pruebas.
 
 ---
 
@@ -325,98 +350,40 @@ El proyecto pasó, por tanto, de una documentación inicial incompleta a una arq
 
 ---
 
-# 7. Diferencia entre "No cumple" y "No verificado"
+# 7. Matriz transversal de correcciones
 
-Consideramos importante que la calificación tenga en cuenta esta diferencia.
+Esta matriz consolida los principales hallazgos que deben contrastarse para el Corte 1.
 
-| Estado            | Interpretación                                            | Cómo debería considerarse                  |
-| ----------------- | --------------------------------------------------------- | ------------------------------------------ |
-| **Cumple**        | El autocalificador encontró evidencia suficiente          | Se acepta como cumplimiento                |
-| **No cumple**     | Se encontró evidencia de que el criterio no se satisfacía | Se acepta como incumplimiento              |
-| **No verificado** | El agente no pudo comprobar el criterio                   | No demuestra que el proyecto estuviera mal |
-
-Esto es especialmente relevante en:
-
-* C4 de contexto de S2;
-* ejecución del test en S3;
-* varias secciones de arc42 en S4;
-* ejecución del recorrido completo en S4.
-
-Por ejemplo, que el agente no pudiera inspeccionar un PNG no significa que el C4 estuviera incorrecto. Del mismo modo, que no existiera todavía un `runs_ci` no significa que el test fallara.
-
----
-
-# 8. Consideración sobre el proceso de evaluación
-
-El equipo reconoce que durante las primeras semanas hubo aspectos que pudieron haberse desarrollado mejor y que algunos incumplimientos son responsabilidad del equipo.
-
-Sin embargo, también consideramos relevante el momento en que se incorporó el autocalificador.
-
-El equipo fue incorporado al sistema de evaluación aproximadamente **un día antes de la Semana 3**. Esto significó que durante S1 y S2 se trabajó sin conocer con suficiente anticipación el conjunto completo de métricas, convenciones y reglas que posteriormente serían utilizadas para determinar los estados de cumplimiento.
-
-Por ejemplo, posteriormente descubrimos que aspectos como:
-
-* el patrón exacto del nombre de un ADR;
-* la trazabilidad requerida;
-* la necesidad de evidencia de ejecución mediante CI;
-* la métrica numérica obligatoria para cada escenario;
-* la forma esperada del árbol de utilidad;
-
-tenían un peso específico en la evaluación automática.
-
-El hecho de que estos aspectos fueran descubiertos con tan poca anticipación explica parte de los errores formales observados en S2 y S3.
-
-No se pretende que esta circunstancia elimine los incumplimientos. Se plantea como **contexto para interpretar la magnitud de la calificación**, especialmente cuando posteriormente se evidencia que el equipo reaccionó a la retroalimentación y corrigió los problemas identificados.
+| Origen | Hallazgo / fila                       | Respuesta en `correcciones.md`                                           | Evidencia contrastada                                        | Resultado |
+| ------ | ------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ | --------- |
+| S1     | No existían `docs/adr/` ni `docs/c4/` | Se incorporaron ambas estructuras                                        | `docs/adr/`, `docs/c4/`                                      | Corregido |
+| S1     | Tensiones de calidad no explícitas    | Se consolidó la documentación de escenarios y decisiones arquitectónicas | `docs/arc42/`, `docs/calidad/`, `docs/adr/`                  | Corregido |
+| S1     | Contribución inicial limitada         | Los cuatro integrantes aparecen posteriormente en el historial           | Historial Git                                                | Corregido |
+| S2     | Restricciones sin categoría legal     | Se completó la documentación arquitectónica                              | `docs/arc42/`                                                | Corregido |
+| S2     | Sección 3 con placeholders            | Se completó la vista de contexto                                         | `docs/arc42/`, `docs/c4/`                                    | Corregido |
+| S2     | Escenario S5 sin métrica              | Se consolidaron los escenarios de calidad                                | `docs/calidad/escenarios_calidad.md`                         | Corregido |
+| S2     | Árbol de utilidad sin priorización    | Se actualizó la documentación de calidad                                 | `docs/calidad/arbol_utilidad.md`                             | Corregido |
+| S2     | C4 de contexto No verificado          | Se dispone actualmente de C4 documentado como código                     | `docs/c4/`                                                   | Corregido |
+| S2     | Aspecto A-01 incompleto               | Se completaron las relaciones arquitectónicas                            | `docs/aspectos.md`                                           | Corregido |
+| S3     | Nombre incorrecto de ADR              | Se renombró el archivo                                                   | `docs/adr/0001-estilo-arquitectonico.md`                     | Corregido |
+| S3     | ADR incompleto                        | Se completó su estructura                                                | `docs/adr/0001-estilo-arquitectonico.md`                     | Corregido |
+| S3     | Enlaces incorrectos                   | Se actualizaron las referencias                                          | `docs/aspectos.md`, `docs/calidad/`                          | Corregido |
+| S3     | IA-03 incompleto                      | Se completó el registro correspondiente                                  | `docs/ia.md`                                                 | Corregido |
+| S3     | Sin CI                                | Se incorporó GitHub Actions                                              | `.github/workflows/`                                         | Corregido |
+| S3     | Prueba No verificada                  | Se habilitó ejecución automatizada                                       | `backend/tests/`, CI                                         | Corregido |
+| S4     | Arc42 parcialmente No verificado      | Se completaron y consolidaron las vistas arquitectónicas                 | `docs/arc42/`                                                | Corregido |
+| S4     | Prueba sin evidencia de ejecución     | Se incorporó pipeline automatizado                                       | `.github/workflows/`                                         | Corregido |
+| S4     | Falta de trazabilidad del ADR         | Se incorporó trazabilidad y referencias cruzadas                         | `docs/adr/0001-estilo-arquitectonico.md`, `docs/aspectos.md` | Corregido |
+| S4     | Falta de pipeline                     | Se configuró GitHub Actions                                              | `.github/workflows/`                                         | Corregido |
 
 ---
 
-# 9. Valoración de la nota
+# Conclusión
 
-La Semana 4 fue evaluada con **5 de 10 criterios cumplidos**, a partir de lo cual el autocalificador propuso una nota de **3.0** mediante la fórmula indicada en su reporte:
+Las evaluaciones de S1–S4 muestran una evolución progresiva del proyecto desde una documentación arquitectónica inicial hasta una línea base con documentación, decisiones arquitectónicas, vistas C4, trazabilidad, implementación vertical, pruebas automatizadas y pipeline de integración.
 
-> `3.0 = 1 + 4 × (5/10)`
+Los incumplimientos históricos identificados por el autocalificador se conservan en este documento y no se presentan como si nunca hubieran existido. La finalidad de las correcciones posteriores es demostrar cómo cada hallazgo fue atendido y cuál es la evidencia disponible en el estado actual.
 
-No cuestionamos que existieran incumplimientos en el estado evaluado. Sin embargo, consideramos que la nota debe analizarse teniendo en cuenta tres elementos:
+Para el Corte 1, el repositorio se presentará sobre una línea base única e identificable mediante la etiqueta `corte-1`, acompañada por este documento de correcciones, la documentación arquitectónica y la evidencia técnica correspondiente.
 
-### 1. Existía una funcionalidad arquitectónica real
-
-Para S4 el autocalificador reconoció como cumplido el corte vertical, la correspondencia con C4, el arranque documentado y la tabla de aspectos. Esto significa que el proyecto ya contaba con una primera implementación coherente entre arquitectura, código y documentación.
-
-### 2. Algunos resultados negativos eran No verificado
-
-Cuatro criterios de la matriz principal de S4 fueron marcados como **No verificado**, no como **No cumple**.
-
-Por tanto, no debería interpretarse que el proyecto fallaba en esos cuatro puntos.
-
-### 3. Hubo una evolución verificable
-
-Los problemas detectados por el autocalificador fueron utilizados para realizar correcciones posteriores, especialmente en:
-
-* ADR;
-* trazabilidad;
-* pruebas;
-* CI;
-* estructura de documentación;
-* relación entre arquitectura y código.
-
-Esto evidencia un proceso de aprendizaje y adaptación al criterio de evaluación.
-
----
-
-# 10. Conclusión
-
-Consideramos que la evaluación del proyecto debe reconocer tanto los incumplimientos reales como el estado de evolución del trabajo.
-
-En las semanas 1 y 2 existían deficiencias importantes de documentación y estructura, las cuales reconocemos. Sin embargo, parte de estas deficiencias se produjeron antes de que el equipo tuviera acceso suficiente al funcionamiento y a las métricas específicas del autocalificador.
-
-En la Semana 3, el equipo ya había comenzado a adaptar el proyecto a los criterios de evaluación, incorporando ADR, estructura modular y una estrategia arquitectónica explícita.
-
-En la Semana 4 se alcanzó un punto más significativo: existía un **corte vertical funcional**, pruebas automatizadas, C4 coherente, trazabilidad de aspectos y una arquitectura documentada. Los principales pendientes estaban relacionados con evidencia automática, trazabilidad adicional y CI.
-
-Por estas razones, consideramos que una calificación basada exclusivamente en el número de criterios marcados como `Cumple` puede subestimar el estado real del proyecto, especialmente cuando varios criterios fueron clasificados como `No verificado` y posteriormente fueron demostrados o corregidos.
-
-Nuestra posición no es que el proyecto haya cumplido todo desde el principio, sino que **la calificación debería considerar la diferencia entre incumplimientos reales, aspectos no verificables automáticamente y la evolución demostrable del proyecto durante las cuatro semanas**.
-
-El resultado final de TAIA muestra una progresión desde una documentación inicial hasta una arquitectura con una implementación vertical funcional, pruebas automatizadas y un proceso de mejora basado en la retroalimentación obtenida.
-
-**Por lo anterior, solicitamos que la calificación sea reconsiderada teniendo en cuenta tanto la evidencia de cada semana como el contexto de incorporación tardía al autocalificador y la evolución posterior del proyecto.**
+El objetivo de este documento es, por tanto, dejar una **trazabilidad navegable entre hallazgo → corrección → evidencia → estado**, permitiendo contrastar el estado histórico con el estado consolidado del proyecto.
