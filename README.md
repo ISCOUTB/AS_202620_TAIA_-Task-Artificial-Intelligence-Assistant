@@ -40,64 +40,111 @@ La información registrada podrá ser consultada y gestionada desde la aplicaci�
 - **Gemini:** interpretación de lenguaje natural y asistencia conversacional.
 - **Telegram Bot API:** canal de captura rápida de información.
 
-## Estado
+## Estado actual
 
-El proyecto avanza de la etapa de esqueleto arquitectónico (Entrega 3) a un primer **corte vertical ejecutable** correspondiente al aspecto **A-01 — Captura inteligente de información académica** (RF-01, RF-02).
+El proyecto evolucionó desde el esqueleto arquitectónico inicial hacia un backend ejecutable con los módulos **Usuario, Academic, Reminders y AI**. La línea base actual mantiene un **monolito modular con organización hexagonal selectiva**, y cuenta con autenticación, aislamiento por usuario, gestión de tareas académicas, gestión de recordatorios y un flujo de asistente preparado para conectarse con un proveedor LLM.
 
-Este incremento implementa el registro y la consulta de tareas académicas, atravesando las tres capas del módulo `academic` definidas en ADR-0001: `domain`, `application` y `adapters`. Es un corte **parcial**: expone el registro de tareas mediante HTTP con un adaptador de persistencia en memoria, en lugar del flujo completo Telegram → Gemini → PostgreSQL descrito en `docs/ficha_problema.md`. La interpretación con Gemini, el canal de Telegram y la persistencia en PostgreSQL se incorporarán en entregas posteriores sustituyendo únicamente los adaptadores correspondientes, sin modificar el dominio ni los casos de uso.
+### Funcionalidad actualmente implementada
+
+- **Usuario:** registro, login mediante JWT, consulta del usuario autenticado y vinculación de una cuenta de Telegram.
+- **Academic:** registro, consulta, actualización y completado de tareas; las operaciones están asociadas al usuario autenticado.
+- **AI:** endpoint autenticado `/ai/message`, conversaciones en memoria, confirmación de operaciones y un puerto de integración con LLM; existe adaptador para Gemini, pero la credencial/configuración del proveedor todavía debe habilitarse para ejecutar el flujo contra Gemini real.
+- **Reminders:** creación, consulta, edición, eliminación y completado de recordatorios; asociación con tareas Academic; aislamiento por usuario.
+- **Notificaciones:** generación y envío explícito de una notificación mediante Telegram cuando existe una cuenta vinculada y `TAIA_TELEGRAM_BOT_TOKEN` está configurado.
+- **Persistencia:** la línea base ejecutable utiliza repositorios en memoria. PostgreSQL sigue siendo parte de la arquitectura objetivo y no está integrado todavía.
+
+### Estado de las integraciones externas
+
+| Integración | Estado | Observación |
+|---|---|---|
+| Telegram | Parcialmente implementada | Vinculación de cuenta y envío de notificaciones implementados; el envío requiere configuración del bot. |
+| Gemini | Preparada | Existe puerto/adaptador y manejo de configuración; falta habilitar la credencial para probar el proveedor real. |
+| PostgreSQL | Pendiente | Los repositorios actuales de Academic y Reminders son en memoria. |
+| Flutter | Arquitectura objetivo | No forma parte del backend entregado en esta línea base. |
+
+### Evidencia de pruebas
+
+La suite automatizada actual contiene pruebas de dominio, casos de uso, API, autenticación, aislamiento de usuarios, integración AI-Academic y Reminders/Telegram. En la línea base documentada se verificó:
+
+```text
+74 passed
+```
 
 
-### Corte vertical: registro de tareas (A-01)
 
-**Alcance de este incremento**
+### Recorridos funcionales de la línea base
 
-- `domain/task.py`: entidad `Task` y las reglas de validación mínimas (título obligatorio, longitud máxima).
-- `application/register_task.py` y `application/list_tasks.py`: casos de uso que orquestan la creación y la consulta de tareas contra el puerto `TaskRepository`.
-- `application/ports.py`: puerto `TaskRepository`, la interfaz que aísla la aplicación de la tecnología de persistencia concreta.
-- `adapters/in_memory_task_repository.py`: adaptador de persistencia **en memoria**, temporal. Se sustituirá por un adaptador de PostgreSQL sin tocar el dominio ni la aplicación.
-- `adapters/api.py`: adaptador de entrada HTTP (router de FastAPI) que expone los endpoints y traduce entre esquemas Pydantic y entidades de dominio.
-
-**Endpoints**
+**Academic**
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/academic/tasks` | Registra una tarea académica (RF-01). |
-| `GET` | `/academic/tasks` | Lista las tareas registradas (RF-02). |
+| `POST` | `/academic/tasks` | Registra una tarea del usuario autenticado. |
+| `GET` | `/academic/tasks` | Lista las tareas del usuario autenticado. |
+| `PATCH` | `/academic/tasks/{task_id}` | Actualiza una tarea propia. |
+| `PATCH` | `/academic/tasks/{task_id}/complete` | Marca una tarea propia como completada. |
 
-**Ejemplo de uso**
+**Usuario**
 
-```bash
-curl -X POST http://127.0.0.1:8000/academic/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Entregar proyecto de programación", "due_date": "2026-09-07", "subject": "Programación"}'
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/users` | Registra un usuario. |
+| `POST` | `/users/login` | Obtiene un JWT. |
+| `GET` | `/users/me` | Consulta el usuario autenticado. |
+| `POST` | `/users/me/telegram/link` | Genera un enlace temporal de vinculación con Telegram. |
+| `POST` | `/users/telegram/link/confirm` | Confirma la vinculación de Telegram. |
+
+**AI**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/ai/message` | Procesa un mensaje del asistente para el usuario autenticado. |
+
+**Reminders**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/reminders` | Crea un recordatorio asociado a una tarea Academic. |
+| `GET` | `/reminders` | Lista los recordatorios propios. |
+| `GET` | `/reminders/{reminder_id}` | Consulta un recordatorio propio. |
+| `PATCH` | `/reminders/{reminder_id}` | Edita un recordatorio propio. |
+| `POST` | `/reminders/{reminder_id}/complete` | Marca un recordatorio como completado. |
+| `DELETE` | `/reminders/{reminder_id}` | Elimina un recordatorio propio. |
+| `POST` | `/reminders/{reminder_id}/notify` | Genera y envía explícitamente una notificación por Telegram. |
+
+### Recorrido representativo
+
+```text
+JWT
+ ↓
+POST /academic/tasks
+ ↓
+TaskRepository (memoria)
+
+JWT
+ ↓
+POST /reminders
+ ↓
+validación de tarea Academic
+ ↓
+ReminderRepository (memoria)
+ ↓
+POST /reminders/{id}/notify
+ ↓
+Telegram Bot API
 ```
 
-Respuesta esperada:
-
-```json
-{
-  "id": "a24a243a-5931-465a-8303-f32153832d10",
-  "title": "Entregar proyecto de programación",
-  "due_date": "2026-09-07",
-  "subject": "Programación",
-  "description": null,
-  "status": "pending"
-}
-```
-
-```bash
-curl http://127.0.0.1:8000/academic/tasks
-```
+El flujo `/ai/message` utiliza un puerto LLM y un `AcademicGateway` para traducir las operaciones del asistente hacia el módulo Academic. El adaptador Gemini está preparado, pero requiere configuración de la credencial del proveedor.
 
 ## Arquitectura
 
 TAIA adopta un **monolito modular con organización hexagonal selectiva** en los módulos que presentan dependencias externas relevantes.
 
-La estructura inicial del backend se organiza en los siguientes módulos:
+El backend actual se organiza en los siguientes módulos:
 
-- `academic`: información académica.
-- `reminders`: gestión de recordatorios.
-- `ai`: integración con servicios de inteligencia artificial.
+- `usuario`: identidad, JWT y vinculación con Telegram.
+- `academic`: tareas académicas y reglas de dominio.
+- `reminders`: recordatorios y notificaciones.
+- `ai`: conversaciones y abstracción del proveedor LLM.
 
 Los módulos contemplan las siguientes responsabilidades arquitectónicas:
 
@@ -134,7 +181,7 @@ pip install -r backend/requirements.txt
 
 ### Ejecución
 
-El proyecto cuenta con un esqueleto ejecutable del backend.
+El proyecto cuenta con un backend ejecutable del monolito modular.
 
 Desde la raíz del repositorio, ejecutar:
 
@@ -171,11 +218,20 @@ pytest backend/tests
 
 Las pruebas cubren:
 
-- reglas del dominio de tareas;
-- caso de uso de registro y consulta de tareas;
-- comprobación del estado del backend.
+- reglas y casos de uso del módulo Academic;
+- autenticación y aislamiento de usuarios;
+- flujo AI y su integración con Academic;
+- API y casos de uso de Reminders;
+- notificaciones y endpoint de Telegram.
 
-El corte vertical A-01 se verifica mediante:
+Las principales evidencias se encuentran en `backend/tests/`, incluyendo:
 
-backend/tests/test_academic_register_task.py
+- `test_academic_register_task.py`
+- `test_academic_update_task.py`
+- `test_academic_user_isolation.py`
+- `test_ai_api.py`
+- `test_ai_academic_gateway.py`
+- `test_reminders_api.py`
+- `test_reminders_notifications.py`
+- `test_reminders_notify_api.py`
 
