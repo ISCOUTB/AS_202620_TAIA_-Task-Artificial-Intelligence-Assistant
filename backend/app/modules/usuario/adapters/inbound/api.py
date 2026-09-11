@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -136,6 +137,17 @@ def get_current_user(
 ) -> UserResponse:
     """Devuelve el perfil del usuario autenticado mediante Bearer JWT."""
     return UserResponse.from_domain(_authenticated_user(credentials))
+
+
+def get_authenticated_user_id(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
+) -> uuid.UUID:
+    """Devuelve únicamente el identificador del usuario autenticado.
+
+    Esta dependencia permite que otros contextos consuman la identidad sin
+    importar la entidad Usuario ni sus detalles internos.
+    """
+    return _authenticated_user(credentials).id
 
 
 def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
