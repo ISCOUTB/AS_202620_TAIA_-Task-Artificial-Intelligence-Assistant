@@ -7,7 +7,7 @@ Postgres, etc. Those details are implemented in `adapters/outbound`.
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from app.modules.reminders.domain.entities import Reminder
+from backend.app.modules.reminders.domain.entities import Reminder
 
 
 class ReminderRepository(ABC):

@@ -1,29 +1,36 @@
-"""Outbound adapter: notification delivery via Telegram.
+"""Outbound adapter for Telegram notification delivery."""
 
-This is the only class in the reminders module that knows about the
-Telegram bot/SDK.
-"""
+from __future__ import annotations
 
-from app.modules.reminders.application.ports.outbound.notification_sender import (
-    NotificationSender,
-)
-from app.modules.reminders.domain.entities import Notification
+from collections.abc import Callable
+from uuid import UUID
+
+from backend.app.modules.reminders.application.ports.outbound.notification_sender import NotificationSender
+from backend.app.modules.reminders.domain.entities import Notification
 
 
 class TelegramNotificationSender(NotificationSender):
-    def __init__(self, bot_client, chat_id_resolver):
-        """
-        bot_client: already configured Telegram client/SDK.
-        chat_id_resolver: callable(reminder_id) -> Telegram chat_id of
-                           the user who owns the reminder.
-        """
+    def __init__(
+        self,
+        bot_client,
+        telegram_user_id_resolver: Callable[[UUID], int | None],
+        reminder_user_id_resolver: Callable[[int], UUID | None],
+    ) -> None:
         self._bot_client = bot_client
-        self._chat_id_resolver = chat_id_resolver
+        self._telegram_user_id_resolver = telegram_user_id_resolver
+        self._reminder_user_id_resolver = reminder_user_id_resolver
 
     def send(self, notification: Notification) -> bool:
-        chat_id = self._chat_id_resolver(notification.reminder_id)
+        user_id = self._reminder_user_id_resolver(notification.reminder_id)
+        if user_id is None:
+            return False
+
+        chat_id = self._telegram_user_id_resolver(user_id)
+        if chat_id is None:
+            return False
+
         try:
             self._bot_client.send_message(chat_id=chat_id, text=notification.message)
-            return True
         except Exception:
             return False
+        return True

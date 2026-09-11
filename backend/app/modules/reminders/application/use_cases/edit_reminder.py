@@ -1,13 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
-from app.modules.reminders.application.ports.inbound.reminder_ports import (
+from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
     EditReminderPort,
 )
-from app.modules.reminders.application.ports.outbound.reminder_repository import (
+from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from app.modules.reminders.domain.entities import Reminder
+from backend.app.modules.reminders.domain.entities import Reminder
 
 
 class EditReminderUseCase(EditReminderPort):
@@ -33,10 +33,16 @@ class EditReminderUseCase(EditReminderPort):
         if message is not None and not message.strip():
             raise ValueError("El mensaje no puede estar vacío")
 
+        if scheduled_at is not None:
+            candidate = scheduled_at if scheduled_at.tzinfo else scheduled_at.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            if candidate <= now:
+                raise ValueError("La fecha programada debe ser futura")
+
         updated = reminder.model_copy(
             update={
-                "message": message.strip() if message else reminder.message,
-                "scheduled_at": scheduled_at or reminder.scheduled_at,
+                "message": message.strip() if message is not None else reminder.message,
+                "scheduled_at": scheduled_at if scheduled_at is not None else reminder.scheduled_at,
             }
         )
         return self._repository.update(updated)

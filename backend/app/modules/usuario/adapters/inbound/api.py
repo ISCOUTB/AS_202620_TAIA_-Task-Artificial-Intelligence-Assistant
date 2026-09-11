@@ -150,6 +150,17 @@ def get_authenticated_user_id(
     return _authenticated_user(credentials).id
 
 
+def get_user_by_id(user_id: uuid.UUID) -> Usuario | None:
+    """Read-only lookup used by other bounded contexts through a small port-like helper."""
+    return _repository.get_by_id(user_id)
+
+
+def get_telegram_user_id(user_id: uuid.UUID) -> int | None:
+    """Returns the Telegram chat/user id linked to a TAIA user, if any."""
+    user = _repository.get_by_id(user_id)
+    return user.telegram_user_id if user is not None else None
+
+
 def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(

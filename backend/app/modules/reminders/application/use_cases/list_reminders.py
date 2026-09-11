@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from app.modules.reminders.application.ports.inbound.reminder_ports import (
+from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
     ListRemindersPort,
 )
-from app.modules.reminders.application.ports.outbound.reminder_repository import (
+from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from app.modules.reminders.domain.entities import Reminder
+from backend.app.modules.reminders.domain.entities import Reminder
 
 
 class ListRemindersUseCase(ListRemindersPort):

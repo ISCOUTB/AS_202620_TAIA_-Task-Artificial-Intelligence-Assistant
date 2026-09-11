@@ -7,12 +7,12 @@ Adjust the session/ORM model names to match your actual project setup.
 
 from uuid import UUID
 
-from app.modules.reminders.application.ports.outbound.reminder_repository import (
+from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from app.modules.reminders.domain.entities import Reminder
+from backend.app.modules.reminders.domain.entities import Reminder
 
-# from app.modules.reminders.adapters.outbound.models import ReminderModel
+# from backend.app.modules.reminders.adapters.outbound.models import ReminderModel
 
 
 class SQLAlchemyReminderRepository(ReminderRepository):

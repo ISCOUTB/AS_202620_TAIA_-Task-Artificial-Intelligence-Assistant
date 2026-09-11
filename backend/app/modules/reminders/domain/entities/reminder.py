@@ -1,21 +1,23 @@
-from pydantic import BaseModel
-from uuid import UUID
+"""Reminder domain entity."""
+
 from datetime import datetime
-from entities.notification import Notification
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
 class Reminder(BaseModel):
+    """Reminder linked to an academic task."""
+
+    model_config = ConfigDict(validate_assignment=True)
+
     id: int
     user_id: UUID
-    message: str
+    message: str = Field(min_length=1)
     scheduled_at: datetime
-    is_active: bool   # cambiar nombre de esta variable a otra mas acorde a un si o no
-    task_id: int   # asumiendo que el id de las tareas es por enteros
+    is_completed: bool = False
+    task_id: UUID
 
-    def create_notification(self) -> Notification:
-        return Notification(
-            reminder_id = self.id,
-            message = self.message,
-            read_status = False,
-            date_send = datetime.now() ) # mover a caso de uso
-        
-        
-
+    def mark_completed(self) -> "Reminder":
+        """Return a completed copy of this reminder."""
+        return self.model_copy(update={"is_completed": True})
