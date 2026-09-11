@@ -11,3 +11,10 @@ __pycache__/
 .venv/
 venv/
 env/
+
+# Secretos locales
+.env
+.env.local
+
+
+claude.md
