@@ -2309,61 +2309,147 @@ El despliegue debe respetar las siguientes restricciones:
 
 # 8. Conceptos transversales
 
-Esta sección recoge conceptos y reglas que afectan transversalmente a diferentes partes de la arquitectura de TAIA.
 
-## 8.1. Separación de responsabilidades
+## 8.1. Lenguaje ubicuo
 
-TAIA separa las responsabilidades entre adaptadores, aplicación, dominio e infraestructura.
+El lenguaje ubicuo de TAIA se define a partir de los términos utilizados por los interesados y de los conceptos que aparecen en el código actual. El objetivo es que cada término tenga un significado estable dentro del contexto donde se utiliza y que los módulos no compartan modelos internos por conveniencia técnica.
 
-El dominio contiene las reglas propias de la información académica y no depende directamente de FastAPI, Telegram, Gemini o PostgreSQL. Los casos de uso coordinan las operaciones y utilizan puertos para acceder a dependencias externas.
+| Término | Significado en TAIA | Contexto principal |
+|---|---|---|
+| **Estudiante** | Persona que utiliza TAIA para registrar y consultar información académica y recibir recordatorios. | Usuario |
+| **Usuario** | Identidad autenticada que representa al estudiante dentro del sistema. | Usuario |
+| **Tarea académica (Task)** | Información académica que representa una actividad que el estudiante debe realizar y que posee datos como título, descripción, asignatura, fecha y estado. | Academic |
+| **Recordatorio (Reminder)** | Elemento programado asociado a una tarea académica para generar una comunicación al estudiante. | Reminders |
+| **Notificación (Notification)** | Resultado o registro de un intento de comunicación asociado a un recordatorio. | Reminders |
+| **Programación de recordatorio (ReminderSchedule)** | Información que representa la programación temporal de una notificación de recordatorio. | Reminders |
+| **Conversación (Conversation)** | Representación de la interacción mantenida entre el estudiante y el asistente de IA. | AI |
+| **Mensaje (Message)** | Unidad de comunicación procesada por el asistente dentro de una conversación. | AI |
+| **Intención (Intent)** | Operación que el módulo de IA identifica a partir de un mensaje en lenguaje natural. | AI |
+| **Confirmación** | Respuesta mediante la cual el estudiante acepta o rechaza una acción propuesta por el asistente. | AI |
+| **Identidad Telegram** | Identificador externo utilizado para asociar un usuario de TAIA con una cuenta de Telegram. | Usuario |
+| **LLM** | Modelo de lenguaje utilizado para interpretar mensajes y producir información estructurada. | AI |
+| **Tarea académica consultable** | Representación mínima de una tarea que otro contexto necesita para realizar una operación, sin importar el modelo interno completo de `Task`. | Integración Academic |
 
-Esta separación corresponde al enfoque de monolito modular con organización hexagonal selectiva definido en el ADR-0001.
+### Reglas del lenguaje ubicuo
 
-## 8.2. Dependencias externas mediante puertos y adaptadores
+1. **Task** pertenece al contexto **Academic**. Otros contextos no deben tratar la entidad `Task` como propia.
+2. **Reminder**, **Notification** y **ReminderSchedule** pertenecen al contexto **Reminders** y no son entidades de Academic.
+3. **Conversation** y **Message** pertenecen al contexto **AI** y no representan datos académicos.
+4. Los módulos que necesiten identificar al estudiante utilizan la identidad del usuario (`user_id`) y no deben manipular internamente la entidad `Usuario` como si fuera propia.
+5. Una integración entre contextos debe utilizar un contrato explícito y traducir los conceptos necesarios, evitando compartir modelos internos por conveniencia.
 
-Las dependencias externas relevantes deben aislarse mediante interfaces propias.
+## 8.2. Mapa de contextos delimitados
 
-En el corte vertical actual, `TaskRepository` define el puerto de persistencia y `InMemoryTaskRepository` proporciona su implementación.
+TAIA se organiza actualmente en cuatro contextos delimitados dentro del monolito modular: **Usuario**, **Academic**, **AI** y **Reminders**. Cada contexto mantiene sus propias responsabilidades, vocabulario y datos. El hecho de que estén desplegados dentro del mismo backend no elimina sus fronteras conceptuales.
 
-La misma estrategia se utilizará para las futuras integraciones con proveedores externos, evitando que la lógica de negocio dependa directamente de un SDK concreto.
+```mermaid
+flowchart LR
+    U[Usuario<br/>Identidad · autenticación · Telegram]
+    A[Academic<br/>Task]
+    AI[AI<br/>Conversation · Turn · Intent]
+    R[Reminders<br/>Reminder · Notification · Schedule]
+    G[Gemini / LLM<br/>Sistema externo]
+    T[Telegram Bot API<br/>Sistema externo]
 
-## 8.3. Validación de información
+    U -->|identidad autenticada| A
+    U -->|identidad autenticada| AI
+    U -->|identidad y vínculo Telegram| R
+    AI -->|Cliente / Proveedor<br/>+ ACL| A
+    R -->|Cliente / Proveedor<br/>consulta de tarea| A
+    AI -->|Cliente / Proveedor<br/>+ ACL| G
+    R -->|Cliente / Proveedor<br/>+ ACL| T
+```
 
-La información recibida por TAIA debe validarse antes de ser almacenada.
+El mapa representa **contextos del dominio**, no capas técnicas. Las carpetas `adapters`, `application` y `domain` son una organización interna de cada contexto y no constituyen por sí mismas contextos delimitados.
 
-La interpretación realizada por el LLM se considera una entrada para el sistema y no sustituye las reglas de negocio. El dominio mantiene las condiciones que determinan si una tarea puede ser creada.
+No se identifica actualmente un **núcleo compartido (Shared Kernel)** entre los cuatro contextos. Los datos de un contexto deben permanecer bajo su responsabilidad aunque otros contextos necesiten consultarlos.
 
-Por tanto, el LLM no tiene acceso directo a la persistencia ni puede modificar directamente los datos almacenados.
+## 8.3. Relaciones entre contextos
 
-## 8.4. Seguridad y aislamiento de datos
+Las relaciones se describen utilizando el vocabulario de Domain-Driven Design solicitado para la evidencia S6.
 
-La información académica debe mantenerse asociada al estudiante correspondiente.
+| Relación | Tipo | Situación actual | Regla arquitectónica |
+|---|---|---|---|
+| **AI → Academic** | Cliente / Proveedor + Capa Anticorrupción | AI define `AcademicGateway` y `AcademicGatewayAdapter` para traducir las operaciones académicas al modelo utilizado por AI. La implementación actual todavía obtiene el repositorio de Academic directamente. | AI debe consumir operaciones académicas mediante el contrato del proveedor y no depender del modelo interno de `Task` ni de su repositorio. |
+| **Reminders → Academic** | Cliente / Proveedor | Reminders necesita comprobar que una tarea pertenece al estudiante y asociar el recordatorio a esa tarea. El código actual accede directamente al `TaskRepository` de Academic. | Academic debe exponer una operación de consulta controlada; Reminders debe consumirla mediante `AcademicTaskLookup` sin importar el repositorio interno. |
+| **Academic → Usuario** | Cliente / Proveedor | Academic necesita la identidad autenticada para asociar y aislar las tareas por estudiante. | Academic puede recibir `user_id`, pero no debe depender de la implementación HTTP interna de Usuario. |
+| **AI → Usuario** | Cliente / Proveedor | AI necesita identificar al estudiante que origina una conversación. | AI debe consumir una abstracción de identidad y no importar el adaptador HTTP de Usuario. |
+| **Reminders → Usuario** | Cliente / Proveedor | Reminders necesita identidad y vinculación Telegram para las notificaciones. | Reminders debe consumir contratos de identidad/vinculación sin depender de los adaptadores HTTP internos de Usuario. |
+| **AI → Gemini** | Cliente / Proveedor externo + Capa Anticorrupción | `GeminiLLM` encapsula el proveedor externo detrás del puerto `LLM`. | Ningún contexto de dominio debe depender directamente del SDK o modelo específico del proveedor. |
+| **Reminders → Telegram** | Cliente / Proveedor externo + Capa Anticorrupción | `TelegramBotApiClient` y `TelegramNotificationSender` aíslan la integración con Telegram. | El dominio de Reminders no debe depender de tipos ni protocolos propios de Telegram. |
 
-El backend constituye el punto de control para las operaciones sobre los datos. Los componentes externos, como Telegram y Gemini, no acceden directamente a la persistencia.
+La **capa anticorrupción (ACL)** se utiliza cuando una dependencia externa o un contexto proveedor puede introducir un modelo que no debe filtrarse al contexto consumidor. En TAIA esto se refleja especialmente en el `AcademicGatewayAdapter` de AI y en los adaptadores de Telegram. En las relaciones con Academic y Usuario todavía existen puntos de acoplamiento que deben corregirse según la auditoría de esta sección.
 
-Las futuras operaciones de consulta y modificación deberán verificar la identidad del estudiante antes de acceder a sus datos.
+## 8.4. Tabla módulo: datos y dueño único
 
-Este concepto responde principalmente al escenario de calidad S4 — Acceso únicamente a datos del propio estudiante.
+La propiedad de datos se define por módulo. Cada entidad existente en el código actual tiene un único módulo responsable de escribirla; los demás contextos solamente pueden solicitar operaciones o consultar representaciones que el propietario exponga.
 
-## 8.5. Configuración y secretos
+| Módulo / contexto | Entidad o dato | Propietario / único escritor | Otros módulos que pueden necesitarlo | Regla |
+|---|---|---|---|---|
+| **Usuario** | `Usuario` | Usuario | Academic, AI, Reminders | Los demás contextos reciben identidad o solicitan información mediante contratos; no escriben `Usuario`. |
+| **Usuario** | `TelegramLinkToken` / vínculo Telegram | Usuario | Reminders | Reminders consume la información necesaria para enviar notificaciones, pero no administra el vínculo. |
+| **Academic** | `Task` | Academic | AI, Reminders | Academic es el único escritor de tareas académicas. AI y Reminders consumen operaciones o consultas controladas. |
+| **AI** | `Conversation` | AI | Ninguno | La conversación pertenece al contexto de interacción inteligente. |
+| **AI** | `Turn` / turnos de conversación | AI | Ninguno | AI administra el historial y estado conversacional. |
+| **Reminders** | `Reminder` | Reminders | Academic, Usuario | Reminders es el único escritor de recordatorios. La referencia `task_id` no convierte a Academic en propietario del recordatorio. |
+| **Reminders** | `Notification` | Reminders | Usuario, Telegram | Reminders registra y gestiona las notificaciones; Telegram es un canal externo. |
+| **Reminders** | `ReminderSchedule` | Reminders | Ninguno | La programación de recordatorios pertenece al ciclo de vida de Reminders. |
 
-Las credenciales y configuraciones sensibles de servicios externos deben mantenerse fuera del código fuente y del repositorio.
+Actualmente la persistencia de estas entidades se implementa mediante repositorios en memoria en los módulos correspondientes. La tabla expresa la **propiedad conceptual y modular del dato**, no presupone que exista todavía una tabla PostgreSQL implementada para cada entidad.
 
-Los valores dependientes del entorno deberán proporcionarse mediante configuración de despliegue o variables de entorno.
+## 8.5. Auditoría de propiedad y dependencias
 
-## 8.6. Tolerancia a fallos de servicios externos
+La auditoría se realizó sobre el código vigente del backend, recorriendo la estructura de `backend/app/modules/` y buscando dependencias cruzadas y acceso a repositorios de otros contextos.
 
-Telegram y el proveedor de IA son dependencias externas que pueden presentar indisponibilidad o cambios de comportamiento.
+### Comprobaciones realizadas
 
-La arquitectura debe limitar su impacto mediante adaptadores y separación de responsabilidades. Una falla de un proveedor externo no debe introducir dependencias directas en las reglas principales del dominio.
+- Se identificaron los cuatro módulos actuales: `academic`, `ai`, `reminders` y `usuario`.
+- Se revisaron las entidades presentes en los contextos y sus repositorios/adaptadores.
+- Se buscaron referencias cruzadas entre módulos, especialmente imports hacia APIs inbound y repositorios outbound de otro contexto.
+- Se verificó que `Task` tiene como repositorio propietario a Academic y que los repositorios de Reminders gestionan `Reminder`, `Notification` y `ReminderSchedule`.
+- No se identificó en el código actual un segundo módulo que escriba directamente las mismas entidades de dominio. Por tanto, **no se detecta una violación de doble escritura de una misma entidad** en el estado auditado.
+- Sí se identificaron **violaciones de frontera modular**, donde un contexto accede directamente a adaptadores internos de otro contexto. Estas violaciones se detallan a continuación.
 
-## 8.7. Trazabilidad
+## 8.6. Violaciones y no conformidades detectadas
 
-Los cambios arquitectónicos y los incrementos funcionales se relacionan mediante la cadena:
+| ID | No conformidad | Ubicación concreta | Impacto | Estado |
+|---|---|---|---|---|
+| **V-01** | Dependencia directa de módulos hacia el adaptador HTTP de Usuario para obtener la identidad autenticada. | `backend/app/modules/academic/adapters/inbound/api.py`, `backend/app/modules/ai/adapters/inbound/api.py`, `backend/app/modules/reminders/adapters/inbound/http_controller.py` | Los contextos conocen una implementación interna de Usuario en lugar de depender de un contrato de identidad. Esto dificulta sustituir la interfaz de autenticación y debilita la frontera entre contextos. | Detectada |
+| **V-02** | Reminders obtiene directamente el repositorio interno de Academic. | `backend/app/modules/reminders/adapters/inbound/http_controller.py` → `academic.adapters.outbound.repository_provider.get_task_repository` | Reminders atraviesa la frontera de Academic y queda acoplado a su mecanismo interno de persistencia. | Detectada |
+| **V-03** | El adaptador de AI hacia Academic obtiene directamente el repositorio de Academic. | `backend/app/modules/ai/adapters/outbound/academic_gateway.py` → `academic.adapters.outbound.repository_provider.get_task_repository` | Aunque AI ya tiene el contrato `AcademicGateway`, su implementación sigue dependiendo de un adaptador de persistencia interno del proveedor. La ACL queda incompleta. | Detectada |
+| **V-04** | Reminders necesita información académica y de identidad, pero sus contratos todavía se apoyan parcialmente en implementaciones concretas de otros módulos. | `reminders/application/ports/outbound/academic_task_lookup.py` y adaptadores asociados | El diseño de puertos existe, pero la composición actual no respeta completamente la frontera del contexto proveedor. | Detectada |
 
-**Requisito → C4 → ADR → Código → Pruebas → Evidencia**
+No se clasifica como violación de propiedad de datos el hecho de que Reminders o AI consulten una tarea académica: **consultar un dato de otro contexto no equivale a ser su propietario**. La violación aparece cuando el consumidor accede directamente al repositorio interno en lugar de utilizar el contrato del contexto propietario.
 
-Los aspectos definidos en `docs/aspectos.md` constituyen el mecanismo principal para mantener esta trazabilidad durante la evolución del proyecto.
+## 8.7. Plan de corrección
+
+| Violación | Acción de corrección | Resultado esperado | Evidencia futura |
+|---|---|---|---|
+| **V-01** | Definir un contrato de identidad en la capa de aplicación de Usuario y hacer que Academic, AI y Reminders consuman ese contrato. Mantener la autenticación HTTP como responsabilidad del adaptador de entrada. | Los módulos consumidores dejan de importar `usuario.adapters.inbound.api`. | Regla de dependencias + pruebas de autenticación y aislamiento. |
+| **V-02** | Mantener `AcademicTaskLookup` como puerto de Reminders, pero conectar su implementación con una operación/fachada pública de Academic en lugar de `get_task_repository()`. | Reminders solicita una consulta académica sin conocer el repositorio interno de Academic. | Pruebas de asociación Reminder–Task y análisis de imports. |
+| **V-03** | Mantener `AcademicGateway` como contrato de AI y cambiar su adaptador para consumir una interfaz de aplicación de Academic, sin acceder directamente al repositorio. | AI conserva su ACL y queda desacoplado de la persistencia concreta de Academic. | Pruebas de `test_ai_academic_gateway.py` y regla de dependencias. |
+| **V-04** | Revisar la composición de adaptadores y proveedores después de V-01 a V-03. | Cada contexto se comunica mediante contratos explícitos y conserva la propiedad de sus datos. | Auditoría S6 repetida y pruebas completas del backend. |
+
+Estas correcciones no implican un cambio del estilo arquitectónico definido para TAIA ni la extracción de microservicios. La arquitectura continúa siendo un monolito modular con organización hexagonal selectiva.
+
+El objetivo de estas acciones es ajustar la implementación actual para que respete mejor las fronteras y responsabilidades de los módulos que ya forman parte de la arquitectura. En particular, se busca evitar dependencias directas hacia repositorios o adaptadores internos de otros contextos y favorecer la comunicación mediante contratos explícitos.
+
+Por tanto, las acciones V-01 a V-04 deben entenderse como refinamientos y correcciones de la arquitectura existente, no como una nueva decisión arquitectónica ni como un cambio de patrón.
+
+## 8.8. Relación con aspectos
+
+Los contextos delimitados de esta sección se relacionan con los aspectos existentes del proyecto de la siguiente manera:
+
+| Aspecto | Contextos relacionados | Justificación |
+|---|---|---|
+| **A-01 — Captura inteligente de información académica** | Academic, AI | La captura y registro de una tarea pertenece a Academic; AI interpreta la solicitud y traduce la intención hacia operaciones académicas. |
+| **A-02 — Usuarios y autenticación** | Usuario | Usuario concentra identidad, autenticación y vinculación con Telegram. |
+| **A-03 — Asistente inteligente e interpretación de solicitudes** | AI, Academic | AI gestiona conversación e interpretación; Academic mantiene las reglas y datos de las operaciones académicas. |
+| **A-04 — Recordatorios y notificaciones** | Reminders, Academic, Usuario | Reminders es propietario de los recordatorios y notificaciones; Academic aporta la tarea asociada y Usuario aporta identidad/canal de comunicación. |
+| **A-05 — Integración y aislamiento entre módulos** | Usuario, Academic, AI, Reminders | Este aspecto transversal depende directamente del respeto de los límites y de la ausencia de escrituras compartidas. |
+| **A-06 — Persistencia y evolución de infraestructura** | Academic, Reminders | Cada contexto mantiene su puerto/adaptador de persistencia y conserva la propiedad de sus datos. |
+
+La correspondencia anterior permite mantener la trazabilidad entre los aspectos de `docs/aspectos.md` y los contextos delimitados definidos en esta sección.
 
 # 9. Decisiones arquitectónicas
 
