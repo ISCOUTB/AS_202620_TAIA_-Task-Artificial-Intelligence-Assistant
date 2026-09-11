@@ -9,21 +9,20 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from backend.app.modules.academic.adapters.outbound.in_memory_task_repository import (
-    InMemoryTaskRepository,
-)
+from backend.app.modules.academic.adapters.outbound.repository_provider import get_task_repository
 from backend.app.modules.academic.application.use_cases.complete_task import (
     CompleteTaskUseCase,
     TaskNotFoundError,
 )
 from backend.app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
 from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
+from backend.app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase, TaskNotFoundError as UpdateTaskNotFoundError
 from backend.app.modules.academic.domain.entities.task import InvalidTaskError, Task, TaskStatus
 from backend.app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
 
 router = APIRouter(prefix="/academic/tasks", tags=["academic"])
 
-_repository = InMemoryTaskRepository()
+_repository = get_task_repository()
 CurrentUserId = Annotated[uuid.UUID, Depends(get_authenticated_user_id)]
 
 
@@ -97,3 +96,37 @@ def complete_task(task_id: uuid.UUID, user_id: CurrentUserId) -> TaskResponse:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return TaskResponse.from_domain(task)
 
+
+
+class TaskUpdateRequest(BaseModel):
+    """Campos opcionales para actualizar una tarea."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    due_date: date | None = None
+    subject: str | None = None
+    description: str | None = None
+
+
+@router.patch("/{task_id}")
+def update_task(
+    task_id: uuid.UUID,
+    payload: TaskUpdateRequest,
+    user_id: CurrentUserId,
+) -> TaskResponse:
+    """Actualiza una tarea del usuario autenticado."""
+
+    use_case = UpdateTaskUseCase(_repository)
+    try:
+        task = use_case.execute(
+            task_id=task_id,
+            user_id=user_id,
+            title=payload.title,
+            due_date=payload.due_date,
+            subject=payload.subject,
+            description=payload.description,
+        )
+    except UpdateTaskNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except InvalidTaskError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return TaskResponse.from_domain(task)

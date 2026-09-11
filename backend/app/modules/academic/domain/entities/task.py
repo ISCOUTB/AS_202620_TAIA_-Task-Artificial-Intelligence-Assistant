@@ -68,3 +68,32 @@ class Task:
         """Marca la tarea como completada."""
 
         self.status = TaskStatus.DONE
+
+    def update(
+        self,
+        title: str | None = None,
+        due_date: date | None = None,
+        subject: str | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Actualiza los campos editables manteniendo las reglas del dominio."""
+
+        if title is not None:
+            clean_title = title.strip()
+            if not clean_title:
+                raise InvalidTaskError("El título de la tarea no puede estar vacío.")
+            if len(clean_title) > self.MAX_TITLE_LENGTH:
+                raise InvalidTaskError(
+                    f"El título de la tarea no puede superar {self.MAX_TITLE_LENGTH} caracteres."
+                )
+            self.title = clean_title
+
+        if due_date is not None:
+            self.due_date = due_date
+
+        if subject is not None:
+            self.subject = subject.strip() or None
+
+        if description is not None:
+            self.description = description.strip() or None
+
