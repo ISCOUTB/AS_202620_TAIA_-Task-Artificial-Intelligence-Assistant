@@ -55,7 +55,7 @@ class AIMessageResponse(BaseModel):
     awaiting_confirmation: bool
 
 
-@router.post("/message", response_model=AIMessageResponse)
+@router.post("/message")
 def handle_message(
     payload: AIMessageRequest,
     user_id: Annotated[uuid.UUID, Depends(get_authenticated_user_id)],

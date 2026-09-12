@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 
 from backend.app.modules.academic.application.ports.outbound.task_repository import TaskRepository
-from backend.app.modules.academic.domain.entities.task import InvalidTaskError, Task
+from backend.app.modules.academic.domain.entities.task import Task
 
 
 class TaskNotFoundError(ValueError):
@@ -34,13 +34,10 @@ class UpdateTaskUseCase:
                 "La tarea no existe o no pertenece al usuario autenticado."
             )
 
-        try:
-            task.update(
-                title=title,
-                due_date=due_date,
-                subject=subject,
-                description=description,
-            )
-        except InvalidTaskError:
-            raise
+        task.update(
+            title=title,
+            due_date=due_date,
+            subject=subject,
+            description=description,
+        )
         return task

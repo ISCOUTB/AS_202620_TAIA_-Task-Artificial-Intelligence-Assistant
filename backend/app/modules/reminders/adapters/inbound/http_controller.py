@@ -87,7 +87,6 @@ NOTIFICATION_UNAVAILABLE_RESPONSE = {
 
 @router.post(
     '',
-    response_model=ReminderResponse,
     status_code=status.HTTP_201_CREATED,
     responses=INVALID_REMINDER_RESPONSE,
 )
@@ -98,13 +97,12 @@ def create_reminder(payload: CreateReminderRequest, user_id: CurrentUserId, use_
         raise HTTPException(status_code=422, detail=str(error)) from error
     return ReminderResponse.from_domain(reminder)
 
-@router.get('', response_model=list[ReminderResponse])
+@router.get('')
 def list_reminders(user_id: CurrentUserId, use_case: Annotated[ListRemindersPort, Depends(get_list_use_case)]) -> list[ReminderResponse]:
     return [ReminderResponse.from_domain(item) for item in use_case.execute(user_id)]
 
 @router.get(
     '/{reminder_id}',
-    response_model=ReminderResponse,
     responses=REMINDER_NOT_FOUND_RESPONSE,
 )
 def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[GetReminderPort, Depends(get_get_use_case)]) -> ReminderResponse:
@@ -116,7 +114,6 @@ def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[G
 
 @router.patch(
     '/{reminder_id}',
-    response_model=ReminderResponse,
     responses={**REMINDER_NOT_FOUND_RESPONSE, **INVALID_REMINDER_RESPONSE},
 )
 def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
@@ -139,7 +136,6 @@ def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotate
 
 @router.post(
     '/{reminder_id}/complete',
-    response_model=ReminderResponse,
     responses=REMINDER_NOT_FOUND_RESPONSE,
 )
 def mark_reminder_completed(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[MarkReminderCompletedPort, Depends(get_complete_use_case)]) -> ReminderResponse:
@@ -158,7 +154,6 @@ class NotificationResponse(BaseModel):
 
 @router.post(
     '/{reminder_id}/notify',
-    response_model=NotificationResponse,
     responses={**REMINDER_NOT_FOUND_RESPONSE, **NOTIFICATION_UNAVAILABLE_RESPONSE},
 )
 def notify_reminder(

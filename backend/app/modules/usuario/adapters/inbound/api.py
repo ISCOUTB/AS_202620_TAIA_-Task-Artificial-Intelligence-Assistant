@@ -14,10 +14,7 @@ from backend.app.modules.usuario.adapters.outbound.in_memory_user_repository imp
 from backend.app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
 from backend.app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2PasswordHasher
 from backend.app.modules.usuario.adapters.outbound.in_memory_telegram_link_repository import InMemoryTelegramLinkRepository
-from backend.app.modules.usuario.application.use_cases.get_current_user import (
-    AuthenticatedUserNotFoundError,
-    GetCurrentUserUseCase,
-)
+from backend.app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from backend.app.modules.usuario.application.use_cases.link_telegram import (
     ConfirmTelegramLinkUseCase,
     CreateTelegramLinkUseCase,
@@ -34,7 +31,7 @@ from backend.app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
     UserAlreadyExistsError,
 )
-from backend.app.modules.usuario.domain.entities.usuario import InvalidUserError, Usuario
+from backend.app.modules.usuario.domain.entities.usuario import Usuario
 from backend.app.modules.usuario.domain.value_objects.email import InvalidEmailError
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -43,6 +40,7 @@ _repository = InMemoryUserRepository()
 _password_hasher = Pbkdf2PasswordHasher()
 _token_service = JwtTokenService()
 _bearer_scheme = HTTPBearer(auto_error=False)
+BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]
 _telegram_link_repository = InMemoryTelegramLinkRepository()
 
 
@@ -118,7 +116,6 @@ INVALID_USER_RESPONSE = {
 
 @router.post(
     "",
-    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     responses={**USER_ALREADY_EXISTS_RESPONSE, **INVALID_USER_RESPONSE},
 )
@@ -132,14 +129,13 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
         )
     except UserAlreadyExistsError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    except (InvalidEmailError, InvalidUserError, ValueError) as error:
+    except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return UserResponse.from_domain(user)
 
 
 @router.post(
     "/login",
-    response_model=LoginResponse,
     responses={**UNAUTHORIZED_RESPONSE, **INACTIVE_USER_RESPONSE, **INVALID_USER_RESPONSE},
 )
 def login_user(payload: UserLoginRequest) -> LoginResponse:
@@ -168,19 +164,14 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
 
 @router.get(
     "/me",
-    response_model=UserResponse,
     responses=UNAUTHORIZED_RESPONSE,
 )
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
-) -> UserResponse:
+def get_current_user(credentials: BearerCredentials) -> UserResponse:
     """Devuelve el perfil del usuario autenticado mediante Bearer JWT."""
     return UserResponse.from_domain(_authenticated_user(credentials))
 
 
-def get_authenticated_user_id(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
-) -> uuid.UUID:
+def get_authenticated_user_id(credentials: BearerCredentials) -> uuid.UUID:
     """Devuelve únicamente el identificador del usuario autenticado.
 
     Esta dependencia permite que otros contextos consuman la identidad sin
@@ -210,7 +201,7 @@ def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usu
     try:
         user_id = _token_service.verify_access_token(credentials.credentials)
         return GetCurrentUserUseCase(_repository).execute(user_id)
-    except (ValueError, AuthenticatedUserNotFoundError) as error:
+    except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token de acceso inválido o usuario no encontrado.",
@@ -220,12 +211,9 @@ def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usu
 
 @router.post(
     "/me/telegram/link",
-    response_model=TelegramLinkResponse,
     responses={**UNAUTHORIZED_RESPONSE, **ALREADY_LINKED_RESPONSE},
 )
-def create_telegram_link(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
-) -> TelegramLinkResponse:
+def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse:
     """Genera un enlace temporal para vincular la cuenta Telegram existente del usuario."""
     user = _authenticated_user(credentials)
     try:
@@ -242,7 +230,6 @@ def create_telegram_link(
 
 @router.post(
     "/telegram/link/confirm",
-    response_model=UserResponse,
     responses={**INVALID_LINK_TOKEN_RESPONSE, **ALREADY_LINKED_RESPONSE, **INVALID_USER_RESPONSE},
 )
 def confirm_telegram_link(payload: TelegramLinkConfirmRequest) -> UserResponse:

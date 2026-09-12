@@ -73,7 +73,6 @@ INVALID_TASK_RESPONSE = {
 
 @router.post(
     "",
-    response_model=TaskResponse,
     status_code=status.HTTP_201_CREATED,
     responses=INVALID_TASK_RESPONSE,
 )
@@ -97,7 +96,7 @@ def register_task(
     return TaskResponse.from_domain(task)
 
 
-@router.get("", response_model=list[TaskResponse])
+@router.get("")
 def list_tasks(user_id: CurrentUserId) -> list[TaskResponse]:
     """Devuelve únicamente las tareas del usuario autenticado."""
 
