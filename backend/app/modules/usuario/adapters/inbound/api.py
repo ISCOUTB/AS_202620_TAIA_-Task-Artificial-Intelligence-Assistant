@@ -90,7 +90,38 @@ class TelegramLinkConfirmRequest(BaseModel):
     telegram_user_id: int = Field(..., gt=0)
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+class ErrorResponse(BaseModel):
+    """Cuerpo devuelto por el adaptador cuando la petición falla."""
+
+    detail: str
+
+
+UNAUTHORIZED_RESPONSE = {
+    401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}
+}
+INACTIVE_USER_RESPONSE = {
+    403: {"model": ErrorResponse, "description": "La cuenta está inactiva."}
+}
+USER_ALREADY_EXISTS_RESPONSE = {
+    409: {"model": ErrorResponse, "description": "Ya existe un usuario registrado con ese correo."}
+}
+ALREADY_LINKED_RESPONSE = {
+    409: {"model": ErrorResponse, "description": "La cuenta ya está vinculada con Telegram."}
+}
+INVALID_LINK_TOKEN_RESPONSE = {
+    400: {"model": ErrorResponse, "description": "El token de vinculación es inválido o expiró."}
+}
+INVALID_USER_RESPONSE = {
+    422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."}
+}
+
+
+@router.post(
+    "",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={**USER_ALREADY_EXISTS_RESPONSE, **INVALID_USER_RESPONSE},
+)
 def register_user(payload: UserCreateRequest) -> UserResponse:
     use_case = RegisterUserUseCase(_repository, _password_hasher)
     try:
@@ -106,7 +137,11 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
     return UserResponse.from_domain(user)
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    responses={**UNAUTHORIZED_RESPONSE, **INACTIVE_USER_RESPONSE, **INVALID_USER_RESPONSE},
+)
 def login_user(payload: UserLoginRequest) -> LoginResponse:
     use_case = LoginUserUseCase(_repository, _password_hasher, _token_service)
     try:
@@ -131,7 +166,11 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
     return LoginResponse(access_token=access_token)
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    responses=UNAUTHORIZED_RESPONSE,
+)
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> UserResponse:
@@ -179,7 +218,11 @@ def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usu
         ) from error
 
 
-@router.post("/me/telegram/link", response_model=TelegramLinkResponse)
+@router.post(
+    "/me/telegram/link",
+    response_model=TelegramLinkResponse,
+    responses={**UNAUTHORIZED_RESPONSE, **ALREADY_LINKED_RESPONSE},
+)
 def create_telegram_link(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> TelegramLinkResponse:
@@ -197,7 +240,11 @@ def create_telegram_link(
     )
 
 
-@router.post("/telegram/link/confirm", response_model=UserResponse)
+@router.post(
+    "/telegram/link/confirm",
+    response_model=UserResponse,
+    responses={**INVALID_LINK_TOKEN_RESPONSE, **ALREADY_LINKED_RESPONSE, **INVALID_USER_RESPONSE},
+)
 def confirm_telegram_link(payload: TelegramLinkConfirmRequest) -> UserResponse:
     """Confirma una vinculación usando la identidad recibida por el bot de Telegram.
 

@@ -68,7 +68,29 @@ def get_schedule_notification_use_case() -> ScheduleNotificationPort:
 def get_send_notification_use_case() -> SendNotificationPort:
     return SendNotificationUseCase(get_notification_sender())
 
-@router.post('', response_model=ReminderResponse, status_code=status.HTTP_201_CREATED)
+class ErrorResponse(BaseModel):
+    '''Cuerpo devuelto por el adaptador cuando la petición falla.'''
+
+    detail: str
+
+
+REMINDER_NOT_FOUND_RESPONSE = {
+    404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}
+}
+INVALID_REMINDER_RESPONSE = {
+    422: {'model': ErrorResponse, 'description': 'Los datos del recordatorio no son válidos.'}
+}
+NOTIFICATION_UNAVAILABLE_RESPONSE = {
+    503: {'model': ErrorResponse, 'description': 'No se pudo entregar la notificación por Telegram.'}
+}
+
+
+@router.post(
+    '',
+    response_model=ReminderResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=INVALID_REMINDER_RESPONSE,
+)
 def create_reminder(payload: CreateReminderRequest, user_id: CurrentUserId, use_case: Annotated[CreateReminderPort, Depends(get_create_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(user_id, payload.message, payload.scheduled_at, payload.task_id)
@@ -80,7 +102,11 @@ def create_reminder(payload: CreateReminderRequest, user_id: CurrentUserId, use_
 def list_reminders(user_id: CurrentUserId, use_case: Annotated[ListRemindersPort, Depends(get_list_use_case)]) -> list[ReminderResponse]:
     return [ReminderResponse.from_domain(item) for item in use_case.execute(user_id)]
 
-@router.get('/{reminder_id}', response_model=ReminderResponse)
+@router.get(
+    '/{reminder_id}',
+    response_model=ReminderResponse,
+    responses=REMINDER_NOT_FOUND_RESPONSE,
+)
 def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[GetReminderPort, Depends(get_get_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id)
@@ -88,7 +114,11 @@ def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[G
         raise HTTPException(status_code=404, detail=str(error)) from error
     return ReminderResponse.from_domain(reminder)
 
-@router.patch('/{reminder_id}', response_model=ReminderResponse)
+@router.patch(
+    '/{reminder_id}',
+    response_model=ReminderResponse,
+    responses={**REMINDER_NOT_FOUND_RESPONSE, **INVALID_REMINDER_RESPONSE},
+)
 def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id, payload.message, payload.scheduled_at)
@@ -96,14 +126,22 @@ def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: Curre
         raise HTTPException(status_code=422 if 'no encontrado' not in str(error).lower() else 404, detail=str(error)) from error
     return ReminderResponse.from_domain(reminder)
 
-@router.delete('/{reminder_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    '/{reminder_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=REMINDER_NOT_FOUND_RESPONSE,
+)
 def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[DeleteReminderPort, Depends(get_delete_use_case)]) -> None:
     try:
         use_case.execute(reminder_id, user_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
-@router.post('/{reminder_id}/complete', response_model=ReminderResponse)
+@router.post(
+    '/{reminder_id}/complete',
+    response_model=ReminderResponse,
+    responses=REMINDER_NOT_FOUND_RESPONSE,
+)
 def mark_reminder_completed(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[MarkReminderCompletedPort, Depends(get_complete_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id)
@@ -118,7 +156,11 @@ class NotificationResponse(BaseModel):
     scheduled_at: datetime
 
 
-@router.post('/{reminder_id}/notify', response_model=NotificationResponse)
+@router.post(
+    '/{reminder_id}/notify',
+    response_model=NotificationResponse,
+    responses={**REMINDER_NOT_FOUND_RESPONSE, **NOTIFICATION_UNAVAILABLE_RESPONSE},
+)
 def notify_reminder(
     reminder_id: int,
     user_id: CurrentUserId,
