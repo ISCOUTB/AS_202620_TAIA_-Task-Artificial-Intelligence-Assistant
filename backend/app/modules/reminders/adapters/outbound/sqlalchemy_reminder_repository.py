@@ -12,8 +12,6 @@ from backend.app.modules.reminders.application.ports.outbound.reminder_repositor
 )
 from backend.app.modules.reminders.domain.entities import Reminder
 
-# from backend.app.modules.reminders.adapters.outbound.models import ReminderModel
-
 
 class SQLAlchemyReminderRepository(ReminderRepository):
     def __init__(self, session):

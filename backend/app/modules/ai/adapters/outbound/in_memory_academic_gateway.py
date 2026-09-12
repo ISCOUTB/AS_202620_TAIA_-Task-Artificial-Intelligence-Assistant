@@ -5,7 +5,6 @@ academico real. Se sustituye por el adaptador real cuando este disponible
 from __future__ import annotations
 
 import uuid
-from dataclasses import replace
 
 from backend.app.modules.ai.application.dto import (
     NewTask,
@@ -55,8 +54,8 @@ class InMemoryAcademicGateway(AcademicGateway):
         tasks = self._by_user.get(user_id, [])
         for index, task in enumerate(tasks):
             if task.id == task_id:
-                updated = replace(
-                    task,
+                updated = TaskView(
+                    id=task.id,
                     title=changes.title or task.title,
                     due_at=changes.due_at or task.due_at,
                     subject=(
@@ -64,6 +63,7 @@ class InMemoryAcademicGateway(AcademicGateway):
                         if changes.subject is not None
                         else task.subject
                     ),
+                    status=task.status,
                 )
                 tasks[index] = updated
                 return updated

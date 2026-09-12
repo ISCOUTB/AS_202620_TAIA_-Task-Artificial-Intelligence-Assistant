@@ -48,8 +48,10 @@ def test_update_task_rejects_other_user():
         due_date=date(2026, 9, 10),
     )
 
+    use_case = UpdateTaskUseCase(repository)
+
     with pytest.raises(TaskNotFoundError):
-        UpdateTaskUseCase(repository).execute(
+        use_case.execute(
             task_id=task.id,
             user_id=other,
             title="No autorizada",
