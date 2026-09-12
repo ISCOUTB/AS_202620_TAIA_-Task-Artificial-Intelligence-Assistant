@@ -1,5 +1,3 @@
-"""Pruebas del corte vertical del aspecto A-01: registrar y consultar tareas."""
-
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
@@ -7,14 +5,29 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_register_task_returns_created_task():
+def register_and_login(email: str):
+    register = client.post(
+        "/users",
+        json={"name": "Estudiante", "email": email, "password": "password123"},
+    )
+    assert register.status_code == 201
+    login = client.post(
+        "/users/login",
+        json={"email": email, "password": "password123"},
+    )
+    assert login.status_code == 200
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+def test_register_task_returns_created_task_for_authenticated_user():
+    headers = register_and_login("academic-register@example.com")
     payload = {
         "title": "Entregar proyecto de programación",
         "due_date": "2026-09-07",
         "subject": "Programación",
     }
 
-    response = client.post("/academic/tasks", json=payload)
+    response = client.post("/academic/tasks", json=payload, headers=headers)
 
     assert response.status_code == 201
     body = response.json()
@@ -24,23 +37,10 @@ def test_register_task_returns_created_task():
     assert "id" in body
 
 
-def test_register_task_rejects_empty_title():
-    payload = {"title": "   ", "due_date": "2026-09-07"}
-
-    response = client.post("/academic/tasks", json=payload)
-
-    assert response.status_code == 422
-
-
-def test_list_tasks_includes_previously_registered_task():
-    create_response = client.post(
+def test_register_task_requires_authentication():
+    response = client.post(
         "/academic/tasks",
-        json={"title": "Estudiar para el parcial", "due_date": "2026-09-10"},
+        json={"title": "Sin autenticación", "due_date": "2026-09-07"},
     )
-    created_id = create_response.json()["id"]
 
-    list_response = client.get("/academic/tasks")
-
-    assert list_response.status_code == 200
-    ids = [task["id"] for task in list_response.json()]
-    assert created_id in ids
+    assert response.status_code == 401

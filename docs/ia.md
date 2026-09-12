@@ -288,3 +288,41 @@ Entre las correcciones verificadas se encuentran:
 * Mantenimiento de la distinción entre arquitectura objetivo y funcionalidades actualmente implementadas.
 
 La configuración de SonarCloud quedó identificada como pendiente de autorización inicial por parte del propietario de la organización.
+
+# Entrada 08
+
+Fecha: 2026-09-11
+
+Herramienta: ChatGPT (OpenAI)
+
+Objetivo: Actualizar la documentación para que refleje la línea base ejecutable posterior a la integración de Usuario, Academic, AI y Reminders.
+
+### Solicitud realizada
+
+Se solicitó revisar y actualizar la documentación arquitectónica, C4, aspectos, escenarios de calidad y README después de implementar autenticación, integración AI-Academic, CRUD de Reminders y notificaciones mediante Telegram.
+
+### Resultado generado
+
+La IA ayudó a: 
+
+* Contrastar la documentación existente con la estructura actual de `backend/app/modules/`.
+* Diferenciar la arquitectura objetivo de los componentes realmente ejecutables.
+* Actualizar el C4 nivel 2 para representar los módulos actualmente implementados.
+* Documentar los recorridos ejecutables de Academic, AI y Reminders en arc42.
+* Actualizar los escenarios de calidad para distinguir capacidades implementadas de capacidades pendientes.
+* Registrar la evidencia actual de pruebas automatizadas.
+
+### Aceptado
+
+* Mantener PostgreSQL y Flutter como arquitectura objetivo mientras no estén implementados en esta línea base.
+* Mantener Gemini como adaptador preparado, sujeto a configuración del proveedor.
+* Documentar el envío explícito de notificaciones Telegram sin presentarlo como scheduler automático.
+* Mantener la evidencia de `74 passed` obtenida mediante la suite automatizada.
+
+### Verificación realizada
+
+Se ejecutó `python -m pytest -q` sobre la línea base actual y se obtuvo:
+
+```text
+74 passed in 3.10s
+```

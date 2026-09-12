@@ -1,11 +1,4 @@
-"""Entidades y reglas del dominio académico.
-
-Este módulo define el concepto de tarea académica sin depender de FastAPI,
-PostgreSQL ni de ningún otro detalle de infraestructura. Es el núcleo del
-aspecto A-01 (RF-01): registrar información académica a partir de lenguaje
-natural, ya interpretada y estructurada. Ver ADR-0001 para la justificación
-de mantener el dominio aislado de la infraestructura.
-"""
+"""Entidades y reglas del dominio académico."""
 
 from __future__ import annotations
 
@@ -28,9 +21,10 @@ class InvalidTaskError(ValueError):
 
 @dataclass
 class Task:
-    """Tarea académica registrada por un estudiante."""
+    """Tarea académica perteneciente a un estudiante."""
 
     id: uuid.UUID
+    user_id: uuid.UUID
     title: str
     due_date: date
     subject: str | None = None
@@ -42,12 +36,16 @@ class Task:
 
     @staticmethod
     def create(
+        user_id: uuid.UUID,
         title: str,
         due_date: date,
         subject: str | None = None,
         description: str | None = None,
     ) -> "Task":
         """Crea una tarea nueva aplicando las reglas de validación del dominio."""
+
+        if not isinstance(user_id, uuid.UUID):
+            raise InvalidTaskError("El identificador del usuario no es válido.")
 
         clean_title = (title or "").strip()
         if not clean_title:
@@ -59,6 +57,7 @@ class Task:
 
         return Task(
             id=uuid.uuid4(),
+            user_id=user_id,
             title=clean_title,
             due_date=due_date,
             subject=subject.strip() if subject else None,
@@ -69,3 +68,32 @@ class Task:
         """Marca la tarea como completada."""
 
         self.status = TaskStatus.DONE
+
+    def update(
+        self,
+        title: str | None = None,
+        due_date: date | None = None,
+        subject: str | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Actualiza los campos editables manteniendo las reglas del dominio."""
+
+        if title is not None:
+            clean_title = title.strip()
+            if not clean_title:
+                raise InvalidTaskError("El título de la tarea no puede estar vacío.")
+            if len(clean_title) > self.MAX_TITLE_LENGTH:
+                raise InvalidTaskError(
+                    f"El título de la tarea no puede superar {self.MAX_TITLE_LENGTH} caracteres."
+                )
+            self.title = clean_title
+
+        if due_date is not None:
+            self.due_date = due_date
+
+        if subject is not None:
+            self.subject = subject.strip() or None
+
+        if description is not None:
+            self.description = description.strip() or None
+

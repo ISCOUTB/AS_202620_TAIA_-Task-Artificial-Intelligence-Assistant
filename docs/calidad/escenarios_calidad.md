@@ -91,3 +91,13 @@ ESCENARIOS DE CALIDAD
 **Decisión arquitectónica relacionada:**
 
 [ADR-0001 — Monolito modular con organización hexagonal selectiva](../adr/0001-estilo-arquitectonico.md)
+
+# Estado de implementación de los escenarios
+
+| Escenario | Estado actual | Evidencia / pendiente |
+|---|---|---|
+| S1 — Registro correcto | Parcialmente implementado | AI y Academic están integrados; Gemini real requiere configuración y PostgreSQL aún no está integrado. |
+| S2 — Entrega puntual | Parcialmente implementado | CRUD y envío explícito por Telegram implementados; falta scheduler/ejecución automática y medición temporal. |
+| S3 — Respuesta del asistente | Parcialmente implementado | `/ai/message` y puerto/adaptador LLM existen; falta validar el proveedor Gemini real y medir latencia. |
+| S4 — Aislamiento de datos | Implementado en backend | Pruebas de aislamiento para Academic/Reminders; falta validar el escenario completo con LLM real. |
+| S5 — Sustitución del modelo | Diseñado y preparado | El módulo AI depende del puerto `LLM`; existe adaptador Gemini. Falta demostrar sustitución con un segundo proveedor. |
