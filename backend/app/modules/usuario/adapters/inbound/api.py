@@ -94,30 +94,13 @@ class ErrorResponse(BaseModel):
     detail: str
 
 
-UNAUTHORIZED_RESPONSE = {
-    401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}
-}
-INACTIVE_USER_RESPONSE = {
-    403: {"model": ErrorResponse, "description": "La cuenta está inactiva."}
-}
-USER_ALREADY_EXISTS_RESPONSE = {
-    409: {"model": ErrorResponse, "description": "Ya existe un usuario registrado con ese correo."}
-}
-ALREADY_LINKED_RESPONSE = {
-    409: {"model": ErrorResponse, "description": "La cuenta ya está vinculada con Telegram."}
-}
-INVALID_LINK_TOKEN_RESPONSE = {
-    400: {"model": ErrorResponse, "description": "El token de vinculación es inválido o expiró."}
-}
-INVALID_USER_RESPONSE = {
-    422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."}
-}
-
-
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    responses={**USER_ALREADY_EXISTS_RESPONSE, **INVALID_USER_RESPONSE},
+    responses={
+        409: {"model": ErrorResponse, "description": "Ya existe un usuario registrado con ese correo."},
+        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+    },
 )
 def register_user(payload: UserCreateRequest) -> UserResponse:
     use_case = RegisterUserUseCase(_repository, _password_hasher)
@@ -136,7 +119,11 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
 
 @router.post(
     "/login",
-    responses={**UNAUTHORIZED_RESPONSE, **INACTIVE_USER_RESPONSE, **INVALID_USER_RESPONSE},
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "La cuenta está inactiva."},
+        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+    },
 )
 def login_user(payload: UserLoginRequest) -> LoginResponse:
     use_case = LoginUserUseCase(_repository, _password_hasher, _token_service)
@@ -164,7 +151,7 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
 
 @router.get(
     "/me",
-    responses=UNAUTHORIZED_RESPONSE,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
 )
 def get_current_user(credentials: BearerCredentials) -> UserResponse:
     """Devuelve el perfil del usuario autenticado mediante Bearer JWT."""
@@ -211,7 +198,10 @@ def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usu
 
 @router.post(
     "/me/telegram/link",
-    responses={**UNAUTHORIZED_RESPONSE, **ALREADY_LINKED_RESPONSE},
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        409: {"model": ErrorResponse, "description": "La cuenta ya está vinculada con Telegram."},
+    },
 )
 def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse:
     """Genera un enlace temporal para vincular la cuenta Telegram existente del usuario."""
@@ -230,7 +220,11 @@ def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse
 
 @router.post(
     "/telegram/link/confirm",
-    responses={**INVALID_LINK_TOKEN_RESPONSE, **ALREADY_LINKED_RESPONSE, **INVALID_USER_RESPONSE},
+    responses={
+        400: {"model": ErrorResponse, "description": "El token de vinculación es inválido o expiró."},
+        409: {"model": ErrorResponse, "description": "La cuenta ya está vinculada con Telegram."},
+        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+    },
 )
 def confirm_telegram_link(payload: TelegramLinkConfirmRequest) -> UserResponse:
     """Confirma una vinculación usando la identidad recibida por el bot de Telegram.

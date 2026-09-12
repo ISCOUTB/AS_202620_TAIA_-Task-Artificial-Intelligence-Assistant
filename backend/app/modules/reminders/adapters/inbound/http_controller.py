@@ -74,21 +74,10 @@ class ErrorResponse(BaseModel):
     detail: str
 
 
-REMINDER_NOT_FOUND_RESPONSE = {
-    404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}
-}
-INVALID_REMINDER_RESPONSE = {
-    422: {'model': ErrorResponse, 'description': 'Los datos del recordatorio no son válidos.'}
-}
-NOTIFICATION_UNAVAILABLE_RESPONSE = {
-    503: {'model': ErrorResponse, 'description': 'No se pudo entregar la notificación por Telegram.'}
-}
-
-
 @router.post(
     '',
     status_code=status.HTTP_201_CREATED,
-    responses=INVALID_REMINDER_RESPONSE,
+    responses={422: {'model': ErrorResponse, 'description': 'Los datos del recordatorio no son válidos.'}},
 )
 def create_reminder(payload: CreateReminderRequest, user_id: CurrentUserId, use_case: Annotated[CreateReminderPort, Depends(get_create_use_case)]) -> ReminderResponse:
     try:
@@ -103,7 +92,7 @@ def list_reminders(user_id: CurrentUserId, use_case: Annotated[ListRemindersPort
 
 @router.get(
     '/{reminder_id}',
-    responses=REMINDER_NOT_FOUND_RESPONSE,
+    responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
 def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[GetReminderPort, Depends(get_get_use_case)]) -> ReminderResponse:
     try:
@@ -114,7 +103,10 @@ def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[G
 
 @router.patch(
     '/{reminder_id}',
-    responses={**REMINDER_NOT_FOUND_RESPONSE, **INVALID_REMINDER_RESPONSE},
+    responses={
+        404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'},
+        422: {'model': ErrorResponse, 'description': 'Los datos del recordatorio no son válidos.'},
+    },
 )
 def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
     try:
@@ -126,7 +118,7 @@ def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: Curre
 @router.delete(
     '/{reminder_id}',
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=REMINDER_NOT_FOUND_RESPONSE,
+    responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
 def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[DeleteReminderPort, Depends(get_delete_use_case)]) -> None:
     try:
@@ -136,7 +128,7 @@ def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotate
 
 @router.post(
     '/{reminder_id}/complete',
-    responses=REMINDER_NOT_FOUND_RESPONSE,
+    responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
 def mark_reminder_completed(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[MarkReminderCompletedPort, Depends(get_complete_use_case)]) -> ReminderResponse:
     try:
@@ -154,7 +146,10 @@ class NotificationResponse(BaseModel):
 
 @router.post(
     '/{reminder_id}/notify',
-    responses={**REMINDER_NOT_FOUND_RESPONSE, **NOTIFICATION_UNAVAILABLE_RESPONSE},
+    responses={
+        404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'},
+        503: {'model': ErrorResponse, 'description': 'No se pudo entregar la notificación por Telegram.'},
+    },
 )
 def notify_reminder(
     reminder_id: int,
