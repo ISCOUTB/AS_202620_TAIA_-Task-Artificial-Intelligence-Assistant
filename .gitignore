@@ -11,5 +11,14 @@ __pycache__/
 .venv/
 venv/
 env/
+<<<<<<< HEAD
 .env
+=======
+
+# Secretos locales
+.env
+.env.local
+
+
+>>>>>>> 3950aba624aa00d3185c60d7f44a1835c3680c21
 claude.md
