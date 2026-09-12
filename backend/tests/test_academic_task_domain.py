@@ -24,13 +24,17 @@ def test_create_task_strips_whitespace_from_title():
 
 
 def test_create_task_rejects_empty_title():
+    user_id = uuid.uuid4()
+
     with pytest.raises(InvalidTaskError):
-        Task.create(user_id=uuid.uuid4(), title="   ", due_date=date(2026, 9, 1))
+        Task.create(user_id=user_id, title="   ", due_date=date(2026, 9, 1))
 
 
 def test_create_task_rejects_title_too_long():
+    user_id = uuid.uuid4()
+
     with pytest.raises(InvalidTaskError):
-        Task.create(user_id=uuid.uuid4(), title="a" * 201, due_date=date(2026, 9, 1))
+        Task.create(user_id=user_id, title="a" * 201, due_date=date(2026, 9, 1))
 
 
 def test_mark_done_changes_status():

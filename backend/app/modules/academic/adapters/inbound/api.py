@@ -57,7 +57,25 @@ class TaskResponse(BaseModel):
         )
 
 
-@router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+class ErrorResponse(BaseModel):
+    """Cuerpo devuelto por el adaptador cuando la petición falla."""
+
+    detail: str
+
+
+TASK_NOT_FOUND_RESPONSE = {
+    404: {"model": ErrorResponse, "description": "La tarea no existe o no pertenece al usuario."}
+}
+INVALID_TASK_RESPONSE = {
+    422: {"model": ErrorResponse, "description": "Los datos de la tarea no son válidos."}
+}
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    responses=INVALID_TASK_RESPONSE,
+)
 def register_task(
     payload: TaskCreateRequest,
     user_id: CurrentUserId,
@@ -78,14 +96,14 @@ def register_task(
     return TaskResponse.from_domain(task)
 
 
-@router.get("", response_model=list[TaskResponse])
+@router.get("")
 def list_tasks(user_id: CurrentUserId) -> list[TaskResponse]:
     """Devuelve únicamente las tareas del usuario autenticado."""
 
     use_case = ListTasksUseCase(_repository)
     return [TaskResponse.from_domain(task) for task in use_case.execute(user_id)]
 
-@router.patch("/{task_id}/complete")
+@router.patch("/{task_id}/complete", responses=TASK_NOT_FOUND_RESPONSE)
 def complete_task(task_id: uuid.UUID, user_id: CurrentUserId) -> TaskResponse:
     """Marca como completada una tarea del usuario autenticado."""
 
@@ -107,7 +125,10 @@ class TaskUpdateRequest(BaseModel):
     description: str | None = None
 
 
-@router.patch("/{task_id}")
+@router.patch(
+    "/{task_id}",
+    responses={**TASK_NOT_FOUND_RESPONSE, **INVALID_TASK_RESPONSE},
+)
 def update_task(
     task_id: uuid.UUID,
     payload: TaskUpdateRequest,

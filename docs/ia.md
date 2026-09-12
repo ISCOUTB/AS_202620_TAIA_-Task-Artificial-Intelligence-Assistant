@@ -326,3 +326,68 @@ Se ejecutó `python -m pytest -q` sobre la línea base actual y se obtuvo:
 ```text
 74 passed in 3.10s
 ```
+
+# Entrada 09
+
+Fecha: 2026-09-12
+
+Herramienta: Claude Code (Anthropic)
+
+Objetivo: Verificar la vigencia de los 45 problemas reportados por SonarQube tras la recuperación de la rama y corregirlos de forma incremental.
+
+### Solicitud realizada
+
+Tras una pérdida accidental de commits en `main` y su posterior recuperación desde la rama `val`, SonarQube pasó a reportar únicamente 3 problemas frente a los 45 registrados en `lista_problemas.md`. Se solicitó verificar directamente sobre los archivos si los 45 problemas seguían presentes, para decidir si corregir 3 o 45, y posteriormente corregirlos por tipo.
+
+### Resultado generado
+
+La IA ayudó a:
+
+* Contrastar `lista_problemas.md` contra el contenido real de los archivos, confirmando que los 45 problemas seguían presentes en las líneas indicadas.
+* Verificar que `origin/main` conservaba los 124 archivos `.py` y que la recuperación desde `val` no había perdido código.
+* Descartar como causas del conteo de 3 el filtro de "New Code", un análisis obsoleto, un cambio de Quality Profile y la presencia de código no parseable.
+* Detectar marcadores de conflicto de merge sin resolver en `.gitignore`, provenientes del commit "git ignore updated".
+* Corregir los problemas agrupados por tipo, en commits separados.
+
+### Correcciones aplicadas
+
+| Problema reportado | Cantidad | Tratamiento |
+| --- | --- | --- |
+| Using dependencies without locking resolved versions | 1 | Se añaden `requirements.lock.txt` y `requirements-dev.lock.txt` con todas las dependencias transitivas y sus hashes; el CI instala con `--require-hashes`. |
+| Document this HTTPException in the "responses" parameter | 17 | Cada adaptador HTTP declara un modelo `ErrorResponse` y constantes de módulo que los decoradores exponen mediante `responses`. |
+| Return a value of type "TaskView" instead of "DataclassInstance" | 1 | Se sustituye `dataclasses.replace()` por la construcción explícita de `TaskView`. |
+| Remove this commented out code | 1 | Se elimina el import comentado de `ReminderModel`. |
+| Refactor this exception test to have only one invocation | 4 | La construcción previa se mueve fuera del bloque `with pytest.raises`. |
+| Remove this redundant "response_model" parameter | 14 | Se elimina el parámetro; FastAPI infiere el mismo esquema desde la anotación de retorno. |
+| Add logic to this except clause or eliminate it | 1 | Se elimina el `try/except InvalidTaskError: raise`, equivalente a no tenerlo. |
+| Remove this redundant Exception class | 3 | `InvalidEmailError`, `InvalidUserError` y `AuthenticatedUserNotFoundError` derivan de `ValueError`, ya capturado. |
+| Use "Annotated" type hints for FastAPI dependency injection | 2 | Se introduce el alias `BearerCredentials`, siguiendo el patrón de `CurrentUserId`. |
+
+Total corregido: 44 de 45.
+
+### Aceptado
+
+* Corregir los 45 problemas verificados en el código y no los 3 que reportaba la herramienta, al confirmarse que los defectos eran reales.
+* Mantener `lista_problemas.md` como referencia del alcance real.
+* Separar `pytest` en `requirements-dev.txt`, dejando `requirements.txt` solo con dependencias de ejecución.
+* Documentar también códigos de error que el código lanza y SonarQube aún no había marcado: el 503 de `/reminders/{id}/notify` y el 401/403 de `/users/login`.
+* Usar constantes de módulo en lugar de diccionarios en línea, para no repetir descripciones entre endpoints.
+
+### Rechazado o modificado
+
+* Se descartó introducir un paquete compartido para el modelo `ErrorResponse`, para no alterar los límites entre módulos documentados en arc42; cada adaptador HTTP queda autocontenido.
+* Se descartó corregir únicamente los 3 problemas visibles en SonarQube.
+* No se modificó `requirements.txt` como fuente editable: los archivos `.lock.txt` son derivados y se regeneran con el comando documentado en su cabecera.
+* Se conservaron `httpx` y `uvicorn` como dependencias de ejecución, al confirmarse que `gemini_llm.py` y `run.bat` las utilizan.
+
+### Verificación realizada
+
+Cada grupo de correcciones se validó ejecutando la suite completa y, en los cambios que afectan a los adaptadores HTTP, contrastando el esquema OpenAPI generado para confirmar que los modelos de respuesta se siguen infiriendo correctamente y que los códigos de error quedan documentados.
+
+```text
+74 passed
+```
+
+Queda pendiente un problema, "Split this composite assertion into separate assertions" en `backend/tests/test_ai_handle_message.py`.
+
+Queda igualmente sin explicación la discrepancia entre los 45 problemas verificados en el código y los 3 que reporta SonarQube. Se comprobó que el análisis se ejecuta sobre el árbol actual, por lo que la causa corresponde a la configuración del proyecto en SonarCloud y no al contenido del repositorio.

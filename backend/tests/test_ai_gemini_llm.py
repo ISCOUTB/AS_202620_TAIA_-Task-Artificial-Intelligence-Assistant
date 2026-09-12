@@ -154,8 +154,10 @@ def test_network_failure_raises_llm_error():
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("sin red")
 
+    llm = _gemini(handler)
+
     with pytest.raises(LLMError):
-        _gemini(handler).interpret(REQUEST, NOW)
+        llm.interpret(REQUEST, NOW)
 
 
 def test_response_without_candidates_raises_llm_error():
