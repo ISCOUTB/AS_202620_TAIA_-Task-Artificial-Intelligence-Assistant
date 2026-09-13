@@ -5,12 +5,16 @@ from backend.app.modules.usuario.application.ports.inbound.identity import confi
 from backend.app.modules.usuario.application.services.identity import IdentityServiceImpl
 
 from backend.app.modules.academic.adapters.inbound.api import router as academic_router
+from backend.app.modules.academic.adapters.outbound.repository_provider import get_task_repository
+from backend.app.modules.academic.application.ports.inbound.task_lookup import configure_academic_task_lookup
+from backend.app.modules.academic.application.services.task_lookup import AcademicTaskLookupService
 from backend.app.modules.ai.adapters.inbound.api import router as ai_router
 from backend.app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from backend.app.modules.usuario.adapters.inbound.api import router as usuario_router
 
 identity_service = IdentityServiceImpl(usuario_repository, usuario_token_service)
 configure_identity_service(identity_service)
+configure_academic_task_lookup(AcademicTaskLookupService(get_task_repository()))
 
 app = FastAPI(title="TAIA")
 
