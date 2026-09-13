@@ -7,6 +7,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from backend.app.modules.academic.adapters.outbound.repository_provider import get_task_repository
@@ -18,11 +19,25 @@ from backend.app.modules.academic.application.use_cases.list_tasks import ListTa
 from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
 from backend.app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase, TaskNotFoundError as UpdateTaskNotFoundError
 from backend.app.modules.academic.domain.entities.task import InvalidTaskError, Task, TaskStatus
-from backend.app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from backend.app.modules.usuario.application.ports.inbound.identity import IdentityService, get_identity_service
 
 router = APIRouter(prefix="/academic/tasks", tags=["academic"])
 
 _repository = get_task_repository()
+_bearer_scheme = HTTPBearer(auto_error=False)
+BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]
+
+def _identity_service() -> IdentityService:
+    return get_identity_service()
+
+def get_authenticated_user_id(credentials: BearerCredentials) -> uuid.UUID:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales de autenticación requeridas.", headers={"WWW-Authenticate": "Bearer"})
+    try:
+        return _identity_service().authenticate(credentials.credentials)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de acceso inválido o usuario no encontrado.", headers={"WWW-Authenticate": "Bearer"}) from error
+
 CurrentUserId = Annotated[uuid.UUID, Depends(get_authenticated_user_id)]
 
 
