@@ -126,15 +126,9 @@ Usuario
 
 ### Interfaz utilizada por otros módulos
 
-El módulo expone la dependencia:
+El módulo expone el contrato de aplicación `IdentityService`, que permite a Academic, AI y Reminders autenticar un token y consultar el `telegram_user_id` sin depender del adaptador HTTP de Usuario.
 
-```text
-get_authenticated_user_id()
-```
-
-Esta dependencia permite que Academic, AI y Reminders obtengan el `UUID` del usuario autenticado sin depender directamente de la entidad `Usuario`.
-
-Esto mantiene el aislamiento entre contextos y permite que cada módulo aplique sus propias reglas de autorización.
+La autenticación HTTP permanece en el adaptador inbound de Usuario; los demás contextos consumen la interfaz de aplicación.
 
 ---
 
@@ -215,7 +209,7 @@ El identificador del usuario se propaga hasta los casos de uso:
 JWT
  │
  ▼
-Usuario.get_authenticated_user_id()
+IdentityService
  │
  ▼
 Academic API
@@ -525,9 +519,9 @@ Las relaciones principales son:
 
 | Origen    | Destino  | Mecanismo                           |
 | --------- | -------- | ----------------------------------- |
-| Academic  | Usuario  | `get_authenticated_user_id`         |
-| AI        | Usuario  | `get_authenticated_user_id`         |
-| Reminders | Usuario  | `get_authenticated_user_id`         |
+| Academic  | Usuario  | `IdentityService`                  |
+| AI        | Usuario  | `IdentityService`                  |
+| Reminders | Usuario  | `IdentityService`                  |
 | AI        | Academic | `AcademicGateway`                   |
 | Reminders | Academic | `AcademicTaskLookup`                |
 | Reminders | Telegram | `NotificationSender`                |

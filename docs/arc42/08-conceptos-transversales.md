@@ -108,15 +108,16 @@ una eventual evolución o extracción de módulos.
 
 ## 8.6 Violaciones detectadas y plan de corrección
 
-La auditoría del código actual identifica las siguientes situaciones que
-deben corregirse para hacer cumplir completamente las fronteras definidas.:
+La auditoría S6 identificó cuatro situaciones de dependencia que fueron corregidas durante el refinamiento de las fronteras modulares.
 
-| ID       | Violación                                                                                  | Corrección                                                                                                                               |
-| -------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **V-01** | Academic, AI y Reminders dependen directamente de funciones del adaptador HTTP de Usuario. | Mover el contrato de identidad a una interfaz de aplicación y mantener la autenticación HTTP como responsabilidad del adaptador inbound. |
-| **V-02** | Reminders obtiene directamente el repositorio interno de Academic.                         | Conectar `AcademicTaskLookup` con una interfaz/fachada de aplicación de Academic.                                                        |
-| **V-03** | AI obtiene directamente el repositorio interno de Academic.                                | Mantener `AcademicGateway` como contrato y hacer que su implementación utilice la interfaz de aplicación de Academic.                    |
-| **V-04** | La composición de dependencias debe revisarse después de corregir V-01–V-03.               | Verificar que las interacciones finales se produzcan exclusivamente mediante contratos explícitos.                                       |
+| ID       | Situación corregida | Corrección aplicada | Estado |
+| -------- | ------------------- | ------------------- | ------ |
+| **V-01** | Academic, AI y Reminders dependían de funciones del adaptador HTTP de Usuario. | Se creó `IdentityService` en la capa de aplicación de Usuario y los consumidores dejaron de importar el adaptador HTTP. | **Corregida** |
+| **V-02** | Reminders obtenía directamente el repositorio interno de Academic. | Se creó `AcademicTaskLookup` y su servicio de aplicación; Reminders consume ese contrato. | **Corregida** |
+| **V-03** | AI obtenía directamente el repositorio interno y la entidad de dominio de Academic. | Se creó `AcademicTaskManagement` y su servicio de aplicación; `AcademicGatewayAdapter` consume DTOs del contrato. | **Corregida** |
+| **V-04** | La composición de dependencias requería una revisión final. | `main.py` concentra la configuración de implementaciones concretas y la auditoría final no encontró accesos directos prohibidos entre contextos. | **Corregida** |
+
+La suite automatizada del backend queda en **74 pruebas aprobadas** después de las correcciones.
 
 La auditoría completa, con las rutas concretas del código y el plan de
 corrección de cada caso, se encuentra en

@@ -135,7 +135,7 @@ Cliente
 HTTP Endpoint
    │
    ▼
-get_authenticated_user_id()
+IdentityService.authenticate()
    │
    ▼
 JwtTokenService
