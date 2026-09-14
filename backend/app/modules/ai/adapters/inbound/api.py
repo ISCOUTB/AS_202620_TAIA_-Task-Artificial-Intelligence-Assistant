@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,14 +14,12 @@ from backend.app.modules.ai.adapters.outbound.in_memory_conversation_store impor
 )
 from backend.app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
 from backend.app.modules.ai.domain.messages import Channel, IncomingRequest
-from backend.app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from backend.app.shared.adapters.inbound.auth import CurrentUserId
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 _conversations = InMemoryConversationStore()
 _academic = AcademicGatewayAdapter()
-
-
 def get_ai_use_case() -> HandleUserMessageUseCase:
     """Construye el caso de uso con los adaptadores reales de ejecución."""
 
@@ -58,7 +55,7 @@ class AIMessageResponse(BaseModel):
 @router.post("/message")
 def handle_message(
     payload: AIMessageRequest,
-    user_id: Annotated[uuid.UUID, Depends(get_authenticated_user_id)],
+    user_id: CurrentUserId,
     use_case: Annotated[HandleUserMessageUseCase, Depends(get_ai_use_case)],
 ) -> AIMessageResponse:
     """Procesa un mensaje del usuario autenticado con el asistente IA."""

@@ -89,7 +89,7 @@ Las pruebas del módulo verifican el flujo de autenticación y el acceso mediant
 
 **## Estado de la implementación**
 
-El módulo AI actúa como frontera entre la interacción conversacional y la lógica académica. La dependencia con el proveedor LLM se mantiene detrás de un puerto, mientras que `AcademicGatewayAdapter` permite que las operaciones interpretadas sean ejecutadas mediante los casos de uso de Academic.
+El módulo AI actúa como frontera entre la interacción conversacional y la lógica académica. La dependencia con el proveedor LLM se mantiene detrás de un puerto. Para Academic, `AcademicGatewayAdapter` consume `AcademicTaskManagement` y traduce `AcademicTaskData` al modelo de AI, evitando acceder directamente al repositorio o a la entidad de dominio de Academic.
 
 La sustitución del proveedor de IA no requiere modificar directamente las entidades ni las reglas centrales del módulo académico.
 
@@ -121,7 +121,7 @@ La sustitución del proveedor de IA no requiere modificar directamente las entid
 
 **## Estado de la implementación**
 
-El módulo `reminders` utiliza `InMemoryReminderRepository` como persistencia actual y un `NotificationSender` como puerto para desacoplar el envío de notificaciones.
+El módulo `reminders` utiliza `InMemoryReminderRepository` como persistencia actual y un `NotificationSender` como puerto para desacoplar el envío de notificaciones. Para validar la tarea asociada, consume `AcademicTaskLookup` en lugar del repositorio de Academic.
 
 El adaptador `TelegramNotificationSender` conecta el sistema con Telegram mediante la API externa. En el incremento actual el envío es explícito mediante `POST /reminders/{id}/notify`; la ejecución automática exactamente en `scheduled_at` queda como evolución posterior.
 
@@ -151,7 +151,7 @@ El adaptador `TelegramNotificationSender` conecta el sistema con Telegram median
 
 **## Estado de la implementación**
 
-La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. Academic y Reminders reciben el contexto del usuario para las operaciones que acceden a información privada. AI utiliza un gateway hacia Academic en lugar de acceder directamente al repositorio.
+La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. La identidad compartida se obtiene mediante `IdentityService`; Reminders consulta Academic mediante `AcademicTaskLookup`; y AI ejecuta operaciones académicas mediante `AcademicTaskManagement` detrás de `AcademicGatewayAdapter`. Los repositorios y entidades internas permanecen encapsulados en sus contextos propietarios.
 
 La suite automatizada constituye la evidencia global de que los módulos pueden evolucionar manteniendo sus responsabilidades separadas.
 

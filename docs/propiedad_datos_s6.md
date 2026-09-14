@@ -28,4 +28,4 @@ La auditoría se realizó sobre el código vigente del backend, recorriendo la e
 - Se buscaron referencias cruzadas entre módulos, especialmente imports hacia APIs inbound y repositorios outbound de otro contexto.
 - Se verificó que `Task` tiene como repositorio propietario a Academic y que los repositorios de Reminders gestionan `Reminder`, `Notification` y `ReminderSchedule`.
 - No se identificó en el código actual un segundo módulo que escriba directamente las mismas entidades de dominio. Por tanto, **no se detecta una violación de doble escritura de una misma entidad** en el estado auditado.
-- Sí se identificaron **violaciones de frontera modular**, donde un contexto accede directamente a adaptadores internos de otro contexto. Estas violaciones se detallan a continuación.
+- En la versión auditada se habían identificado **violaciones de frontera modular**; fueron corregidas mediante `IdentityService`, `AcademicTaskLookup` y `AcademicTaskManagement`. La auditoría final confirma que AI y Reminders ya no acceden directamente a los repositorios internos de Academic y que los consumidores no importan el adaptador HTTP de Usuario.
