@@ -28,14 +28,14 @@ No se identificó una violación de doble escritura de una misma entidad de domi
 
 No se clasifica como violación de propiedad de datos el hecho de que Reminders o AI consulten una tarea académica: **consultar un dato de otro contexto no equivale a ser su propietario**. La violación aparece cuando el consumidor accede directamente al repositorio interno en lugar de utilizar el contrato del contexto propietario.
 
-## Plan de corrección
+## Correcciones aplicadas y evidencia
 
-| Violación | Acción de corrección | Resultado esperado | Evidencia futura |
+| Violación | Corrección aplicada | Evidencia actual | Estado |
 |---|---|---|---|
-| **V-01** | Definir un contrato de identidad en la capa de aplicación de Usuario y hacer que Academic, AI y Reminders consuman ese contrato. Mantener la autenticación HTTP como responsabilidad del adaptador de entrada. | Los módulos consumidores dejan de importar `usuario.adapters.inbound.api`. | Regla de dependencias + pruebas de autenticación y aislamiento. |
-| **V-02** | Mantener `AcademicTaskLookup` como puerto de Reminders, pero conectar su implementación con una operación/fachada pública de Academic en lugar de `get_task_repository()`. | Reminders solicita una consulta académica sin conocer el repositorio interno de Academic. | Pruebas de asociación Reminder–Task y análisis de imports. |
-| **V-03** | Mantener `AcademicGateway` como contrato de AI y cambiar su adaptador para consumir una interfaz de aplicación de Academic, sin acceder directamente al repositorio. | AI conserva su ACL y queda desacoplado de la persistencia concreta de Academic. | Pruebas de `test_ai_academic_gateway.py` y regla de dependencias. |
-| **V-04** | Revisar la composición de adaptadores y proveedores después de V-01 a V-03. | Cada contexto se comunica mediante contratos explícitos y conserva la propiedad de sus datos. | Auditoría S6 repetida y pruebas completas del backend. |
+| **V-01** | Se definió `IdentityService` en la capa de aplicación de Usuario. Academic, AI y Reminders obtienen identidad mediante ese contrato; la autenticación HTTP permanece en el adaptador de entrada. | `backend/app/modules/usuario/application/ports/inbound/identity.py` + imports cruzados sin `usuario.adapters.inbound.api` + suite de 74 pruebas. | **Corregida** |
+| **V-02** | Se definió `AcademicTaskLookup` y `AcademicTaskLookupService`. Reminders utiliza el contrato y `AcademicTaskLookupAdapter`; `TaskRepository` permanece encapsulado en Academic. | `backend/app/modules/academic/application/ports/inbound/task_lookup.py` + `backend/app/modules/reminders/adapters/outbound/academic_task_lookup_adapter.py` + auditoría de imports. | **Corregida** |
+| **V-03** | Se definió `AcademicTaskManagement` y `AcademicTaskManagementService`. `AcademicGatewayAdapter` consume el contrato y trabaja con `AcademicTaskData`, sin importar repositorio ni entidad `Task`. | `backend/app/modules/academic/application/ports/inbound/task_management.py` + `backend/app/modules/ai/adapters/outbound/academic_gateway.py` + auditoría de imports. | **Corregida** |
+| **V-04** | Se concentró la composición de implementaciones concretas en `backend/app/main.py` y se repitió la auditoría después de V-01–V-03. | `main.py` configura `IdentityService`, `AcademicTaskLookup` y `AcademicTaskManagement`; 74 pruebas aprobadas. | **Corregida** |
 
 Estas correcciones no implican un cambio del estilo arquitectónico definido para TAIA ni la extracción de microservicios. La arquitectura continúa siendo un monolito modular con organización hexagonal selectiva.
 
