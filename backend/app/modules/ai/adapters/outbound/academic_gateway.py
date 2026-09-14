@@ -41,7 +41,7 @@ class AcademicGatewayAdapter(AcademicGateway):
             )
         except ValueError as error:
             raise TaskDataRejected(str(error)) from error
-        except (ValueError, TypeError) as error:
+        except TypeError as error:
             raise TaskDataRejected("Los datos de la tarea no son válidos.") from error
         return _to_view(task)
 
@@ -65,7 +65,7 @@ class AcademicGatewayAdapter(AcademicGateway):
             )
         except ValueError as error:
             raise TaskDataRejected(str(error)) from error
-        except (TypeError,) as error:
+        except TypeError as error:
             raise TaskDataRejected("Los datos de la tarea no son válidos.") from error
         return _to_view(task)
 

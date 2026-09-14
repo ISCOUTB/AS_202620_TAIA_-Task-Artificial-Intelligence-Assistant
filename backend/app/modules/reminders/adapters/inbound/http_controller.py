@@ -2,10 +2,9 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from backend.app.modules.academic.application.ports.inbound.task_lookup import get_academic_task_lookup
-from backend.app.modules.usuario.application.ports.inbound.identity import IdentityService, get_identity_service
+from backend.app.shared.adapters.inbound.auth import CurrentUserId
 from backend.app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
 from backend.app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
 from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
@@ -24,22 +23,6 @@ from backend.app.modules.reminders.adapters.outbound.notification_provider impor
 from backend.app.modules.reminders.domain.entities import Reminder
 
 router = APIRouter(prefix='/reminders', tags=['reminders'])
-_bearer_scheme = HTTPBearer(auto_error=False)
-BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]
-
-def _identity_service() -> IdentityService:
-    return get_identity_service()
-
-def get_authenticated_user_id(credentials: BearerCredentials) -> UUID:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales de autenticación requeridas.", headers={"WWW-Authenticate": "Bearer"})
-    try:
-        return _identity_service().authenticate(credentials.credentials)
-    except ValueError as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token de acceso inválido o usuario no encontrado.", headers={"WWW-Authenticate": "Bearer"}) from error
-
-CurrentUserId = Annotated[UUID, Depends(get_authenticated_user_id)]
-
 class CreateReminderRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=500)
     scheduled_at: datetime

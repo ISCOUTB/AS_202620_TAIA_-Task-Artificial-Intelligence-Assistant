@@ -8,6 +8,7 @@ from backend.app.modules.academic.application.ports.inbound.task_management impo
     AcademicTaskManagement,
 )
 from backend.app.modules.academic.application.ports.outbound.task_repository import TaskRepository
+from backend.app.modules.academic.application.use_cases.complete_task import CompleteTaskUseCase
 from backend.app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
 from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
 from backend.app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase
@@ -17,6 +18,7 @@ class AcademicTaskManagementService(AcademicTaskManagement):
     """Fachada de aplicación que mantiene el repositorio dentro de Academic."""
 
     def __init__(self, repository: TaskRepository) -> None:
+        self._complete = CompleteTaskUseCase(repository)
         self._register = RegisterTaskUseCase(repository)
         self._list = ListTasksUseCase(repository)
         self._update = UpdateTaskUseCase(repository)
@@ -61,6 +63,9 @@ class AcademicTaskManagementService(AcademicTaskManagement):
                 description=description,
             )
         )
+
+    def complete_task(self, task_id: UUID, user_id: UUID) -> AcademicTaskData:
+        return _to_data(self._complete.execute(task_id=task_id, user_id=user_id))
 
 
 def _to_data(task) -> AcademicTaskData:

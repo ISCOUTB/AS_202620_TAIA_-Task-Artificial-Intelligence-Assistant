@@ -46,6 +46,9 @@ class AcademicTaskManagement(Protocol):
     ) -> AcademicTaskData:
         ...
 
+    def complete_task(self, task_id: UUID, user_id: UUID) -> AcademicTaskData:
+        ...
+
 
 _service: AcademicTaskManagement | None = None
 
