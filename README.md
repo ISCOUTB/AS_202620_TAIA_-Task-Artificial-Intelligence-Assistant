@@ -235,3 +235,17 @@ Las principales evidencias se encuentran en `backend/tests/`, incluyendo:
 - `test_reminders_notifications.py`
 - `test_reminders_notify_api.py`
 
+
+### Contrato de API (S7)
+
+La API HTTP principal de TAIA está versionada como `1.0.0` y utiliza HTTP síncrono con JSON. El contrato ejecutable OpenAPI 3.1 se encuentra en `docs/api/openapi.json`.
+
+Para verificar el contrato y el cliente generado:
+
+```bash
+python -m pytest backend/tests/test_api_contract.py -q
+python tools/generate_api_client.py
+git diff --exit-code -- backend/generated/taia_api_client.py
+```
+
+El cliente generado está en `backend/generated/taia_api_client.py`. La decisión de integración está documentada en `docs/adr/0002-estrategia-integracion-api-sincrona.md`.

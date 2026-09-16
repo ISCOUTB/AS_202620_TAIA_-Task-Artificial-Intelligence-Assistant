@@ -151,7 +151,7 @@ El adaptador `TelegramNotificationSender` conecta el sistema con Telegram median
 
 **## Estado de la implementación**
 
-La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. La identidad compartida se obtiene mediante `IdentityService`; Reminders consulta Academic mediante `AcademicTaskLookup`; y AI ejecuta operaciones académicas mediante `AcademicTaskManagement` detrás de `AcademicGatewayAdapter`. Los repositorios y entidades internas permanecen encapsulados en sus contextos propietarios.
+La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. La autenticación HTTP reutiliza `CurrentUserId` desde `backend/app/shared/adapters/inbound/auth.py` y la identidad compartida se obtiene mediante `IdentityService`; Reminders consulta Academic mediante `AcademicTaskLookup`; y AI ejecuta operaciones académicas mediante `AcademicTaskManagement` detrás de `AcademicGatewayAdapter`. Los repositorios y entidades internas permanecen encapsulados en sus contextos propietarios.
 
 La suite automatizada constituye la evidencia global de que los módulos pueden evolucionar manteniendo sus responsabilidades separadas.
 
@@ -185,3 +185,11 @@ La persistencia está aislada mediante puertos y adaptadores. En Academic, los c
 
 Esta estructura permite que PostgreSQL sea incorporado posteriormente como un nuevo adaptador sin modificar las reglas principales de los casos de uso ni del dominio.
 
+
+---
+
+## Evidencia S7 — Contrato de API e integración
+
+La integración HTTP de la API principal se formaliza mediante el [contrato OpenAPI 3.1 versión 1.0.0](api/openapi.json). La estrategia síncrona está justificada en [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md), el flujo de ejecución está documentado en [arc42 sección 6](arc42/06-vista-de-ejecucion.md) y el protocolo/formato de las interacciones está reflejado en el [C4 nivel 2](c4/C4-C2.md).
+
+La conformidad entre contrato e implementación se verifica en [`test_api_contract.py`](../backend/tests/test_api_contract.py). El cliente HTTP generado a partir del contrato se encuentra en [`backend/generated/taia_api_client.py`](../backend/generated/taia_api_client.py) y se regenera mediante [`tools/generate_api_client.py`](../tools/generate_api_client.py). El workflow de CI ejecuta explícitamente la prueba de contrato y comprueba que el cliente generado permanezca sincronizado.

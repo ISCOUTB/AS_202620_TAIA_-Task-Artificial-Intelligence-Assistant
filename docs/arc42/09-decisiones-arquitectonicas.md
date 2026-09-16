@@ -36,3 +36,7 @@ Estos elementos no forman parte del recorrido ejecutable del corte vertical actu
 ## 9.3. Decisiones aplicadas en la implementación actual
 
 ADR-0001 se refleja en la separación entre dominio, aplicación y adaptadores en Academic y Reminders, y en los puertos del módulo AI para LLM y AcademicGateway. Esta separación permitió integrar Reminders y el asistente sin trasladar detalles de Telegram o Gemini al dominio.
+
+## 9.4. ADR-0002 — Integración HTTP síncrona con contrato OpenAPI
+
+La estrategia de integración de la API principal está documentada en [ADR-0002](../adr/0002-estrategia-integracion-api-sincrona.md). La decisión establece HTTP síncrono + JSON y OpenAPI 3.1 como contrato versionado.
