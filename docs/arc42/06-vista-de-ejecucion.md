@@ -1057,3 +1057,45 @@ Los escenarios principales documentados son:
 
 
 Estos escenarios representan los recorridos arquitectónicamente relevantes del estado actual de TAIA y muestran cómo los cuatro módulos colaboran dentro del monolito modular.
+
+---
+
+## 6.25. Flujo de integración de la API principal — contrato HTTP síncrono
+
+La API principal utiliza **HTTP síncrono** y **JSON** para las operaciones expuestas al cliente. El contrato versionado es `docs/api/openapi.json` y corresponde a la versión de API `1.0.0`.
+
+```text
+Cliente / App móvil
+      │
+      │ HTTPS + JSON
+      │ solicitud HTTP
+      ▼
+API TAIA
+      │
+      ├── autenticación: Bearer JWT
+      │
+      ├── validación de esquema
+      │
+      └── caso de uso del módulo
+      │
+      ▼
+Respuesta HTTP + JSON
+      │
+      │ HTTPS
+      ▼
+Cliente / App móvil
+```
+
+### Flujos de integración externos
+
+```text
+API TAIA ── HTTPS + JSON ──► Gemini
+API TAIA ◄─ HTTPS + JSON ─── Gemini
+
+Telegram ── HTTPS + JSON ──► API TAIA
+API TAIA ── HTTPS + JSON ──► Telegram
+
+API TAIA ── SQL/TCP 5432 ──► Base de datos
+```
+
+El protocolo y formato de cada integración se reflejan también en el C4 nivel 2. La API HTTP se mantiene síncrona porque las operaciones actuales necesitan devolver al cliente el resultado de validación, autenticación o ejecución en la misma interacción.

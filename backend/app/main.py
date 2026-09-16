@@ -22,7 +22,11 @@ from backend.app.modules.ai.adapters.inbound.api import router as ai_router
 from backend.app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from backend.app.modules.usuario.adapters.inbound.api import router as usuario_router
 
-app = FastAPI(title="TAIA")
+app = FastAPI(
+    title="TAIA",
+    version="1.0.0",
+    description="Contrato versionado de la API HTTP principal de TAIA. La API utiliza HTTP síncrono y JSON para solicitudes y respuestas.",
+)
 
 app.include_router(academic_router)
 app.include_router(usuario_router)

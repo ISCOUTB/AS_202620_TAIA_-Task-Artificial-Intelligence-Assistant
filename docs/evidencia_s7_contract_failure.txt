@@ -1,0 +1,29 @@
+Evidencia reproducible S7 — detección de cambio incompatible
+
+Comando:
+  PYTHONPATH=. python tools/demo_contract_break.py
+
+Cambio incompatible simulado:
+  Se elimina GET /health de la implementación mientras el contrato continúa declarando la ruta.
+
+Resultado esperado:
+  La comprobación del contrato falla con AssertionError.
+
+Ejecución local:
+Cambio incompatible simulado: se elimina GET /health de la implementación.
+Ejecutando la misma comprobación usada por la prueba de contrato...
+Traceback (most recent call last):
+  File "<repo>/tools/demo_contract_break.py", line 22, in <module>
+    _assert_contract_matches(contract, broken_implementation)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>/backend/tests/test_api_contract.py", line 32, in _assert_contract_matches
+    assert contract["paths"] == implementation["paths"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+Código de salida:
+  1
+
+El script es una demostración manual y no se ejecuta en el CI normal. El CI ejecuta
+backend/tests/test_api_contract.py, cuya prueba test_incompatible_change_is_detected
+verifica de forma automatizada que el mismo comparador detecta la ruptura.
