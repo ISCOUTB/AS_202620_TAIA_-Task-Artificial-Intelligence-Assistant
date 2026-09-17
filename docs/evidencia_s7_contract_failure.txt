@@ -27,3 +27,11 @@ Código de salida:
 El script es una demostración manual y no se ejecuta en el CI normal. El CI ejecuta
 backend/tests/test_api_contract.py, cuya prueba test_incompatible_change_is_detected
 verifica de forma automatizada que el mismo comparador detecta la ruptura.
+
+
+Evidencia CI esperada
+----------------------
+El workflow `.github/workflows/ci.yml` ejecuta:
+  python -m pytest backend/tests/test_api_contract.py -q
+Después regenera `backend/generated/taia_api_client.py` y verifica su sincronización mediante `git diff --exit-code`.
+La URL del run exitoso debe registrarse a partir de GitHub Actions una vez realizado el push; no se incluye una URL ficticia en este archivo.
