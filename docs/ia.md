@@ -391,3 +391,43 @@ Cada grupo de correcciones se validó ejecutando la suite completa y, en los cam
 Queda pendiente un problema, "Split this composite assertion into separate assertions" en `backend/tests/test_ai_handle_message.py`.
 
 Queda igualmente sin explicación la discrepancia entre los 45 problemas verificados en el código y los 3 que reporta SonarQube. Se comprobó que el análisis se ejecuta sobre el árbol actual, por lo que la causa corresponde a la configuración del proyecto en SonarCloud y no al contenido del repositorio.
+
+# Entrada 10
+
+Fecha: 2026-09-15
+
+Herramienta: ChatGPT (OpenAI)
+
+Objetivo: Implementar y documentar la evidencia de la Semana 7 sobre contrato de API, generación de cliente y prueba de contrato.
+
+### Solicitud realizada
+
+Se solicitó apoyo para definir una estrategia de integración HTTP síncrona con JSON, documentarla mediante OpenAPI 3.1, generar un cliente a partir del contrato y añadir una prueba que detectara cambios incompatibles.
+
+### Resultado generado
+
+La IA ayudó a estructurar:
+
+* `docs/api/openapi.json` como contrato versionado.
+* `backend/tests/test_api_contract.py` para comparar contrato e implementación.
+* `backend/generated/taia_api_client.py` y `tools/generate_api_client.py` para generación determinista del cliente.
+* `docs/adr/0002-estrategia-integracion-api-sincrona.md` para justificar HTTP síncrono + JSON + OpenAPI 3.1.
+* Actualizaciones de arc42 §6 y C4-C2 para documentar los flujos y protocolos.
+
+### Aceptado
+
+* Mantener HTTP síncrono y JSON como estrategia de integración de la API principal.
+* Usar OpenAPI 3.1 como contrato ejecutable y versionado.
+* Ejecutar la prueba de contrato en GitHub Actions.
+* Verificar en CI que el cliente generado permanezca sincronizado con el contrato.
+* Mantener una demostración separada de cambio incompatible para no romper la rama principal.
+
+### Rechazado o modificado
+
+* No se incorporó Schemathesis como dependencia adicional, porque la prueba de contrato implementada ya compara directamente el contrato OpenAPI con el esquema generado por FastAPI y permite reproducir explícitamente un cambio incompatible.
+* No se introdujo mensajería asíncrona para la API principal, porque el ADR-0002 documenta HTTP síncrono como decisión para S7.
+* La evidencia de CI no se inventó en el repositorio: la URL y el resultado del run deben obtenerse de una ejecución real de GitHub Actions después del push.
+
+### Verificación realizada
+
+La suite local de contrato se ejecuta con `python -m pytest backend/tests/test_api_contract.py -q`. La demostración `tools/demo_contract_break.py` produce `AssertionError` y código de salida 1 al eliminar `/health` de la implementación. El workflow contiene pasos separados para ejecutar la prueba de contrato, regenerar el cliente y verificar su sincronización.
