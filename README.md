@@ -5,7 +5,7 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 ## Integrantes
 
 - Valeria Berrio Payares
-- Deiner Gonzales Paredes
+- Deiner Gonzalez Paredes
 - Luis Mendoza Angulo
 - Mark Pastrana Koreia 
 
