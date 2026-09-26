@@ -42,6 +42,8 @@ Documento de requerimientos funcionales y no funcionales básicos de TAIA (Task 
 
 **Vocabulario:** "asignatura", "materia" y "curso" significan lo mismo; en el sistema se usa **asignatura**. "Actividad" se refiere a una tarea o un examen.
 
+**Idioma de los valores del sistema:** el texto de los documentos está en español, pero todo valor que exista en el sistema (nombres de tablas, columnas, campos JSON, estados, tipos y valores de `ENUM`) se escribe en inglés, tal como aparece en `diccionario_datos.md`. Cuando el documento nombra uno de esos valores, lo escribe en inglés entre comillas invertidas, con la traducción entre paréntesis si hace falta: por ejemplo, `overdue` (vencida).
+
 ---
 
 ## 2. Reglas transversales
@@ -152,7 +154,7 @@ El sistema debe permitir cerrar la sesión actual.
 
 **Reglas**
 - Se revoca el token de renovación de la sesión.
-- El token de acceso deja de ser aceptado. Se usa una lista de revocación por `jti` hasta su expiración natural.
+- El token de acceso deja de ser aceptado. El token de acceso lleva el identificador de la sesión (`sid`), y en cada petición se verifica que la sesión no esté revocada.
 - Se elimina el token de dispositivo FCM asociado a esa sesión (RF-NOT-01).
 
 **Criterios de aceptación**
@@ -269,7 +271,7 @@ El sistema debe permitir cambiar el nombre y el docente de una asignatura, con l
 ### RF-ASG-04 · Eliminar asignatura
 **Prioridad:** MVP · **Estado:** Pendiente
 
-El sistema debe permitir eliminar una asignatura **solo si no tiene tareas ni exámenes asociados** (en ningún estado).
+El sistema debe permitir eliminar una asignatura **solo si no tiene tareas ni exámenes asociados** en ningún estado, incluidas las actividades eliminadas lógicamente. En cualquier otro caso se archiva.
 
 **Reglas**
 - Al eliminarla, se eliminan también sus bloques de horario.
@@ -336,7 +338,7 @@ El sistema debe permitir crear una actividad académica con estos datos:
 | Campo | Obligatorio | Reglas |
 |---|---|---|
 | Asignatura | Sí | Identificador de una asignatura propia y activa. |
-| Tipo | No | `tarea` (por defecto) o `examen`. |
+| Tipo | No | `task` (por defecto) o `exam`. |
 | Título | Sí en la app | 1–200 caracteres. Por el agente puede generarse automáticamente (RF-AGT-06). |
 | Descripción | No | Máximo 2000 caracteres. |
 | Fecha y hora límite | Sí | Fecha y hora de Colombia (RT-03). Si solo se indica la fecha, se asume 23:59. En un examen es la fecha y hora de presentación. |
@@ -375,9 +377,9 @@ El sistema debe calcular la prioridad de cada actividad pendiente según el tiem
 
 | Prioridad | Condición |
 |---|---|
-| Alta | Vence en 48 horas o menos. |
-| Media | Vence en más de 48 horas y hasta 7 días. |
-| Baja | Vence en más de 7 días. |
+| `high` (alta) | Vence en 48 horas o menos. |
+| `medium` (media) | Vence en más de 48 horas y hasta 7 días. |
+| `low` (baja) | Vence en más de 7 días. |
 
 Las actividades completadas no tienen prioridad y las vencidas tienen su propio estado (RF-TAR-09).
 
@@ -444,7 +446,7 @@ El sistema debería permitir desmarcar una actividad completada por error. Se bo
 ### RF-TAR-09 · Estado "vencida"
 **Prioridad:** MVP · **Estado:** Pendiente
 
-Una actividad pendiente cuya fecha límite ya pasó se muestra con el estado **vencida**. Es un estado derivado, no almacenado. El usuario todavía puede completarla, y en ese caso cuenta como "completada fuera de plazo" en las estadísticas.
+Una actividad pendiente cuya fecha límite ya pasó se muestra con el estado `overdue` (vencida). Es un estado derivado, no almacenado. El usuario todavía puede completarla, y en ese caso cuenta como "completada fuera de plazo" en las estadísticas.
 
 ### RF-TAR-10 · Eliminar actividad
 **Prioridad:** MVP · **Estado:** Pendiente
@@ -486,12 +488,12 @@ El sistema debe permitir crear un recordatorio para una actividad propia y pendi
 **Reglas**
 - La fecha debe ser futura y anterior a la fecha límite de la actividad.
 - Si no se indica mensaje, se genera uno: `"Recuerda: <título> (<asignatura>) vence el <fecha y hora>"`.
-- Origen: `personalizado`.
+- Origen: `custom`.
 
 ### RF-REC-02 · Política de recordatorios por defecto
 **Prioridad:** MVP · **Estado:** Pendiente
 
-Cuando una actividad se crea con la política por defecto, el sistema genera automáticamente estos recordatorios, con origen `automático`:
+Cuando una actividad se crea con la política por defecto, el sistema genera automáticamente estos recordatorios, con origen `automatic`:
 
 1. **La tarde anterior:** el día anterior a la fecha límite, a las 18:00 (Colombia).
 2. **Cada 2 días** contando hacia atrás desde la fecha límite (D−2, D−4, D−6…), a las 18:00, solo dentro de los 14 días previos al vencimiento (D-12).
@@ -507,18 +509,18 @@ Cuando una actividad se crea con la política por defecto, el sistema genera aut
 **Prioridad:** MVP · **Estado:** Implementado (sin filtros)
 
 El sistema debe permitir listar los recordatorios del usuario, filtrables por actividad y estado, y consultar uno por identificador. Cada recordatorio muestra:
-- **Estado:** `pendiente`, `enviado` o `cancelado`.
-- **Origen:** `automático` o `personalizado`.
+- **Estado:** `pending`, `sent` o `cancelled`.
+- **Origen:** `automatic` o `custom`.
 
 ### RF-REC-04 · Editar recordatorio
 **Prioridad:** MVP · **Estado:** Parcial
 
-El sistema debe permitir cambiar la fecha, la hora y el mensaje de un recordatorio **pendiente**. Aplican las reglas de RF-REC-01. Un recordatorio automático editado pasa a ser `personalizado`, para que no lo sobrescriba un recálculo.
+El sistema debe permitir cambiar la fecha, la hora y el mensaje de un recordatorio **pendiente**. Aplican las reglas de RF-REC-01. Un recordatorio automático editado pasa a ser `custom`, para que no lo sobrescriba un recálculo.
 
 ### RF-REC-05 · Eliminar recordatorio
-**Prioridad:** MVP · **Estado:** Implementado
+**Prioridad:** MVP · **Estado:** Parcial
 
-El sistema debe permitir eliminar un recordatorio propio.
+El sistema debe permitir eliminar un recordatorio propio que no haya generado una notificación (estado `pending` o `cancelled`). Un recordatorio `sent` no se elimina, para conservar la bandeja de notificaciones.
 
 ### RF-REC-06 · Sincronización con el ciclo de vida de la actividad
 **Prioridad:** MVP · **Estado:** Pendiente
@@ -545,7 +547,7 @@ Las notificaciones se entregan como **push mediante Firebase Cloud Messaging (FC
 ### RF-NOT-01 · Registrar dispositivo
 **Prioridad:** MVP · **Estado:** Pendiente
 
-El sistema debe permitir que la aplicación registre el token FCM del dispositivo después de iniciar sesión y lo elimine al cerrar sesión. Un usuario puede tener varios dispositivos.
+El sistema debe permitir que la aplicación registre el token FCM del dispositivo después de iniciar sesión y lo elimine al cerrar sesión. Un usuario puede tener varios dispositivos. El token se asocia a la sesión y pertenece al módulo Usuario. Reminders lo obtiene mediante el puerto de Usuario.
 
 ### RF-NOT-02 · Envío automático de notificaciones
 **Prioridad:** MVP · **Estado:** Pendiente
@@ -554,7 +556,7 @@ Un proceso programado del backend debe revisar periódicamente (al menos cada mi
 
 **Reglas**
 - Cada recordatorio genera como máximo una notificación, aunque el proceso se ejecute dos veces (idempotencia).
-- Después del envío, el recordatorio pasa a `enviado` y se guarda la notificación.
+- Después del envío, el recordatorio pasa a `sent` y se guarda la notificación.
 - Si FCM falla, se reintenta hasta 3 veces con espera creciente.
 - No se notifica si la actividad está completada o eliminada, ni si la cuenta está inactiva.
 - La comparación de horas usa instantes con zona (RT-03), nunca la hora local del servidor.
@@ -572,7 +574,7 @@ El sistema debe permitir listar las notificaciones del usuario (más recientes p
 ### RF-NOT-04 · Usuario sin dispositivo registrado
 **Prioridad:** MVP · **Estado:** Pendiente
 
-Si el usuario no tiene dispositivos registrados, la notificación se guarda igualmente en la bandeja (RF-NOT-03) y el recordatorio se marca como `enviado`. No es un error.
+Si el usuario no tiene dispositivos registrados, la notificación se guarda igualmente en la bandeja (RF-NOT-03) y el recordatorio se marca como `sent`. No es un error.
 
 ---
 
