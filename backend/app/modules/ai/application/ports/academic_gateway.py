@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from backend.app.modules.ai.application.dto import (
+from app.modules.ai.application.dto import (
     NewTask,
     TaskChanges,
     TaskFilters,

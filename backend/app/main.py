@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 
-from backend.app.modules.academic.adapters.inbound.api import router as academic_router
-from backend.app.modules.ai.adapters.inbound.api import router as ai_router
-from backend.app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
-from backend.app.modules.usuario.adapters.inbound.api import router as usuario_router
+from app.modules.academic.adapters.inbound.api import router as academic_router
+from app.modules.ai.adapters.inbound.api import router as ai_router
+from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
+from app.modules.usuario.adapters.inbound.api import router as usuario_router
 
 app = FastAPI(title="TAIA")
 

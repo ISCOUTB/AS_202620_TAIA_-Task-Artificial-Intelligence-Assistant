@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from uuid import UUID
 
-from backend.app.modules.reminders.application.ports.outbound.notification_sender import NotificationSender
-from backend.app.modules.reminders.domain.entities import Notification
+from app.modules.reminders.application.ports.outbound.notification_sender import NotificationSender
+from app.modules.reminders.domain.entities import Notification
 
 
 class TelegramNotificationSender(NotificationSender):

@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import os
 
-from backend.app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
+from app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
 
 
 class Pbkdf2PasswordHasher(PasswordHasher):

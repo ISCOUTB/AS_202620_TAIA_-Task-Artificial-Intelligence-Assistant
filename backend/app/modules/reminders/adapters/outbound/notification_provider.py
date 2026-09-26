@@ -1,9 +1,9 @@
 """Composition root for notification delivery."""
 
-from backend.app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
-from backend.app.modules.reminders.adapters.outbound.telegram_bot_client import TelegramBotApiClient
-from backend.app.modules.reminders.adapters.outbound.telegram_notification_sender import TelegramNotificationSender
-from backend.app.modules.usuario.adapters.inbound.api import get_telegram_user_id
+from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
+from app.modules.reminders.adapters.outbound.telegram_bot_client import TelegramBotApiClient
+from app.modules.reminders.adapters.outbound.telegram_notification_sender import TelegramNotificationSender
+from app.modules.usuario.adapters.inbound.api import get_telegram_user_id
 
 
 def get_notification_sender() -> TelegramNotificationSender:

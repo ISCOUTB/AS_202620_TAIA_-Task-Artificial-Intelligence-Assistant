@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
-from backend.app.modules.usuario.domain.value_objects.email import Email
+from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.domain.value_objects.email import Email
 
 
 class InMemoryUserRepository(UserRepository):

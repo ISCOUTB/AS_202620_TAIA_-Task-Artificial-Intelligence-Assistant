@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from backend.app.modules.ai.application.ports.llm import LLMError, LLMPort
-from backend.app.modules.ai.domain.messages import IncomingRequest, Interpretation
+from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.domain.messages import IncomingRequest, Interpretation
 
 
 class FakeLLM(LLMPort):

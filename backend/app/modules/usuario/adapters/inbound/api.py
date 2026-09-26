@@ -10,29 +10,29 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from backend.app.modules.usuario.adapters.outbound.in_memory_user_repository import InMemoryUserRepository
-from backend.app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
-from backend.app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2PasswordHasher
-from backend.app.modules.usuario.adapters.outbound.in_memory_telegram_link_repository import InMemoryTelegramLinkRepository
-from backend.app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
-from backend.app.modules.usuario.application.use_cases.link_telegram import (
+from app.modules.usuario.adapters.outbound.in_memory_user_repository import InMemoryUserRepository
+from app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
+from app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2PasswordHasher
+from app.modules.usuario.adapters.outbound.in_memory_telegram_link_repository import InMemoryTelegramLinkRepository
+from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
+from app.modules.usuario.application.use_cases.link_telegram import (
     ConfirmTelegramLinkUseCase,
     CreateTelegramLinkUseCase,
     TelegramAlreadyLinkedError,
     TelegramLinkTokenInvalidError,
     UserAlreadyLinkedError,
 )
-from backend.app.modules.usuario.application.use_cases.login_user import (
+from app.modules.usuario.application.use_cases.login_user import (
     InactiveUserError,
     InvalidCredentialsError,
     LoginUserUseCase,
 )
-from backend.app.modules.usuario.application.use_cases.register_user import (
+from app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
     UserAlreadyExistsError,
 )
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
-from backend.app.modules.usuario.domain.value_objects.email import InvalidEmailError
+from app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.domain.value_objects.email import InvalidEmailError
 
 router = APIRouter(prefix="/users", tags=["users"])
 

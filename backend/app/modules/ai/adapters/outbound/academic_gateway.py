@@ -9,18 +9,18 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone, timedelta
 
-from backend.app.modules.academic.adapters.outbound.repository_provider import (
+from app.modules.academic.adapters.outbound.repository_provider import (
     get_task_repository,
 )
-from backend.app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
-from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
-from backend.app.modules.academic.application.use_cases.update_task import (
+from app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
+from app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
+from app.modules.academic.application.use_cases.update_task import (
     TaskNotFoundError,
     UpdateTaskUseCase,
 )
-from backend.app.modules.academic.domain.entities.task import InvalidTaskError, Task
-from backend.app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters, TaskView
-from backend.app.modules.ai.application.ports.academic_gateway import (
+from app.modules.academic.domain.entities.task import InvalidTaskError, Task
+from app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters, TaskView
+from app.modules.ai.application.ports.academic_gateway import (
     AcademicGateway,
     AcademicError,
     TaskDataRejected,

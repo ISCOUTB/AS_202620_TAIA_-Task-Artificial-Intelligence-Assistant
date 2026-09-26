@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from jwt import InvalidTokenError
 
-from backend.app.modules.usuario.application.ports.outbound.token_service import TokenService
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.application.ports.outbound.token_service import TokenService
+from app.modules.usuario.domain.entities.usuario import Usuario
 
 
 class JwtTokenService(TokenService):

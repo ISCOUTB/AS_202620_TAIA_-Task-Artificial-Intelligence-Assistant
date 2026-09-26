@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
+from app.modules.reminders.application.ports.inbound.reminder_ports import (
     EditReminderPort,
 )
-from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
+from app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from backend.app.modules.reminders.domain.entities import Reminder
+from app.modules.reminders.domain.entities import Reminder
 
 
 class EditReminderUseCase(EditReminderPort):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from backend.app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.domain.conversation import Conversation
 
 
 class ConversationStore(ABC):

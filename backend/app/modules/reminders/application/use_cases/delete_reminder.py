@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
+from app.modules.reminders.application.ports.inbound.reminder_ports import (
     DeleteReminderPort,
 )
-from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
+from app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
 

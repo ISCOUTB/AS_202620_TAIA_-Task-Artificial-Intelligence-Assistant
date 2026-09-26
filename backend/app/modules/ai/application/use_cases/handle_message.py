@@ -8,17 +8,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime
 
-from backend.app.modules.ai.application import replies
-from backend.app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters
-from backend.app.modules.ai.application.ports.academic_gateway import (
+from app.modules.ai.application import replies
+from app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters
+from app.modules.ai.application.ports.academic_gateway import (
     AcademicError,
     AcademicGateway,
     TaskDataRejected,
 )
-from backend.app.modules.ai.application.ports.conversation_store import ConversationStore
-from backend.app.modules.ai.application.ports.llm import LLMError, LLMPort
-from backend.app.modules.ai.domain.conversation import Conversation
-from backend.app.modules.ai.domain.messages import (
+from app.modules.ai.application.ports.conversation_store import ConversationStore
+from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.domain.messages import (
     COLOMBIA_TZ,
     MAX_INPUT_CHARS,
     MIN_CONFIDENCE,

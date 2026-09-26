@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from backend.app.modules.ai.domain.messages import (
+from app.modules.ai.domain.messages import (
     HISTORY_LIMIT,
     MAX_HISTORY_CHARS,
     PendingAction,

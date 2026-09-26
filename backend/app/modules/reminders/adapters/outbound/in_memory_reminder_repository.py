@@ -6,10 +6,10 @@ module can be executed and tested before PostgreSQL/SQLAlchemy is wired.
 
 from uuid import UUID
 
-from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
+from app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from backend.app.modules.reminders.domain.entities import Reminder
+from app.modules.reminders.domain.entities import Reminder
 
 
 class InMemoryReminderRepository(ReminderRepository):

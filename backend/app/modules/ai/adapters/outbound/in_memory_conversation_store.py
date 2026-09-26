@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from backend.app.modules.ai.application.ports.conversation_store import ConversationStore
-from backend.app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.application.ports.conversation_store import ConversationStore
+from app.modules.ai.domain.conversation import Conversation
 
 
 class InMemoryConversationStore(ConversationStore):

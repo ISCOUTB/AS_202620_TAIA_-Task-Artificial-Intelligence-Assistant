@@ -3,24 +3,24 @@ from typing import Annotated
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from backend.app.modules.academic.adapters.outbound.repository_provider import get_task_repository
-from backend.app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
-from backend.app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
-from backend.app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
+from app.modules.academic.adapters.outbound.repository_provider import get_task_repository
+from app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
+from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
+from app.modules.reminders.application.ports.inbound.reminder_ports import (
     CreateReminderPort, DeleteReminderPort, EditReminderPort, GetReminderPort,
     ListRemindersPort, MarkReminderCompletedPort, ScheduleNotificationPort, SendNotificationPort,
 )
-from backend.app.modules.reminders.application.use_cases.create_reminder import CreateReminderUseCase
-from backend.app.modules.reminders.application.use_cases.delete_reminder import DeleteReminderUseCase
-from backend.app.modules.reminders.application.use_cases.edit_reminder import EditReminderUseCase
-from backend.app.modules.reminders.application.use_cases.get_reminder import GetReminderUseCase
-from backend.app.modules.reminders.application.use_cases.list_reminders import ListRemindersUseCase
-from backend.app.modules.reminders.application.use_cases.mark_reminder_completed import MarkReminderCompletedUseCase
-from backend.app.modules.reminders.application.use_cases.schedule_notification import ScheduleNotificationUseCase
-from backend.app.modules.reminders.application.use_cases.send_notification import SendNotificationUseCase
-from backend.app.modules.reminders.adapters.outbound.notification_provider import get_notification_sender
-from backend.app.modules.reminders.domain.entities import Reminder
+from app.modules.reminders.application.use_cases.create_reminder import CreateReminderUseCase
+from app.modules.reminders.application.use_cases.delete_reminder import DeleteReminderUseCase
+from app.modules.reminders.application.use_cases.edit_reminder import EditReminderUseCase
+from app.modules.reminders.application.use_cases.get_reminder import GetReminderUseCase
+from app.modules.reminders.application.use_cases.list_reminders import ListRemindersUseCase
+from app.modules.reminders.application.use_cases.mark_reminder_completed import MarkReminderCompletedUseCase
+from app.modules.reminders.application.use_cases.schedule_notification import ScheduleNotificationUseCase
+from app.modules.reminders.application.use_cases.send_notification import SendNotificationUseCase
+from app.modules.reminders.adapters.outbound.notification_provider import get_notification_sender
+from app.modules.reminders.domain.entities import Reminder
 
 router = APIRouter(prefix='/reminders', tags=['reminders'])
 CurrentUserId = Annotated[UUID, Depends(get_authenticated_user_id)]

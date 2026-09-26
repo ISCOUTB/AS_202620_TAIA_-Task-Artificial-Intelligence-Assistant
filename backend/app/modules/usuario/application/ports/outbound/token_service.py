@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.domain.entities.usuario import Usuario
 
 
 class TokenService(ABC):

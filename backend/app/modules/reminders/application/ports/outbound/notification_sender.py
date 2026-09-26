@@ -6,7 +6,7 @@ The application layer only knows this contract.
 
 from abc import ABC, abstractmethod
 
-from backend.app.modules.reminders.domain.entities import Notification
+from app.modules.reminders.domain.entities import Notification
 
 
 class NotificationSender(ABC):

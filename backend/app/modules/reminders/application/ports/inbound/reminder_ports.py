@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from uuid import UUID
-from backend.app.modules.reminders.domain.entities import Notification, Reminder
+from app.modules.reminders.domain.entities import Notification, Reminder
 
 class CreateReminderPort(ABC):
     @abstractmethod

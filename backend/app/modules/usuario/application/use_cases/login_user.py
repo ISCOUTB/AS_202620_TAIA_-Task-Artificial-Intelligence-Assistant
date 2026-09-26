@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from backend.app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
-from backend.app.modules.usuario.application.ports.outbound.token_service import TokenService
-from backend.app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from backend.app.modules.usuario.domain.entities.usuario import Usuario, UserStatus
-from backend.app.modules.usuario.domain.value_objects.email import Email
+from app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
+from app.modules.usuario.application.ports.outbound.token_service import TokenService
+from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.domain.entities.usuario import Usuario, UserStatus
+from app.modules.usuario.domain.value_objects.email import Email
 
 
 class InvalidCredentialsError(ValueError):

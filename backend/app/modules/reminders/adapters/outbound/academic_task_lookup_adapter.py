@@ -1,5 +1,5 @@
 from uuid import UUID
-from backend.app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup, TaskSummary
+from app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup, TaskSummary
 
 class AcademicTaskLookupAdapter(AcademicTaskLookup):
     def __init__(self, get_task):

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.domain.entities.usuario import Usuario
 
 
 class AuthenticatedUserNotFoundError(ValueError):

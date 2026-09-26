@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.modules.ai.application.dto import (
+from app.modules.ai.application.dto import (
     NewTask,
     TaskChanges,
     TaskFilters,
     TaskView,
 )
-from backend.app.modules.ai.application.ports.academic_gateway import (
+from app.modules.ai.application.ports.academic_gateway import (
     AcademicGateway,
     TaskDataRejected,
 )

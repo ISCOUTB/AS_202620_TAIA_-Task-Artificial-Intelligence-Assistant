@@ -6,12 +6,12 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from backend.app.modules.usuario.application.ports.outbound.telegram_link_repository import (
+from app.modules.usuario.application.ports.outbound.telegram_link_repository import (
     TelegramLinkRepository,
     TelegramLinkToken,
 )
-from backend.app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from backend.app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.domain.entities.usuario import Usuario
 
 
 class TelegramLinkTokenInvalidError(ValueError):

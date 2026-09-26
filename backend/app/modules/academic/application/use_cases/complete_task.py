@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.modules.academic.application.ports.outbound.task_repository import TaskRepository
-from backend.app.modules.academic.domain.entities.task import Task
+from app.modules.academic.application.ports.outbound.task_repository import TaskRepository
+from app.modules.academic.domain.entities.task import Task
 
 
 class TaskNotFoundError(ValueError):

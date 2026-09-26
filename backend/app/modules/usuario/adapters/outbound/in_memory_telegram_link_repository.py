@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from backend.app.modules.usuario.application.ports.outbound.telegram_link_repository import (
+from app.modules.usuario.application.ports.outbound.telegram_link_repository import (
     TelegramLinkRepository,
     TelegramLinkToken,
 )

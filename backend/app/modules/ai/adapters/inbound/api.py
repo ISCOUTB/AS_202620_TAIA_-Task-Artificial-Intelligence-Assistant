@@ -8,14 +8,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from backend.app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
-from backend.app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
-from backend.app.modules.ai.adapters.outbound.in_memory_conversation_store import (
+from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.adapters.outbound.in_memory_conversation_store import (
     InMemoryConversationStore,
 )
-from backend.app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
-from backend.app.modules.ai.domain.messages import Channel, IncomingRequest
-from backend.app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
+from app.modules.ai.domain.messages import Channel, IncomingRequest
+from app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 

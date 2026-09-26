@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from uuid import UUID
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import CreateReminderPort
-from backend.app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup
-from backend.app.modules.reminders.application.ports.outbound.reminder_repository import ReminderRepository
-from backend.app.modules.reminders.domain.entities import Reminder
+from app.modules.reminders.application.ports.inbound.reminder_ports import CreateReminderPort
+from app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup
+from app.modules.reminders.application.ports.outbound.reminder_repository import ReminderRepository
+from app.modules.reminders.domain.entities import Reminder
 
 class CreateReminderUseCase(CreateReminderPort):
     def __init__(self, repository: ReminderRepository, task_lookup: AcademicTaskLookup | None = None, now_provider=None):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 
-from backend.app.modules.academic.domain.entities.task import Task
+from app.modules.academic.domain.entities.task import Task
 
 
 class TaskRepository(ABC):

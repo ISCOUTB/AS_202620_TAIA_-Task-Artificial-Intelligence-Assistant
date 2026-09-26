@@ -13,8 +13,8 @@ from typing import Any
 
 import httpx
 
-from backend.app.modules.ai.application.ports.llm import LLMError, LLMPort
-from backend.app.modules.ai.domain.messages import (
+from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.domain.messages import (
     COLOMBIA_TZ,
     ExtractedFilters,
     ExtractedTaskData,

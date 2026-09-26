@@ -1,10 +1,10 @@
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
+from app.modules.reminders.application.ports.inbound.reminder_ports import (
     SendNotificationPort,
 )
-from backend.app.modules.reminders.application.ports.outbound.notification_sender import (
+from app.modules.reminders.application.ports.outbound.notification_sender import (
     NotificationSender,
 )
-from backend.app.modules.reminders.domain.entities import Notification
+from app.modules.reminders.domain.entities import Notification
 
 
 class SendNotificationUseCase(SendNotificationPort):

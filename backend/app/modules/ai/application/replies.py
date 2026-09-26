@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from backend.app.modules.ai.application.dto import TaskView
-from backend.app.modules.ai.domain.messages import ExtractedTaskData
+from app.modules.ai.application.dto import TaskView
+from app.modules.ai.domain.messages import ExtractedTaskData
 
 
 def _when(value: datetime) -> str:

@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import (
+from app.modules.reminders.application.ports.inbound.reminder_ports import (
     ScheduleNotificationPort,
 )
-from backend.app.modules.reminders.application.ports.outbound.reminder_repository import (
+from app.modules.reminders.application.ports.outbound.reminder_repository import (
     ReminderRepository,
 )
-from backend.app.modules.reminders.domain.entities import Notification
+from app.modules.reminders.domain.entities import Notification
 
 
 class ScheduleNotificationUseCase(ScheduleNotificationPort):

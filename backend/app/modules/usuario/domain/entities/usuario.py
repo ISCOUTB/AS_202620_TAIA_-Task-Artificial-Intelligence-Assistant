@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 
-from backend.app.modules.usuario.domain.value_objects.email import Email
+from app.modules.usuario.domain.value_objects.email import Email
 
 
 class UserStatus(str, Enum):
