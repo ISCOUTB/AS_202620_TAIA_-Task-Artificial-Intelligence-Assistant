@@ -18,6 +18,11 @@ configure_academic_task_lookup(AcademicTaskLookupService(academic_repository))
 configure_academic_task_management(AcademicTaskManagementService(academic_repository))
 
 from app.modules.academic.adapters.inbound.api import router as academic_router
+from app.modules.academic.adapters.inbound.structure_api import (
+    period_router as academic_period_router,
+    schedule_router as academic_schedule_router,
+    subjects_router as academic_subjects_router,
+)
 from app.modules.ai.adapters.inbound.api import router as ai_router
 from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from app.modules.usuario.adapters.inbound.api import router as usuario_router
@@ -29,6 +34,9 @@ app = FastAPI(
 )
 
 app.include_router(academic_router)
+app.include_router(academic_subjects_router)
+app.include_router(academic_schedule_router)
+app.include_router(academic_period_router)
 app.include_router(usuario_router)
 app.include_router(ai_router)
 app.include_router(reminders_router)

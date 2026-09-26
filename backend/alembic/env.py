@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, pool
 
 from app.shared.adapters.outbound.database import Base, database_url
 
+import app.modules.academic.adapters.outbound.sqlalchemy_models  # noqa: F401
 import app.modules.usuario.adapters.outbound.sqlalchemy_user_repository  # noqa: F401
 
 target_metadata = Base.metadata

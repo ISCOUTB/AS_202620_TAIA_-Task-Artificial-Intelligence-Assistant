@@ -1,61 +1,25 @@
 """Pruebas de integración del repositorio de Usuario contra PostgreSQL (RNF-06, RT-03).
 
-Requieren TEST_DATABASE_URL apuntando a una base de datos de pruebas vacía.
-Sin esa variable se omiten.
+Usan la fixture `clean_db` de conftest.py; sin TEST_DATABASE_URL se omiten.
 """
 
 from __future__ import annotations
 
-import os
 import uuid
 from datetime import datetime
-from pathlib import Path
 
 import pytest
-from alembic import command
-from alembic.config import Config
-from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
 from app.modules.usuario.adapters.outbound.sqlalchemy_user_repository import SqlAlchemyUserRepository
 from app.modules.usuario.domain.entities.usuario import Usuario
 from app.modules.usuario.domain.value_objects.email import Email
 from app.shared.clock import BOGOTA_TZ
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
-
-pytestmark = pytest.mark.skipif(not TEST_DATABASE_URL, reason="TEST_DATABASE_URL no está configurada.")
-
-ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
-
-
-@pytest.fixture(scope="module")
-def session_factory():
-    previous = os.environ.get("DATABASE_URL")
-    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-    config = Config(str(ALEMBIC_INI))
-    try:
-        command.downgrade(config, "base")
-        command.upgrade(config, "head")
-        # Falla si los modelos ORM y las migraciones no coinciden.
-        command.check(config)
-    finally:
-        if previous is None:
-            os.environ.pop("DATABASE_URL", None)
-        else:
-            os.environ["DATABASE_URL"] = previous
-
-    engine = create_engine(TEST_DATABASE_URL)
-    yield sessionmaker(bind=engine, expire_on_commit=False)
-    engine.dispose()
-
 
 @pytest.fixture
-def repository(session_factory):
-    with session_factory.begin() as session:
-        session.execute(text("TRUNCATE users"))
-    return SqlAlchemyUserRepository(session_factory)
+def repository(clean_db):
+    return SqlAlchemyUserRepository(clean_db)
 
 
 def _new_user(email: str = "ana@example.com") -> Usuario:

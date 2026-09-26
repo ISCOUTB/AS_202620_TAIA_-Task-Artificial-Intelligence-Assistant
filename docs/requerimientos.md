@@ -244,7 +244,7 @@ El sistema debe permitir al usuario desactivar su cuenta. La cuenta no se borra 
 Las asignaturas son la base del modelo académico: toda tarea o examen pertenece a una asignatura. Esto permite que consultas como "¿qué tareas tengo en Matemáticas Básicas?" se resuelvan por identificador de asignatura y no comparando texto.
 
 ### RF-ASG-01 · Registrar asignatura
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir al usuario registrar sus asignaturas con **nombre** (obligatorio) y **docente** (opcional).
 
@@ -259,17 +259,17 @@ El sistema debe permitir al usuario registrar sus asignaturas con **nombre** (ob
 - Crear otra con el mismo nombre normalizado → `409`.
 
 ### RF-ASG-02 · Consultar asignaturas
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Parcial
 
 El sistema debe permitir listar las asignaturas del usuario (activas por defecto, con opción de incluir las archivadas) y consultar el detalle de una, incluyendo cuántas tareas pendientes tiene.
 
 ### RF-ASG-03 · Editar asignatura
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir cambiar el nombre y el docente de una asignatura, con las reglas de RF-ASG-01. Las tareas asociadas conservan la relación porque apuntan al identificador, no al nombre.
 
 ### RF-ASG-04 · Eliminar asignatura
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Parcial
 
 El sistema debe permitir eliminar una asignatura **solo si no tiene tareas ni exámenes asociados** en ningún estado, incluidas las actividades eliminadas lógicamente. En cualquier otro caso se archiva.
 
@@ -282,7 +282,7 @@ El sistema debe permitir eliminar una asignatura **solo si no tiene tareas ni ex
 - Eliminar una asignatura con al menos una actividad → `409` con un mensaje que indica cuántas actividades tiene.
 
 ### RF-ASG-05 · Archivar asignatura
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir archivar una asignatura (por ejemplo, al terminar el semestre) y desarchivarla.
 
@@ -293,7 +293,7 @@ El sistema debe permitir archivar una asignatura (por ejemplo, al terminar el se
   - Sus tareas históricas se conservan y siguen contando en las estadísticas.
 
 ### RF-ASG-06 · Registrar bloques de horario
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir registrar el horario de clases del usuario como bloques semanales. Cada bloque tiene asignatura, día de la semana (lunes a domingo), hora de inicio, hora de fin (hora de Colombia) y aula (opcional).
 
@@ -308,7 +308,7 @@ El sistema debe permitir registrar el horario de clases del usuario como bloques
 - Crear un bloque con fin 08:00 e inicio 10:00 → `422`.
 
 ### RF-ASG-07 · Consultar, editar y eliminar bloques de horario
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir:
 - Consultar el horario semanal completo, ordenado por día y hora, con el nombre de la asignatura.
@@ -317,12 +317,12 @@ El sistema debe permitir:
 - Eliminar un bloque. Los bloques no tienen dependientes, así que se eliminan físicamente.
 
 ### RF-ASG-08 · Período académico
-**Prioridad:** Deseable · **Estado:** Pendiente
+**Prioridad:** Deseable · **Estado:** Parcial
 
 El sistema debería permitir definir la fecha de inicio y de fin del período académico (semestre), para que el horario solo se muestre y se use en el plan de estudio dentro de ese rango.
 
 ### RF-ASG-09 · Alias de asignatura
-**Prioridad:** Deseable · **Estado:** Pendiente
+**Prioridad:** Deseable · **Estado:** Implementado
 
 El sistema debería permitir registrar alias cortos por asignatura (por ejemplo, "mate básicas" o "MB") para mejorar su reconocimiento en lenguaje natural (RF-AGT-10).
 

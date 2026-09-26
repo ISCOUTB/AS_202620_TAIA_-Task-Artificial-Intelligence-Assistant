@@ -62,6 +62,51 @@ class TaiaApiClient:
     def update_task_academic_tasks__task_id__patch(self, body: object | None = None, task_id: object | None = None) -> object:
         return self._request("PATCH", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
 
+    def create_subject_academic_subjects_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/academic/subjects", body, **{})
+
+    def list_subjects_academic_subjects_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/subjects", body, **{})
+
+    def get_subject_academic_subjects__subject_id__get(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("GET", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+
+    def update_subject_academic_subjects__subject_id__patch(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("PATCH", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+
+    def delete_subject_academic_subjects__subject_id__delete(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("DELETE", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+
+    def archive_subject_academic_subjects__subject_id__archive_post(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("POST", "/academic/subjects/{subject_id}/archive", body, **{'subject_id': subject_id})
+
+    def unarchive_subject_academic_subjects__subject_id__unarchive_post(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("POST", "/academic/subjects/{subject_id}/unarchive", body, **{'subject_id': subject_id})
+
+    def add_subject_alias_academic_subjects__subject_id__aliases_post(self, body: object | None = None, subject_id: object | None = None) -> object:
+        return self._request("POST", "/academic/subjects/{subject_id}/aliases", body, **{'subject_id': subject_id})
+
+    def remove_subject_alias_academic_subjects__subject_id__aliases__alias_id__delete(self, body: object | None = None, subject_id: object | None = None, alias_id: object | None = None) -> object:
+        return self._request("DELETE", "/academic/subjects/{subject_id}/aliases/{alias_id}", body, **{'subject_id': subject_id, 'alias_id': alias_id})
+
+    def create_schedule_block_academic_schedule_blocks_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/academic/schedule-blocks", body, **{})
+
+    def list_schedule_blocks_academic_schedule_blocks_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/schedule-blocks", body, **{})
+
+    def update_schedule_block_academic_schedule_blocks__block_id__patch(self, body: object | None = None, block_id: object | None = None) -> object:
+        return self._request("PATCH", "/academic/schedule-blocks/{block_id}", body, **{'block_id': block_id})
+
+    def delete_schedule_block_academic_schedule_blocks__block_id__delete(self, body: object | None = None, block_id: object | None = None) -> object:
+        return self._request("DELETE", "/academic/schedule-blocks/{block_id}", body, **{'block_id': block_id})
+
+    def get_academic_period_academic_period_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/period", body, **{})
+
+    def set_academic_period_academic_period_put(self, body: object | None = None) -> object:
+        return self._request("PUT", "/academic/period", body, **{})
+
     def register_user_users_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users", body, **{})
 
