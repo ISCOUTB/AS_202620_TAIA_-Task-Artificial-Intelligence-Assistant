@@ -55,5 +55,10 @@ def clean_db(db_session_factory):
     from sqlalchemy import text
 
     with db_session_factory.begin() as session:
-        session.execute(text("TRUNCATE users, subjects, academic_periods CASCADE"))
+        session.execute(
+            text(
+                "TRUNCATE users, subjects, academic_periods, failed_login_attempts, "
+                "study_plans, reminders, conversations CASCADE"
+            )
+        )
     return db_session_factory
