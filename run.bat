@@ -1,2 +1,2 @@
 @echo off
-python -m uvicorn backend.app.main:app --reload
+python -m uvicorn app.main:app --app-dir backend --reload

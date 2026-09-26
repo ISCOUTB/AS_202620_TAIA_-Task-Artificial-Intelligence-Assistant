@@ -3,7 +3,7 @@ import uuid
 
 import pytest
 
-from backend.app.modules.academic.domain.entities.task import InvalidTaskError, Task, TaskStatus
+from app.modules.academic.domain.entities.task import InvalidTaskError, Task, TaskStatus
 
 
 def test_create_task_with_valid_data():

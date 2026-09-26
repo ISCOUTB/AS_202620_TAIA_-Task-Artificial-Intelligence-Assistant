@@ -3,11 +3,11 @@ import uuid
 
 import pytest
 
-from backend.app.modules.academic.adapters.outbound.in_memory_task_repository import (
+from app.modules.academic.adapters.outbound.in_memory_task_repository import (
     InMemoryTaskRepository,
 )
-from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
-from backend.app.modules.academic.application.use_cases.update_task import (
+from app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
+from app.modules.academic.application.use_cases.update_task import (
     TaskNotFoundError,
     UpdateTaskUseCase,
 )

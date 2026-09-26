@@ -10,8 +10,8 @@ import copy
 import json
 from pathlib import Path
 
-from backend.app.main import app
-from backend.tests.test_api_contract import _assert_contract_matches
+from app.main import app
+from tests.test_api_contract import _assert_contract_matches
 
 contract = json.loads(Path("docs/api/openapi.json").read_text(encoding="utf-8"))
 broken_implementation = copy.deepcopy(app.openapi())

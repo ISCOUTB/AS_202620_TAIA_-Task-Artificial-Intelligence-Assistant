@@ -1,9 +1,9 @@
 from datetime import datetime, timezone, timedelta
 import uuid
 
-from backend.app.modules.academic.adapters.outbound.repository_provider import get_task_repository
-from backend.app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
-from backend.app.modules.ai.application.dto import NewTask, TaskFilters
+from app.modules.academic.adapters.outbound.repository_provider import get_task_repository
+from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
+from app.modules.ai.application.dto import NewTask, TaskFilters
 
 TZ = timezone(timedelta(hours=-5))
 

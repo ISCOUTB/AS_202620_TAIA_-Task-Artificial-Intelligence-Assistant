@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from backend.app.modules.reminders.adapters.outbound.telegram_notification_sender import TelegramNotificationSender
-from backend.app.modules.reminders.domain.entities import Notification, Reminder
+from app.modules.reminders.adapters.outbound.telegram_notification_sender import TelegramNotificationSender
+from app.modules.reminders.domain.entities import Notification, Reminder
 
 
 class FakeBot:

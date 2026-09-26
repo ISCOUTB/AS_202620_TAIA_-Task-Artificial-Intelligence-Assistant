@@ -10,10 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from app.modules.usuario.adapters.outbound.in_memory_user_repository import InMemoryUserRepository
-from app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
-from app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2PasswordHasher
-from app.modules.usuario.adapters.outbound.in_memory_telegram_link_repository import InMemoryTelegramLinkRepository
+from app.modules.usuario.adapters.outbound.provider import (
+    password_hasher as _password_hasher,
+    repository as _repository,
+    telegram_link_repository as _telegram_link_repository,
+    token_service as _token_service,
+)
 from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from app.modules.usuario.application.use_cases.link_telegram import (
     ConfirmTelegramLinkUseCase,

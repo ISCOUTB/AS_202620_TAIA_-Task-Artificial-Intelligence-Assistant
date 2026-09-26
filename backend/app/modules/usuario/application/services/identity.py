@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from backend.app.modules.usuario.application.ports.inbound.identity import IdentityService
-from backend.app.modules.usuario.application.ports.outbound.token_service import TokenService
-from backend.app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from backend.app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
+from app.modules.usuario.application.ports.inbound.identity import IdentityService
+from app.modules.usuario.application.ports.outbound.token_service import TokenService
+from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 
 
 class IdentityServiceImpl(IdentityService):

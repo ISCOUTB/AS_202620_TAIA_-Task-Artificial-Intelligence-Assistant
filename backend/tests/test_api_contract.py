@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from backend.app.main import app
+from app.main import app
 
 
 CONTRACT_PATH = Path(__file__).resolve().parents[2] / "docs/api/openapi.json"

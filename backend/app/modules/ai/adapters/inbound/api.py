@@ -14,7 +14,7 @@ from app.modules.ai.adapters.outbound.in_memory_conversation_store import (
 )
 from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
 from app.modules.ai.domain.messages import Channel, IncomingRequest
-from app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from app.shared.adapters.inbound.auth import CurrentUserId
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 

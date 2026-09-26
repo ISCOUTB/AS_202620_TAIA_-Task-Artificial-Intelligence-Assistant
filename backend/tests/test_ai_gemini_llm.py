@@ -6,9 +6,9 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pytest
 
-from backend.app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
-from backend.app.modules.ai.application.ports.llm import LLMError
-from backend.app.modules.ai.domain.messages import Channel, IncomingRequest, Intent
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.application.ports.llm import LLMError
+from app.modules.ai.domain.messages import Channel, IncomingRequest, Intent
 
 TZ = timezone(timedelta(hours=-5))
 NOW = datetime(2026, 9, 10, 12, 0, tzinfo=TZ)

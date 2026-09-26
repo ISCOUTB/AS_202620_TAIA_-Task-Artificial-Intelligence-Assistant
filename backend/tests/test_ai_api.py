@@ -2,13 +2,13 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
-from backend.app.main import app
-from backend.app.modules.ai.adapters.inbound.api import get_ai_use_case
-from backend.app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
-from backend.app.modules.ai.adapters.outbound.in_memory_conversation_store import InMemoryConversationStore
-from backend.app.modules.ai.adapters.outbound.fake_llm import FakeLLM
-from backend.app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
-from backend.app.modules.ai.domain.messages import ExtractedTaskData, Interpretation, Intent
+from app.main import app
+from app.modules.ai.adapters.inbound.api import get_ai_use_case
+from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
+from app.modules.ai.adapters.outbound.in_memory_conversation_store import InMemoryConversationStore
+from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
+from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
+from app.modules.ai.domain.messages import ExtractedTaskData, Interpretation, Intent
 
 client = TestClient(app)
 TZ = timezone(timedelta(hours=-5))

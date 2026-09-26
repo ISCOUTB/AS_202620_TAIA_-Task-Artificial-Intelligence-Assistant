@@ -1,7 +1,7 @@
 """Pruebas del dominio de conversacion del modulo de IA."""
 
-from backend.app.modules.ai.domain.conversation import Conversation
-from backend.app.modules.ai.domain.messages import (
+from app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.domain.messages import (
     HISTORY_LIMIT,
     ActionKind,
     ExtractedTaskData,

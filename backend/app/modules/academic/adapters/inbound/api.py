@@ -9,16 +9,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.modules.academic.adapters.outbound.repository_provider import get_task_repository
-from app.modules.academic.application.use_cases.complete_task import (
-    CompleteTaskUseCase,
-    TaskNotFoundError,
+from app.modules.academic.application.ports.inbound.task_management import (
+    AcademicTaskData,
+    AcademicTaskManagement,
+    get_academic_task_management,
 )
-from app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
-from app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
-from app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase, TaskNotFoundError as UpdateTaskNotFoundError
-from app.modules.academic.domain.entities.task import InvalidTaskError, Task, TaskStatus
-from app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from app.modules.academic.application.use_cases.complete_task import TaskNotFoundError
+from app.modules.academic.application.use_cases.update_task import TaskNotFoundError as UpdateTaskNotFoundError
+from app.shared.adapters.inbound.auth import CurrentUserId
 
 router = APIRouter(prefix="/academic/tasks", tags=["academic"])
 

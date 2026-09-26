@@ -2,18 +2,18 @@
 
 from datetime import datetime, timedelta, timezone
 
-from backend.app.modules.ai.adapters.outbound.fake_llm import FakeLLM
-from backend.app.modules.ai.adapters.outbound.in_memory_academic_gateway import (
+from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
+from app.modules.ai.adapters.outbound.in_memory_academic_gateway import (
     InMemoryAcademicGateway,
 )
-from backend.app.modules.ai.adapters.outbound.in_memory_conversation_store import (
+from app.modules.ai.adapters.outbound.in_memory_conversation_store import (
     InMemoryConversationStore,
 )
-from backend.app.modules.ai.application.dto import NewTask, TaskFilters
-from backend.app.modules.ai.application.use_cases.handle_message import (
+from app.modules.ai.application.dto import NewTask, TaskFilters
+from app.modules.ai.application.use_cases.handle_message import (
     HandleUserMessageUseCase,
 )
-from backend.app.modules.ai.domain.messages import (
+from app.modules.ai.domain.messages import (
     Channel,
     ExtractedFilters,
     ExtractedTaskData,

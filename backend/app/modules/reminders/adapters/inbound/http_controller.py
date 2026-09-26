@@ -3,8 +3,8 @@ from typing import Annotated
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from app.modules.academic.adapters.outbound.repository_provider import get_task_repository
-from app.modules.usuario.adapters.inbound.api import get_authenticated_user_id
+from app.modules.academic.application.ports.inbound.task_lookup import get_academic_task_lookup
+from app.shared.adapters.inbound.auth import CurrentUserId
 from app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
 from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
 from app.modules.reminders.application.ports.inbound.reminder_ports import (

@@ -2,11 +2,11 @@
 
 from uuid import UUID
 
-from backend.app.modules.academic.application.ports.inbound.task_lookup import (
+from app.modules.academic.application.ports.inbound.task_lookup import (
     AcademicTaskLookup,
     AcademicTaskSummary,
 )
-from backend.app.modules.academic.application.ports.outbound.task_repository import TaskRepository
+from app.modules.academic.application.ports.outbound.task_repository import TaskRepository
 
 
 class AcademicTaskLookupService(AcademicTaskLookup):

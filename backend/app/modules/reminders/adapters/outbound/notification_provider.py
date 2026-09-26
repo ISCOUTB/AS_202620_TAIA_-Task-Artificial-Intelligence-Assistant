@@ -3,7 +3,7 @@
 from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
 from app.modules.reminders.adapters.outbound.telegram_bot_client import TelegramBotApiClient
 from app.modules.reminders.adapters.outbound.telegram_notification_sender import TelegramNotificationSender
-from app.modules.usuario.adapters.inbound.api import get_telegram_user_id
+from app.modules.usuario.application.ports.inbound.identity import get_identity_service
 
 
 def get_notification_sender() -> TelegramNotificationSender:

@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from backend.app.modules.usuario.application.ports.inbound.identity import (
+from app.modules.usuario.application.ports.inbound.identity import (
     IdentityService,
     get_identity_service,
 )

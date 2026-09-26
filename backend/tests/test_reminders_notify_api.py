@@ -2,9 +2,9 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
-from backend.app.main import app
-from backend.app.modules.reminders.adapters.inbound.http_controller import get_send_notification_use_case
-from backend.app.modules.reminders.application.ports.inbound.reminder_ports import SendNotificationPort
+from app.main import app
+from app.modules.reminders.adapters.inbound.http_controller import get_send_notification_use_case
+from app.modules.reminders.application.ports.inbound.reminder_ports import SendNotificationPort
 
 client = TestClient(app)
 

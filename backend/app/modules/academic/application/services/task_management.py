@@ -3,15 +3,15 @@
 from uuid import UUID
 from datetime import date
 
-from backend.app.modules.academic.application.ports.inbound.task_management import (
+from app.modules.academic.application.ports.inbound.task_management import (
     AcademicTaskData,
     AcademicTaskManagement,
 )
-from backend.app.modules.academic.application.ports.outbound.task_repository import TaskRepository
-from backend.app.modules.academic.application.use_cases.complete_task import CompleteTaskUseCase
-from backend.app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
-from backend.app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
-from backend.app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase
+from app.modules.academic.application.ports.outbound.task_repository import TaskRepository
+from app.modules.academic.application.use_cases.complete_task import CompleteTaskUseCase
+from app.modules.academic.application.use_cases.list_tasks import ListTasksUseCase
+from app.modules.academic.application.use_cases.register_task import RegisterTaskUseCase
+from app.modules.academic.application.use_cases.update_task import UpdateTaskUseCase
 
 
 class AcademicTaskManagementService(AcademicTaskManagement):

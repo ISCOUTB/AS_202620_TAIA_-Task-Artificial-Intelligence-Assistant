@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from backend.app.main import app
-from backend.app.modules.usuario.adapters.inbound.api import _repository
+from app.main import app
+from app.modules.usuario.adapters.inbound.api import _repository
 
 
 client = TestClient(app)
