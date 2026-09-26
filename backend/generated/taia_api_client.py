@@ -50,17 +50,26 @@ class TaiaApiClient:
                 body = raw.decode("utf-8", errors="replace")
             raise TaiaApiError(exc.code, body) from exc
 
+    def register_task_academic_tasks_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/academic/tasks", body, **{})
+
     def list_tasks_academic_tasks_get(self, body: object | None = None) -> object:
         return self._request("GET", "/academic/tasks", body, **{})
 
-    def register_task_academic_tasks_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/academic/tasks", body, **{})
+    def get_task_academic_tasks__task_id__get(self, body: object | None = None, task_id: object | None = None) -> object:
+        return self._request("GET", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+
+    def update_task_academic_tasks__task_id__patch(self, body: object | None = None, task_id: object | None = None) -> object:
+        return self._request("PATCH", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+
+    def delete_task_academic_tasks__task_id__delete(self, body: object | None = None, task_id: object | None = None) -> object:
+        return self._request("DELETE", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
 
     def complete_task_academic_tasks__task_id__complete_patch(self, body: object | None = None, task_id: object | None = None) -> object:
         return self._request("PATCH", "/academic/tasks/{task_id}/complete", body, **{'task_id': task_id})
 
-    def update_task_academic_tasks__task_id__patch(self, body: object | None = None, task_id: object | None = None) -> object:
-        return self._request("PATCH", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+    def reopen_task_academic_tasks__task_id__reopen_patch(self, body: object | None = None, task_id: object | None = None) -> object:
+        return self._request("PATCH", "/academic/tasks/{task_id}/reopen", body, **{'task_id': task_id})
 
     def create_subject_academic_subjects_post(self, body: object | None = None) -> object:
         return self._request("POST", "/academic/subjects", body, **{})

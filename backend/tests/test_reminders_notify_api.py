@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests import helpers
 from app.modules.reminders.adapters.inbound.http_controller import get_send_notification_use_case
 from app.modules.reminders.application.ports.inbound.reminder_ports import SendNotificationPort
 
@@ -17,10 +18,8 @@ def register_and_login(email: str) -> dict[str, str]:
     return {'Authorization': f"Bearer {login.json()['access_token']}"}
 
 
-def create_task(headers):
-    response = client.post('/academic/tasks', headers=headers, json={'title': 'Tarea', 'due_date': '2026-09-20'})
-    assert response.status_code == 201
-    return response.json()['id']
+def create_task(headers, title='Tarea vinculada'):
+    return helpers.create_task(client, headers, title)
 
 
 class FakeSender(SendNotificationPort):

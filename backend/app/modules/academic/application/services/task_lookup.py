@@ -16,12 +16,12 @@ class AcademicTaskLookupService(AcademicTaskLookup):
         self._repository = repository
 
     def get_summary(self, task_id: UUID, user_id: UUID) -> AcademicTaskSummary | None:
-        task = self._repository.get_by_id(task_id, user_id)
+        task = self._repository.get(task_id, user_id)
         if task is None:
             return None
         return AcademicTaskSummary(
             task_id=task.id,
-            owner_user_id=task.user_id,
+            owner_user_id=user_id,
             title=task.title,
-            due_date=getattr(task, "due_date", None),
+            due_at=task.due_at,
         )

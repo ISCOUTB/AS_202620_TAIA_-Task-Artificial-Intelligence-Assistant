@@ -7,51 +7,27 @@
   },
   "paths": {
     "/academic/tasks": {
-      "get": {
-        "tags": [
-          "academic"
-        ],
-        "summary": "List Tasks",
-        "description": "Devuelve únicamente las tareas del usuario autenticado.",
-        "operationId": "list_tasks_academic_tasks_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TaskResponse"
-                  },
-                  "type": "array",
-                  "title": "Response List Tasks Academic Tasks Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "academic"
         ],
         "summary": "Register Task",
-        "description": "Registra una tarea académica para el usuario autenticado.",
+        "description": "Registra una tarea o un examen en una asignatura activa (RF-TAR-01).",
         "operationId": "register_task_academic_tasks_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TaskCreateRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -60,6 +36,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -74,22 +60,179 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "List Tasks",
+        "description": "Lista paginada de las tareas propias, ordenadas por fecha límite (RF-TAR-04).",
+        "operationId": "list_tasks_academic_tasks_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TaskStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TaskType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "due_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Due From"
+            }
+          },
+          {
+            "name": "due_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Due To"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Texto en el título o la descripción.",
+              "title": "Q"
+            },
+            "description": "Texto en el título o la descripción."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskPageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos de la tarea no son válidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/academic/tasks/{task_id}/complete": {
-      "patch": {
+    "/academic/tasks/{task_id}": {
+      "get": {
         "tags": [
           "academic"
         ],
-        "summary": "Complete Task",
-        "description": "Marca como completada una tarea del usuario autenticado.",
-        "operationId": "complete_task_academic_tasks__task_id__complete_patch",
+        "summary": "Get Task",
+        "description": "Detalle de una tarea (RF-TAR-05).",
+        "operationId": "get_task_academic_tasks__task_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -119,7 +262,7 @@
             }
           },
           "404": {
-            "description": "La tarea no existe o no pertenece al usuario.",
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
             "content": {
               "application/json": {
                 "schema": {
@@ -139,15 +282,13 @@
             }
           }
         }
-      }
-    },
-    "/academic/tasks/{task_id}": {
+      },
       "patch": {
         "tags": [
           "academic"
         ],
         "summary": "Update Task",
-        "description": "Actualiza una tarea del usuario autenticado.",
+        "description": "Actualiza una tarea propia (RF-TAR-06).",
         "operationId": "update_task_academic_tasks__task_id__patch",
         "security": [
           {
@@ -188,7 +329,7 @@
             }
           },
           "404": {
-            "description": "La tarea no existe o no pertenece al usuario.",
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
             "content": {
               "application/json": {
                 "schema": {
@@ -203,6 +344,174 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Delete Task",
+        "description": "Elimina lógicamente una tarea propia (RF-TAR-10).",
+        "operationId": "delete_task_academic_tasks__task_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/academic/tasks/{task_id}/complete": {
+      "patch": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Complete Task",
+        "description": "Marca como completada una tarea propia (RF-TAR-07).",
+        "operationId": "complete_task_academic_tasks__task_id__complete_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/academic/tasks/{task_id}/reopen": {
+      "patch": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Reopen Task",
+        "description": "Desmarca una tarea completada por error (RF-TAR-08).",
+        "operationId": "reopen_task_academic_tasks__task_id__reopen_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La tarea o la asignatura no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -271,7 +580,7 @@
           "academic"
         ],
         "summary": "List Subjects",
-        "description": "Lista las asignaturas del usuario (RF-ASG-02).",
+        "description": "Lista las asignaturas del usuario con sus tareas pendientes (RF-ASG-02).",
         "operationId": "list_subjects_academic_subjects_get",
         "security": [
           {
@@ -324,7 +633,7 @@
           "academic"
         ],
         "summary": "Get Subject",
-        "description": "Consulta una asignatura (RF-ASG-02).",
+        "description": "Consulta una asignatura con sus tareas pendientes (RF-ASG-02).",
         "operationId": "get_subject_academic_subjects__subject_id__get",
         "security": [
           {
@@ -458,7 +767,7 @@
           "academic"
         ],
         "summary": "Delete Subject",
-        "description": "Elimina una asignatura y sus bloques de horario (RF-ASG-04).",
+        "description": "Elimina una asignatura sin actividades, junto con sus bloques de horario (RF-ASG-04).",
         "operationId": "delete_subject_academic_subjects__subject_id__delete",
         "security": [
           {
@@ -483,6 +792,16 @@
           },
           "404": {
             "description": "No existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con datos existentes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2318,6 +2637,10 @@
             "type": "array",
             "title": "Aliases"
           },
+          "pending_tasks": {
+            "type": "integer",
+            "title": "Pending Tasks"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -2332,6 +2655,7 @@
           "archived",
           "archived_at",
           "aliases",
+          "pending_tasks",
           "created_at"
         ],
         "title": "SubjectResponse"
@@ -2369,32 +2693,32 @@
       },
       "TaskCreateRequest": {
         "properties": {
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
           "title": {
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Title"
           },
-          "due_date": {
+          "due_at": {
             "type": "string",
-            "format": "date",
-            "title": "Due Date"
+            "format": "date-time",
+            "title": "Due At",
+            "description": "Fecha y hora límite. Solo con fecha (AAAA-MM-DD) se asume 23:59 hora de Colombia; sin zona horaria, hora de Colombia."
           },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
+          "type": {
+            "$ref": "#/components/schemas/TaskType",
+            "default": "task"
           },
           "description": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 2000
               },
               {
                 "type": "null"
@@ -2405,11 +2729,43 @@
         },
         "type": "object",
         "required": [
+          "subject_id",
           "title",
-          "due_date"
+          "due_at"
         ],
         "title": "TaskCreateRequest",
-        "description": "Esquema de entrada para registrar una tarea académica."
+        "description": "Esquema de entrada para registrar una tarea o un examen."
+      },
+      "TaskPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "TaskPageResponse"
       },
       "TaskResponse": {
         "properties": {
@@ -2418,25 +2774,21 @@
             "format": "uuid",
             "title": "Id"
           },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TaskType"
+          },
           "title": {
             "type": "string",
             "title": "Title"
-          },
-          "due_date": {
-            "type": "string",
-            "format": "date",
-            "title": "Due Date"
-          },
-          "subject": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subject"
           },
           "description": {
             "anyOf": [
@@ -2449,25 +2801,92 @@
             ],
             "title": "Description"
           },
-          "status": {
+          "due_at": {
             "type": "string",
-            "title": "Status"
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "id",
+          "subject_id",
+          "subject_name",
+          "type",
           "title",
-          "due_date",
-          "subject",
           "description",
-          "status"
+          "due_at",
+          "completed_at",
+          "status",
+          "priority",
+          "created_at"
         ],
         "title": "TaskResponse",
-        "description": "Esquema de salida de una tarea académica."
+        "description": "Tarea con sus campos derivados: estado y prioridad (RF-TAR-03, RF-TAR-09)."
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "completed",
+          "overdue"
+        ],
+        "title": "TaskStatus",
+        "description": "Estado derivado de `completed_at` y `due_at`; no se almacena (RF-TAR-09)."
+      },
+      "TaskType": {
+        "type": "string",
+        "enum": [
+          "task",
+          "exam"
+        ],
+        "title": "TaskType"
       },
       "TaskUpdateRequest": {
         "properties": {
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
           "title": {
             "anyOf": [
               {
@@ -2481,33 +2900,34 @@
             ],
             "title": "Title"
           },
-          "due_date": {
+          "due_at": {
             "anyOf": [
               {
                 "type": "string",
-                "format": "date"
+                "format": "date-time",
+                "description": "Fecha y hora límite. Solo con fecha (AAAA-MM-DD) se asume 23:59 hora de Colombia; sin zona horaria, hora de Colombia."
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Due Date"
+            "title": "Due At"
           },
-          "subject": {
+          "type": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/TaskType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Subject"
+            ]
           },
           "description": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 2000
               },
               {
                 "type": "null"

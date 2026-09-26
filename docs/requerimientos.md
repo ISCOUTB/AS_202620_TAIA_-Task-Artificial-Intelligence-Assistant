@@ -259,7 +259,7 @@ El sistema debe permitir al usuario registrar sus asignaturas con **nombre** (ob
 - Crear otra con el mismo nombre normalizado → `409`.
 
 ### RF-ASG-02 · Consultar asignaturas
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir listar las asignaturas del usuario (activas por defecto, con opción de incluir las archivadas) y consultar el detalle de una, incluyendo cuántas tareas pendientes tiene.
 
@@ -269,7 +269,7 @@ El sistema debe permitir listar las asignaturas del usuario (activas por defecto
 El sistema debe permitir cambiar el nombre y el docente de una asignatura, con las reglas de RF-ASG-01. Las tareas asociadas conservan la relación porque apuntan al identificador, no al nombre.
 
 ### RF-ASG-04 · Eliminar asignatura
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir eliminar una asignatura **solo si no tiene tareas ni exámenes asociados** en ningún estado, incluidas las actividades eliminadas lógicamente. En cualquier otro caso se archiva.
 
@@ -331,7 +331,7 @@ El sistema debería permitir registrar alias cortos por asignatura (por ejemplo,
 ## 5. Tareas y exámenes (TAR)
 
 ### RF-TAR-01 · Crear actividad (tarea o examen)
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir crear una actividad académica con estos datos:
 
@@ -371,7 +371,7 @@ En la aplicación la opción por defecto preseleccionada es la política por def
 - Crear con "sin recordatorios" → no se genera ninguno.
 
 ### RF-TAR-03 · Prioridad calculada por fecha límite
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe calcular la prioridad de cada actividad pendiente según el tiempo que falta para su fecha límite. No se almacena: se calcula en cada consulta.
 
@@ -388,7 +388,7 @@ Las actividades completadas no tienen prioridad y las vencidas tienen su propio 
 - La prioridad de una actividad cambia con el paso del tiempo sin que nadie la edite.
 
 ### RF-TAR-04 · Listar actividades con filtros
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir listar las actividades del usuario, ordenadas por fecha límite ascendente (lo que vence primero aparece primero). Se puede filtrar por:
 - Asignatura (identificador).
@@ -407,7 +407,7 @@ El sistema debe permitir listar las actividades del usuario, ordenadas por fecha
 - Con 25 actividades y sin paginación explícita, se devuelven 20 y la información para pedir la siguiente página.
 
 ### RF-TAR-05 · Ver detalle de una actividad
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Parcial
 
 El sistema debe permitir consultar una actividad por su identificador, con todos sus campos, su prioridad, sus fechas de creación y de completado, y sus recordatorios.
 
@@ -439,17 +439,17 @@ El sistema debe permitir marcar una actividad como completada.
 - `completed_at` queda registrado en hora con zona.
 
 ### RF-TAR-08 · Reabrir actividad
-**Prioridad:** Deseable · **Estado:** Pendiente
+**Prioridad:** Deseable · **Estado:** Parcial
 
 El sistema debería permitir desmarcar una actividad completada por error. Se borra `completed_at` y se regeneran los recordatorios automáticos futuros si la fecha límite no ha pasado.
 
 ### RF-TAR-09 · Estado "vencida"
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 Una actividad pendiente cuya fecha límite ya pasó se muestra con el estado `overdue` (vencida). Es un estado derivado, no almacenado. El usuario todavía puede completarla, y en ese caso cuenta como "completada fuera de plazo" en las estadísticas.
 
 ### RF-TAR-10 · Eliminar actividad
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Parcial
 
 El sistema debe permitir eliminar una actividad propia. **Solo el usuario puede hacerlo, desde la aplicación**: el agente no puede eliminar actividades (RF-AGT-03).
 

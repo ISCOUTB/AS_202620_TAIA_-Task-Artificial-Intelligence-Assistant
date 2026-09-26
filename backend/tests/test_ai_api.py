@@ -35,6 +35,8 @@ def test_ai_endpoint_requires_authentication():
 
 def test_ai_create_task_uses_real_academic_context(monkeypatch):
     headers = register_and_login("ai-api@example.com")
+    subject = client.post("/academic/subjects", json={"name": "Arquitectura"}, headers=headers)
+    assert subject.status_code == 201
     llm = FakeLLM(
         [
             Interpretation(
@@ -42,7 +44,7 @@ def test_ai_create_task_uses_real_academic_context(monkeypatch):
                 confidence=0.95,
                 task=ExtractedTaskData(
                     title="Tarea creada por IA",
-                    due_at=datetime(2026, 9, 20, 20, 0, tzinfo=TZ),
+                    due_at=datetime.now(TZ) + timedelta(days=5),
                     subject="Arquitectura",
                 ),
             )
@@ -74,6 +76,7 @@ def test_ai_create_task_uses_real_academic_context(monkeypatch):
 
         academic = client.get("/academic/tasks", headers=headers)
         assert academic.status_code == 200
-        assert any(task["title"] == "Tarea creada por IA" for task in academic.json())
+        created = [task for task in academic.json()["items"] if task["title"] == "Tarea creada por IA"]
+        assert created[0]["subject_name"] == "Arquitectura"
     finally:
         app.dependency_overrides.pop(get_ai_use_case, None)

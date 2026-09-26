@@ -27,3 +27,11 @@ class AliasNotFoundError(ValueError):
 
 class AcademicPeriodNotFoundError(ValueError):
     """El usuario no ha definido un período académico."""
+
+
+class SubjectHasTasksError(ValueError):
+    """La asignatura tiene actividades asociadas y solo puede archivarse (RF-ASG-04)."""
+
+
+class TaskNotFoundError(ValueError):
+    """La tarea no existe, fue eliminada o no pertenece al usuario (RT-02)."""

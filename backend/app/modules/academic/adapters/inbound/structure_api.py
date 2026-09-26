@@ -13,6 +13,7 @@ from app.modules.academic.adapters.outbound.repository_provider import (
     get_academic_period_repository,
     get_schedule_block_repository,
     get_subject_repository,
+    get_task_repository,
 )
 from app.modules.academic.application.errors import (
     AcademicPeriodNotFoundError,
@@ -20,6 +21,7 @@ from app.modules.academic.application.errors import (
     ScheduleBlockNotFoundError,
     ScheduleOverlapError,
     SubjectAlreadyExistsError,
+    SubjectHasTasksError,
     SubjectNotFoundError,
 )
 from app.modules.academic.application.use_cases.manage_academic_period import (
@@ -38,7 +40,7 @@ period_router = APIRouter(prefix="/academic/period", tags=["academic"])
 
 
 def get_subjects_use_case() -> ManageSubjectsUseCase:
-    return ManageSubjectsUseCase(get_subject_repository(), get_schedule_block_repository())
+    return ManageSubjectsUseCase(get_subject_repository(), get_schedule_block_repository(), get_task_repository())
 
 
 def get_schedule_use_case() -> ManageScheduleUseCase:
@@ -68,7 +70,7 @@ CONFLICT = {409: {"model": ErrorResponse, "description": "Conflicto con datos ex
 def _http_error(error: ValueError) -> HTTPException:
     if isinstance(error, (SubjectNotFoundError, ScheduleBlockNotFoundError, AliasNotFoundError, AcademicPeriodNotFoundError)):
         return HTTPException(status_code=404, detail=str(error))
-    if isinstance(error, (SubjectAlreadyExistsError, ScheduleOverlapError)):
+    if isinstance(error, (SubjectAlreadyExistsError, ScheduleOverlapError, SubjectHasTasksError)):
         return HTTPException(status_code=409, detail=str(error))
     return HTTPException(status_code=422, detail=str(error))
 
@@ -102,10 +104,11 @@ class SubjectResponse(BaseModel):
     archived: bool
     archived_at: datetime | None
     aliases: list[AliasResponse]
+    pending_tasks: int
     created_at: datetime
 
     @classmethod
-    def from_domain(cls, subject: Subject) -> "SubjectResponse":
+    def from_domain(cls, subject: Subject, pending_tasks: int) -> "SubjectResponse":
         return cls(
             id=subject.id,
             name=subject.name,
@@ -113,15 +116,20 @@ class SubjectResponse(BaseModel):
             archived=subject.archived,
             archived_at=subject.archived_at,
             aliases=[AliasResponse(id=alias.id, alias=alias.alias) for alias in subject.aliases],
+            pending_tasks=pending_tasks,
             created_at=subject.created_at,
         )
+
+
+def _subject_response(subject: Subject, use_case: ManageSubjectsUseCase) -> SubjectResponse:
+    return SubjectResponse.from_domain(subject, use_case.pending_task_counts(subject.user_id).get(subject.id, 0))
 
 
 @subjects_router.post("", status_code=status.HTTP_201_CREATED, responses={**CONFLICT, **INVALID})
 def create_subject(payload: SubjectCreateRequest, user_id: CurrentUserId, use_case: SubjectsUseCase) -> SubjectResponse:
     """Registra una asignatura (RF-ASG-01)."""
     try:
-        return SubjectResponse.from_domain(use_case.create(user_id, payload.name, payload.teacher))
+        return _subject_response(use_case.create(user_id, payload.name, payload.teacher), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
@@ -132,15 +140,19 @@ def list_subjects(
     use_case: SubjectsUseCase,
     include_archived: Annotated[bool, Query()] = False,
 ) -> list[SubjectResponse]:
-    """Lista las asignaturas del usuario (RF-ASG-02)."""
-    return [SubjectResponse.from_domain(subject) for subject in use_case.list(user_id, include_archived)]
+    """Lista las asignaturas del usuario con sus tareas pendientes (RF-ASG-02)."""
+    counts = use_case.pending_task_counts(user_id)
+    return [
+        SubjectResponse.from_domain(subject, counts.get(subject.id, 0))
+        for subject in use_case.list(user_id, include_archived)
+    ]
 
 
 @subjects_router.get("/{subject_id}", responses=NOT_FOUND)
 def get_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: SubjectsUseCase) -> SubjectResponse:
-    """Consulta una asignatura (RF-ASG-02)."""
+    """Consulta una asignatura con sus tareas pendientes (RF-ASG-02)."""
     try:
-        return SubjectResponse.from_domain(use_case.get(subject_id, user_id))
+        return _subject_response(use_case.get(subject_id, user_id), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
@@ -151,14 +163,14 @@ def update_subject(
 ) -> SubjectResponse:
     """Edita el nombre o el docente (RF-ASG-03)."""
     try:
-        return SubjectResponse.from_domain(use_case.update(subject_id, user_id, payload.name, payload.teacher))
+        return _subject_response(use_case.update(subject_id, user_id, payload.name, payload.teacher), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
 
-@subjects_router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT, responses=NOT_FOUND)
+@subjects_router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT, responses={**NOT_FOUND, **CONFLICT})
 def delete_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: SubjectsUseCase) -> None:
-    """Elimina una asignatura y sus bloques de horario (RF-ASG-04)."""
+    """Elimina una asignatura sin actividades, junto con sus bloques de horario (RF-ASG-04)."""
     try:
         use_case.delete(subject_id, user_id)
     except ValueError as error:
@@ -169,7 +181,7 @@ def delete_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: Subj
 def archive_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: SubjectsUseCase) -> SubjectResponse:
     """Archiva una asignatura (RF-ASG-05)."""
     try:
-        return SubjectResponse.from_domain(use_case.archive(subject_id, user_id))
+        return _subject_response(use_case.archive(subject_id, user_id), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
@@ -178,7 +190,7 @@ def archive_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: Sub
 def unarchive_subject(subject_id: uuid.UUID, user_id: CurrentUserId, use_case: SubjectsUseCase) -> SubjectResponse:
     """Desarchiva una asignatura si su horario no choca con el actual (RF-ASG-05)."""
     try:
-        return SubjectResponse.from_domain(use_case.unarchive(subject_id, user_id))
+        return _subject_response(use_case.unarchive(subject_id, user_id), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
@@ -191,7 +203,7 @@ def add_subject_alias(
 ) -> SubjectResponse:
     """Agrega un alias a la asignatura (RF-ASG-09)."""
     try:
-        return SubjectResponse.from_domain(use_case.add_alias(subject_id, user_id, payload.alias))
+        return _subject_response(use_case.add_alias(subject_id, user_id, payload.alias), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 
@@ -202,7 +214,7 @@ def remove_subject_alias(
 ) -> SubjectResponse:
     """Elimina un alias de la asignatura (RF-ASG-09)."""
     try:
-        return SubjectResponse.from_domain(use_case.remove_alias(subject_id, user_id, alias_id))
+        return _subject_response(use_case.remove_alias(subject_id, user_id, alias_id), use_case)
     except ValueError as error:
         raise _http_error(error) from error
 

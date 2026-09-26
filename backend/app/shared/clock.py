@@ -8,7 +8,7 @@ depender de tzdata.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 BOGOTA_TZ = timezone(timedelta(hours=-5), "America/Bogota")
 
@@ -27,3 +27,9 @@ def as_bogota(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=BOGOTA_TZ)
     return value.astimezone(BOGOTA_TZ)
+
+
+def end_of_day_bogota(value: date) -> datetime:
+    """Una fecha sin hora se interpreta como las 23:59 de ese día en Colombia (RT-03)."""
+
+    return datetime.combine(value, time(23, 59), tzinfo=BOGOTA_TZ)

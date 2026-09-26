@@ -1,18 +1,38 @@
-"""Entidades y reglas del dominio académico."""
+"""Tareas y exámenes (RF-TAR-01…10)."""
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import datetime, timedelta
 from enum import Enum
+
+from app.shared.clock import as_bogota, now_bogota
+
+
+class TaskType(str, Enum):
+    TASK = "task"
+    EXAM = "exam"
 
 
 class TaskStatus(str, Enum):
-    """Estado de una tarea académica."""
+    """Estado derivado de `completed_at` y `due_at`; no se almacena (RF-TAR-09)."""
 
     PENDING = "pending"
-    DONE = "done"
+    COMPLETED = "completed"
+    OVERDUE = "overdue"
+
+
+class TaskPriority(str, Enum):
+    """Prioridad derivada del tiempo restante (RF-TAR-03, D-04)."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+HIGH_PRIORITY_WINDOW = timedelta(hours=48)
+MEDIUM_PRIORITY_WINDOW = timedelta(days=7)
 
 
 class InvalidTaskError(ValueError):
@@ -21,79 +41,114 @@ class InvalidTaskError(ValueError):
 
 @dataclass
 class Task:
-    """Tarea académica perteneciente a un estudiante."""
+    """Actividad académica de una asignatura. El usuario propietario es el de la asignatura."""
 
     id: uuid.UUID
-    user_id: uuid.UUID
+    subject_id: uuid.UUID
     title: str
-    due_date: date
-    subject: str | None = None
+    due_at: datetime
+    type: TaskType = TaskType.TASK
     description: str | None = None
-    status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime | None = None
+    deleted_at: datetime | None = None
+    created_at: datetime = field(default_factory=now_bogota)
 
     MAX_TITLE_LENGTH = 200
+    MAX_DESCRIPTION_LENGTH = 2000
 
     @staticmethod
     def create(
-        user_id: uuid.UUID,
+        subject_id: uuid.UUID,
         title: str,
-        due_date: date,
-        subject: str | None = None,
+        due_at: datetime,
+        type: TaskType = TaskType.TASK,
         description: str | None = None,
+        now: datetime | None = None,
     ) -> "Task":
-        """Crea una tarea nueva aplicando las reglas de validación del dominio."""
-
-        if not isinstance(user_id, uuid.UUID):
-            raise InvalidTaskError("El identificador del usuario no es válido.")
-
-        clean_title = (title or "").strip()
-        if not clean_title:
-            raise InvalidTaskError("El título de la tarea no puede estar vacío.")
-        if len(clean_title) > Task.MAX_TITLE_LENGTH:
-            raise InvalidTaskError(
-                f"El título de la tarea no puede superar {Task.MAX_TITLE_LENGTH} caracteres."
-            )
-
-        return Task(
+        task = Task(
             id=uuid.uuid4(),
-            user_id=user_id,
-            title=clean_title,
-            due_date=due_date,
-            subject=subject.strip() if subject else None,
-            description=description.strip() if description else None,
+            subject_id=subject_id,
+            title=_clean_title(title),
+            due_at=_future_due_at(due_at, now),
+            type=type,
+            description=_clean_description(description),
         )
+        return task
 
-    def mark_done(self) -> None:
-        """Marca la tarea como completada."""
+    def status(self, now: datetime | None = None) -> TaskStatus:
+        if self.completed_at is not None:
+            return TaskStatus.COMPLETED
+        if self.due_at < (now or now_bogota()):
+            return TaskStatus.OVERDUE
+        return TaskStatus.PENDING
 
-        self.status = TaskStatus.DONE
+    def priority(self, now: datetime | None = None) -> TaskPriority | None:
+        """Solo las tareas pendientes tienen prioridad."""
+
+        current = now or now_bogota()
+        if self.status(current) is not TaskStatus.PENDING:
+            return None
+        remaining = self.due_at - current
+        if remaining <= HIGH_PRIORITY_WINDOW:
+            return TaskPriority.HIGH
+        if remaining <= MEDIUM_PRIORITY_WINDOW:
+            return TaskPriority.MEDIUM
+        return TaskPriority.LOW
 
     def update(
         self,
         title: str | None = None,
-        due_date: date | None = None,
-        subject: str | None = None,
         description: str | None = None,
+        subject_id: uuid.UUID | None = None,
+        type: TaskType | None = None,
+        due_at: datetime | None = None,
+        now: datetime | None = None,
     ) -> None:
-        """Actualiza los campos editables manteniendo las reglas del dominio."""
-
         if title is not None:
-            clean_title = title.strip()
-            if not clean_title:
-                raise InvalidTaskError("El título de la tarea no puede estar vacío.")
-            if len(clean_title) > self.MAX_TITLE_LENGTH:
-                raise InvalidTaskError(
-                    f"El título de la tarea no puede superar {self.MAX_TITLE_LENGTH} caracteres."
-                )
-            self.title = clean_title
-
-        if due_date is not None:
-            self.due_date = due_date
-
-        if subject is not None:
-            self.subject = subject.strip() or None
-
+            self.title = _clean_title(title)
         if description is not None:
-            self.description = description.strip() or None
+            self.description = _clean_description(description)
+        if subject_id is not None:
+            self.subject_id = subject_id
+        if type is not None:
+            self.type = type
+        if due_at is not None:
+            self.due_at = _future_due_at(due_at, now)
 
+    def complete(self, now: datetime | None = None) -> None:
+        """Idempotente: completar dos veces conserva el primer `completed_at` (RF-TAR-07)."""
+
+        if self.completed_at is None:
+            self.completed_at = now or now_bogota()
+
+    def reopen(self) -> None:
+        self.completed_at = None
+
+    def delete(self, now: datetime | None = None) -> None:
+        if self.deleted_at is None:
+            self.deleted_at = now or now_bogota()
+
+
+def _clean_title(title: str) -> str:
+    clean = (title or "").strip()
+    if not clean:
+        raise InvalidTaskError("El título de la tarea no puede estar vacío.")
+    if len(clean) > Task.MAX_TITLE_LENGTH:
+        raise InvalidTaskError(f"El título de la tarea no puede superar {Task.MAX_TITLE_LENGTH} caracteres.")
+    return clean
+
+
+def _clean_description(description: str | None) -> str | None:
+    clean = (description or "").strip()
+    if len(clean) > Task.MAX_DESCRIPTION_LENGTH:
+        raise InvalidTaskError(
+            f"La descripción no puede superar {Task.MAX_DESCRIPTION_LENGTH} caracteres."
+        )
+    return clean or None
+
+
+def _future_due_at(due_at: datetime, now: datetime | None) -> datetime:
+    value = as_bogota(due_at)
+    if value <= (now or now_bogota()):
+        raise InvalidTaskError("La fecha límite debe ser posterior al momento actual.")
+    return value

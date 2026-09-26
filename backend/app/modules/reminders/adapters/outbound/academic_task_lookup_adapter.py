@@ -13,5 +13,5 @@ class AcademicTaskLookupAdapter(AcademicTaskLookup):
             task_id=task.task_id,
             owner_user_id=task.owner_user_id,
             title=task.title,
-            due_date=task.due_date,
+            due_at=task.due_at,
         )

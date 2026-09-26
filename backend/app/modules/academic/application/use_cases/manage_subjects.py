@@ -8,19 +8,22 @@ from app.modules.academic.application.errors import (
     AliasNotFoundError,
     ScheduleOverlapError,
     SubjectAlreadyExistsError,
+    SubjectHasTasksError,
     SubjectNotFoundError,
 )
 from app.modules.academic.application.ports.outbound.schedule_block_repository import (
     ScheduleBlockRepository,
 )
 from app.modules.academic.application.ports.outbound.subject_repository import SubjectRepository
+from app.modules.academic.application.ports.outbound.task_repository import TaskRepository
 from app.modules.academic.domain.entities.subject import Subject
 
 
 class ManageSubjectsUseCase:
-    def __init__(self, subjects: SubjectRepository, blocks: ScheduleBlockRepository) -> None:
+    def __init__(self, subjects: SubjectRepository, blocks: ScheduleBlockRepository, tasks: TaskRepository) -> None:
         self._subjects = subjects
         self._blocks = blocks
+        self._tasks = tasks
 
     def create(self, user_id: uuid.UUID, name: str, teacher: str | None = None) -> Subject:
         subject = Subject.create(user_id=user_id, name=name, teacher=teacher)
@@ -54,10 +57,17 @@ class ManageSubjectsUseCase:
         return subject
 
     def delete(self, subject_id: uuid.UUID, user_id: uuid.UUID) -> None:
-        # RF-ASG-04: la restricción "sin tareas asociadas" llega con la fase 3,
-        # cuando tasks referencie subjects con ON DELETE RESTRICT.
         subject = self.get(subject_id, user_id)
+        # Cuenta también las tareas eliminadas lógicamente, que siguen referenciando la asignatura.
+        task_count = self._tasks.count_by_subject(subject.id)
+        if task_count > 0:
+            raise SubjectHasTasksError(
+                f"La asignatura tiene {task_count} actividad(es) asociada(s); archívala en lugar de eliminarla."
+            )
         self._subjects.delete(subject.id)
+
+    def pending_task_counts(self, user_id: uuid.UUID) -> dict[uuid.UUID, int]:
+        return self._tasks.count_open_by_subject(user_id)
 
     def archive(self, subject_id: uuid.UUID, user_id: uuid.UUID) -> Subject:
         subject = self.get(subject_id, user_id)

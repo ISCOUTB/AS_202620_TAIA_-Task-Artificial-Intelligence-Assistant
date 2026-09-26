@@ -13,6 +13,7 @@ from app.modules.academic.adapters.outbound.sqlalchemy_structure_repositories im
 from app.modules.academic.adapters.outbound.in_memory_task_repository import (
     InMemoryTaskRepository,
 )
+from app.modules.academic.adapters.outbound.sqlalchemy_task_repository import SqlAlchemyTaskRepository
 from app.modules.academic.application.ports.outbound.academic_period_repository import (
     AcademicPeriodRepository,
 )
@@ -24,17 +25,16 @@ from app.modules.academic.application.ports.outbound.task_repository import Task
 from app.shared.adapters.outbound.database import get_session_factory, use_in_memory_storage
 
 
-# Las tareas siguen en memoria hasta la fase 3 (docs/estado_backend.md).
-_repository: TaskRepository = InMemoryTaskRepository()
-
 if use_in_memory_storage():
     _subjects: SubjectRepository = InMemorySubjectRepository()
     _blocks: ScheduleBlockRepository = InMemoryScheduleBlockRepository(_subjects)
     _periods: AcademicPeriodRepository = InMemoryAcademicPeriodRepository()
+    _repository: TaskRepository = InMemoryTaskRepository(_subjects)
 else:
     _subjects = SqlAlchemySubjectRepository(get_session_factory())
     _blocks = SqlAlchemyScheduleBlockRepository(get_session_factory())
     _periods = SqlAlchemyAcademicPeriodRepository(get_session_factory())
+    _repository = SqlAlchemyTaskRepository(get_session_factory())
 
 
 def get_task_repository() -> TaskRepository:

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from app.main import app
+from tests import helpers
 
 client = TestClient(app)
 
@@ -14,9 +15,7 @@ def register_and_login(email: str) -> dict[str, str]:
 
 
 def create_task(headers, title='Tarea vinculada'):
-    response = client.post('/academic/tasks', headers=headers, json={'title': title, 'due_date': '2026-09-20'})
-    assert response.status_code == 201
-    return response.json()['id']
+    return helpers.create_task(client, headers, title)
 
 
 def future_iso(minutes=30):

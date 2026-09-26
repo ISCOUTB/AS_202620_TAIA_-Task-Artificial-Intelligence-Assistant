@@ -5,15 +5,22 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, time
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Enum, ForeignKey, String, Time, UniqueConstraint, Uuid, func
+from sqlalchemy import CheckConstraint, Date, DateTime, Enum, ForeignKey, Index, String, Time, UniqueConstraint, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.academic.domain.entities.schedule_block import Weekday
+from app.modules.academic.domain.entities.task import TaskType
 from app.shared.adapters.outbound.database import Base
 
 weekday_enum = Enum(
     Weekday,
     name="weekday",
+    values_callable=lambda members: [member.value for member in members],
+)
+
+task_type_enum = Enum(
+    TaskType,
+    name="task_type",
     values_callable=lambda members: [member.value for member in members],
 )
 
@@ -77,6 +84,34 @@ class AcademicPeriodModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TaskModel(Base):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint("char_length(trim(title)) > 0", name="title_not_blank"),
+        # Listar por asignatura y ordenar por fecha límite (RF-TAR-04).
+        Index(
+            "ix_tasks_subject_id_due_at_active",
+            "subject_id",
+            "due_at",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    # RESTRICT: una asignatura con tareas no se puede borrar, solo archivar (RF-ASG-04).
+    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subjects.id", ondelete="RESTRICT"))
+    type: Mapped[TaskType] = mapped_column(task_type_enum, server_default=TaskType.TASK.value)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(String(2000))
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
