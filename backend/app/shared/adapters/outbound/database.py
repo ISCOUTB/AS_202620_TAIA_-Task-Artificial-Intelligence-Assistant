@@ -7,10 +7,14 @@ salida. El dominio nunca importa este archivo.
 from __future__ import annotations
 
 import os
+from dotenv import load_dotenv
+from pathlib import Path
 from functools import lru_cache
 
 from sqlalchemy import Engine, MetaData, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+load_dotenv(Path(__file__).resolve().parents[4] / ".env")
 
 
 class Base(DeclarativeBase):
