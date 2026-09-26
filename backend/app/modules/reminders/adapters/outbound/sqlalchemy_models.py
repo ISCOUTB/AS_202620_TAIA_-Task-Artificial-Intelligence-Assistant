@@ -1,7 +1,4 @@
-"""Modelos ORM del módulo Reminders (diccionario de datos, sección 7).
-
-Todavía no tienen repositorio: el módulo sigue en memoria hasta las fases 5 y 6.
-"""
+"""Modelos ORM del módulo Reminders (diccionario de datos, sección 7)."""
 
 from __future__ import annotations
 

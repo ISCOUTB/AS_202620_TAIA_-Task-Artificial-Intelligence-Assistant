@@ -22,7 +22,8 @@ def test_telegram_sender_resolves_linked_user_and_sends():
         reminder_user_id_resolver=lambda reminder_id: user_id,
     )
 
-    notification = Notification(reminder_id=7, message='Entrega mañana', date_send=datetime.now(timezone.utc))
+    reminder_id = uuid4()
+    notification = Notification(reminder_id=reminder_id, message='Entrega mañana', date_send=datetime.now(timezone.utc))
     assert sender.send(notification) is True
     assert bot.calls == [(123456, 'Entrega mañana')]
 
@@ -35,5 +36,5 @@ def test_telegram_sender_returns_false_when_user_has_no_telegram():
         reminder_user_id_resolver=lambda reminder_id: uuid4(),
     )
 
-    assert sender.send(Notification(reminder_id=7, message='Aviso', date_send=datetime.now(timezone.utc))) is False
+    assert sender.send(Notification(reminder_id=uuid4(), message='Aviso', date_send=datetime.now(timezone.utc))) is False
     assert bot.calls == []

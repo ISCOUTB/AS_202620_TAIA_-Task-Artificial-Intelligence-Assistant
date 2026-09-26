@@ -32,7 +32,7 @@ class EditReminderRequest(BaseModel):
     message: str | None = Field(default=None, min_length=1, max_length=500)
     scheduled_at: datetime | None = None
 class ReminderResponse(BaseModel):
-    id: int
+    id: UUID
     user_id: UUID
     message: str
     scheduled_at: datetime
@@ -65,7 +65,7 @@ def get_schedule_notification_use_case() -> ScheduleNotificationPort:
 
 
 def get_send_notification_use_case() -> SendNotificationPort:
-    return SendNotificationUseCase(get_notification_sender())
+    return SendNotificationUseCase(get_notification_sender(), get_reminder_repository())
 
 class ErrorResponse(BaseModel):
     '''Cuerpo devuelto por el adaptador cuando la petición falla.'''
@@ -93,7 +93,7 @@ def list_reminders(user_id: CurrentUserId, use_case: Annotated[ListRemindersPort
     '/{reminder_id}',
     responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
-def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[GetReminderPort, Depends(get_get_use_case)]) -> ReminderResponse:
+def get_reminder(reminder_id: UUID, user_id: CurrentUserId, use_case: Annotated[GetReminderPort, Depends(get_get_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id)
     except ValueError as error:
@@ -107,7 +107,7 @@ def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[G
         422: {'model': ErrorResponse, 'description': 'Los datos del recordatorio no son válidos.'},
     },
 )
-def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
+def edit_reminder(reminder_id: UUID, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id, payload.message, payload.scheduled_at)
     except ReminderNotFoundError as error:
@@ -121,7 +121,7 @@ def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: Curre
     status_code=status.HTTP_204_NO_CONTENT,
     responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
-def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[DeleteReminderPort, Depends(get_delete_use_case)]) -> None:
+def delete_reminder(reminder_id: UUID, user_id: CurrentUserId, use_case: Annotated[DeleteReminderPort, Depends(get_delete_use_case)]) -> None:
     try:
         use_case.execute(reminder_id, user_id)
     except ValueError as error:
@@ -131,7 +131,7 @@ def delete_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotate
     '/{reminder_id}/complete',
     responses={404: {'model': ErrorResponse, 'description': 'El recordatorio no existe o no pertenece al usuario.'}},
 )
-def mark_reminder_completed(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[MarkReminderCompletedPort, Depends(get_complete_use_case)]) -> ReminderResponse:
+def mark_reminder_completed(reminder_id: UUID, user_id: CurrentUserId, use_case: Annotated[MarkReminderCompletedPort, Depends(get_complete_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id)
     except ValueError as error:
@@ -140,7 +140,7 @@ def mark_reminder_completed(reminder_id: int, user_id: CurrentUserId, use_case: 
 
 
 class NotificationResponse(BaseModel):
-    reminder_id: int
+    reminder_id: UUID
     sent: bool
     scheduled_at: datetime
 
@@ -153,7 +153,7 @@ class NotificationResponse(BaseModel):
     },
 )
 def notify_reminder(
-    reminder_id: int,
+    reminder_id: UUID,
     user_id: CurrentUserId,
     schedule_use_case: Annotated[ScheduleNotificationPort, Depends(get_schedule_notification_use_case)],
     send_use_case: Annotated[SendNotificationPort, Depends(get_send_notification_use_case)],

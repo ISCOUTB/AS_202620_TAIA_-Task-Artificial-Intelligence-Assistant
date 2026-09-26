@@ -14,7 +14,7 @@ class TelegramNotificationSender(NotificationSender):
         self,
         bot_client,
         telegram_user_id_resolver: Callable[[UUID], int | None],
-        reminder_user_id_resolver: Callable[[int], UUID | None],
+        reminder_user_id_resolver: Callable[[UUID], UUID | None],
     ) -> None:
         self._bot_client = bot_client
         self._telegram_user_id_resolver = telegram_user_id_resolver

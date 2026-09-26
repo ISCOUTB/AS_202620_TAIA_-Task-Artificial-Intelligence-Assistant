@@ -1,7 +1,4 @@
-"""Modelos ORM del módulo AI (diccionario de datos, sección 8).
-
-Todavía no tienen repositorio: la conversación sigue en memoria hasta la fase 8.
-"""
+"""Modelos ORM del módulo AI (diccionario de datos, sección 8)."""
 
 from __future__ import annotations
 

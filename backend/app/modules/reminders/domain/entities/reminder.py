@@ -11,7 +11,7 @@ class Reminder(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
-    id: int
+    id: UUID
     user_id: UUID
     message: str = Field(min_length=1)
     scheduled_at: datetime

@@ -1,11 +1,7 @@
-"""Configuración común de las pruebas.
+"""Configuración común de las pruebas de integración con PostgreSQL.
 
-Las pruebas unitarias y de API usan los repositorios en memoria. Debe
-definirse antes de importar la aplicación, porque los proveedores eligen el
-repositorio al importarse.
-
-Las pruebas de integración usan la fixture `db_session_factory`, que aplica
-todas las migraciones sobre TEST_DATABASE_URL. Sin esa variable se omiten.
+La fixture `db_session_factory` aplica todas las migraciones sobre
+TEST_DATABASE_URL. Sin esa variable, las pruebas que la solicitan se omiten.
 """
 
 import os
@@ -13,35 +9,39 @@ from pathlib import Path
 
 import pytest
 
-os.environ["TAIA_STORAGE"] = "memory"
-
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
+if TEST_DATABASE_URL:
+    # Se ejecuta antes de que los módulos de prueba importen app.main.
+    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
-@pytest.fixture(scope="session")
-def db_session_factory():
+
+@pytest.fixture(scope="session", autouse=True)
+def migrated_database():
+    """Prepara el PostgreSQL de CI antes de que cualquier endpoint lo use."""
+
     if not TEST_DATABASE_URL:
-        pytest.skip("TEST_DATABASE_URL no está configurada.")
+        yield
+        return
 
     from alembic import command
     from alembic.config import Config
+
+    config = Config(str(ALEMBIC_INI))
+    command.downgrade(config, "base")
+    command.upgrade(config, "head")
+    command.check(config)
+    yield
+
+
+@pytest.fixture(scope="session")
+def db_session_factory(migrated_database):
+    if not TEST_DATABASE_URL:
+        pytest.skip("TEST_DATABASE_URL no está configurada.")
+
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-
-    previous = os.environ.get("DATABASE_URL")
-    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-    config = Config(str(ALEMBIC_INI))
-    try:
-        command.downgrade(config, "base")
-        command.upgrade(config, "head")
-        # Falla si los modelos ORM y las migraciones no coinciden.
-        command.check(config)
-    finally:
-        if previous is None:
-            os.environ.pop("DATABASE_URL", None)
-        else:
-            os.environ["DATABASE_URL"] = previous
 
     engine = create_engine(TEST_DATABASE_URL)
     yield sessionmaker(bind=engine, expire_on_commit=False)

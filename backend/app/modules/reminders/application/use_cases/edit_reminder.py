@@ -21,7 +21,7 @@ class EditReminderUseCase(EditReminderPort):
 
     def execute(
         self,
-        reminder_id: int,
+        reminder_id: UUID,
         user_id: UUID,
         message: str | None = None,
         scheduled_at: datetime | None = None,

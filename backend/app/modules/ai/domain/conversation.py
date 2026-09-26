@@ -23,7 +23,7 @@ class Turn:
 class Conversation:
     """Ultimos mensajes con un estudiante y la accion pendiente de confirmar.
 
-    No se persiste entre reinicios en esta version (ver context_IA.md)."""
+    El adaptador configurado conserva este estado entre reinicios."""
 
     user_id: str
     turns: list[Turn] = field(default_factory=list)

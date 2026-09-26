@@ -15,7 +15,7 @@ class DeleteReminderUseCase(DeleteReminderPort):
     def __init__(self, repository: ReminderRepository):
         self._repository = repository
 
-    def execute(self, reminder_id: int, user_id: UUID) -> None:
+    def execute(self, reminder_id: UUID, user_id: UUID) -> None:
         reminder = self._repository.get_by_id(reminder_id)
         if reminder is None or reminder.user_id != user_id:
             raise ReminderNotFoundError("Recordatorio no encontrado")

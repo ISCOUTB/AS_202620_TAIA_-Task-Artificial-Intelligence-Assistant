@@ -9,16 +9,15 @@ from pydantic import BaseModel, Field
 
 from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
 from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
-from app.modules.ai.adapters.outbound.in_memory_conversation_store import (
-    InMemoryConversationStore,
-)
+from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import SqlAlchemyConversationStore
 from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
 from app.modules.ai.domain.messages import Channel, IncomingRequest
 from app.shared.adapters.inbound.auth import CurrentUserId
+from app.shared.adapters.outbound.database import get_session_factory
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-_conversations = InMemoryConversationStore()
+_conversations = SqlAlchemyConversationStore(get_session_factory())
 _academic = AcademicGatewayAdapter()
 def get_ai_use_case() -> HandleUserMessageUseCase:
     """Construye el caso de uso con los adaptadores reales de ejecución."""

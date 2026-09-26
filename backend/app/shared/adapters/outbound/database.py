@@ -47,13 +47,3 @@ def get_engine() -> Engine:
 @lru_cache
 def get_session_factory() -> sessionmaker:
     return sessionmaker(bind=get_engine(), expire_on_commit=False)
-
-
-def use_in_memory_storage() -> bool:
-    """Las pruebas unitarias piden repositorios en memoria de forma explícita.
-
-    Fuera de las pruebas no se usa: si falta DATABASE_URL, la aplicación falla
-    al arrancar en lugar de perder datos en silencio.
-    """
-
-    return os.getenv("TAIA_STORAGE") == "memory"
