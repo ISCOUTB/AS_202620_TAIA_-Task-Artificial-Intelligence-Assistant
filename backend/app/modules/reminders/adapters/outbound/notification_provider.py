@@ -7,10 +7,11 @@ from app.modules.usuario.adapters.inbound.api import get_telegram_user_id
 
 
 def get_notification_sender() -> TelegramNotificationSender:
+    identity_service = get_identity_service()
     repository = get_reminder_repository()
     return TelegramNotificationSender(
         bot_client=TelegramBotApiClient(),
-        telegram_user_id_resolver=get_telegram_user_id,
+        telegram_user_id_resolver=identity_service.get_telegram_user_id,
         reminder_user_id_resolver=lambda reminder_id: (
             repository.get_by_id(reminder_id).user_id
             if repository.get_by_id(reminder_id) is not None

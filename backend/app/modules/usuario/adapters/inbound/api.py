@@ -36,12 +36,8 @@ from app.modules.usuario.domain.value_objects.email import InvalidEmailError
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-_repository = InMemoryUserRepository()
-_password_hasher = Pbkdf2PasswordHasher()
-_token_service = JwtTokenService()
 _bearer_scheme = HTTPBearer(auto_error=False)
 BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]
-_telegram_link_repository = InMemoryTelegramLinkRepository()
 
 
 class UserCreateRequest(BaseModel):
@@ -156,26 +152,6 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
 def get_current_user(credentials: BearerCredentials) -> UserResponse:
     """Devuelve el perfil del usuario autenticado mediante Bearer JWT."""
     return UserResponse.from_domain(_authenticated_user(credentials))
-
-
-def get_authenticated_user_id(credentials: BearerCredentials) -> uuid.UUID:
-    """Devuelve únicamente el identificador del usuario autenticado.
-
-    Esta dependencia permite que otros contextos consuman la identidad sin
-    importar la entidad Usuario ni sus detalles internos.
-    """
-    return _authenticated_user(credentials).id
-
-
-def get_user_by_id(user_id: uuid.UUID) -> Usuario | None:
-    """Read-only lookup used by other bounded contexts through a small port-like helper."""
-    return _repository.get_by_id(user_id)
-
-
-def get_telegram_user_id(user_id: uuid.UUID) -> int | None:
-    """Returns the Telegram chat/user id linked to a TAIA user, if any."""
-    user = _repository.get_by_id(user_id)
-    return user.telegram_user_id if user is not None else None
 
 
 def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:

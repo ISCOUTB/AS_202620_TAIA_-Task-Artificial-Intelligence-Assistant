@@ -9,6 +9,8 @@
 | A-05 | Integración y aislamiento entre módulos               | RF-01, RF-02, RF-03, RF-04, RF-05, RF-06 | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/`](../backend/app/modules/)                                                                                          | [`backend/tests/`](../backend/tests/)                                                                                                                                                                                                     | [Suite automatizada de integración y aislamiento](../backend/tests/)                            |
 | A-06 | Persistencia y evolución de infraestructura           | RF-01, RF-02, RF-05                      | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/), [`backend/app/modules/reminders/`](../backend/app/modules/reminders/) | [`test_academic_register_task.py`](../backend/tests/test_academic_register_task.py), [`test_reminders_api.py`](../backend/tests/test_reminders_api.py)                                                                                    | [Pruebas mediante repositorios en memoria y puertos](../backend/tests/)                         |
 
+| A-07 | Contrato e integración de la API principal | S7 — contrato OpenAPI 3.1, cliente generado y prueba de contrato | [C4-C2](c4/C4-C2.md) | [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md) | [`docs/api/openapi.json`](api/openapi.json), [`backend/generated/taia_api_client.py`](../backend/generated/taia_api_client.py), [`tools/generate_api_client.py`](../tools/generate_api_client.py) | [`test_api_contract.py`](../backend/tests/test_api_contract.py) | [`evidencia_s7_contract_failure.txt`](evidencia_s7_contract_failure.txt), [CI](../.github/workflows/ci.yml) |
+
 ## Descripción del aspecto A-01
 
 **Nombre:** Captura inteligente de información académica
@@ -89,7 +91,7 @@ Las pruebas del módulo verifican el flujo de autenticación y el acceso mediant
 
 **## Estado de la implementación**
 
-El módulo AI actúa como frontera entre la interacción conversacional y la lógica académica. La dependencia con el proveedor LLM se mantiene detrás de un puerto, mientras que `AcademicGatewayAdapter` permite que las operaciones interpretadas sean ejecutadas mediante los casos de uso de Academic.
+El módulo AI actúa como frontera entre la interacción conversacional y la lógica académica. La dependencia con el proveedor LLM se mantiene detrás de un puerto. Para Academic, `AcademicGatewayAdapter` consume `AcademicTaskManagement` y traduce `AcademicTaskData` al modelo de AI, evitando acceder directamente al repositorio o a la entidad de dominio de Academic.
 
 La sustitución del proveedor de IA no requiere modificar directamente las entidades ni las reglas centrales del módulo académico.
 
@@ -121,7 +123,7 @@ La sustitución del proveedor de IA no requiere modificar directamente las entid
 
 **## Estado de la implementación**
 
-El módulo `reminders` utiliza `InMemoryReminderRepository` como persistencia actual y un `NotificationSender` como puerto para desacoplar el envío de notificaciones.
+El módulo `reminders` utiliza `InMemoryReminderRepository` como persistencia actual y un `NotificationSender` como puerto para desacoplar el envío de notificaciones. Para validar la tarea asociada, consume `AcademicTaskLookup` en lugar del repositorio de Academic.
 
 El adaptador `TelegramNotificationSender` conecta el sistema con Telegram mediante la API externa. En el incremento actual el envío es explícito mediante `POST /reminders/{id}/notify`; la ejecución automática exactamente en `scheduled_at` queda como evolución posterior.
 
@@ -151,7 +153,7 @@ El adaptador `TelegramNotificationSender` conecta el sistema con Telegram median
 
 **## Estado de la implementación**
 
-La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. Academic y Reminders reciben el contexto del usuario para las operaciones que acceden a información privada. AI utiliza un gateway hacia Academic en lugar de acceder directamente al repositorio.
+La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. La autenticación HTTP reutiliza `CurrentUserId` desde `backend/app/shared/adapters/inbound/auth.py` y la identidad compartida se obtiene mediante `IdentityService`; Reminders consulta Academic mediante `AcademicTaskLookup`; y AI ejecuta operaciones académicas mediante `AcademicTaskManagement` detrás de `AcademicGatewayAdapter`. Los repositorios y entidades internas permanecen encapsulados en sus contextos propietarios.
 
 La suite automatizada constituye la evidencia global de que los módulos pueden evolucionar manteniendo sus responsabilidades separadas.
 
@@ -185,3 +187,11 @@ La persistencia está aislada mediante puertos y adaptadores. En Academic, los c
 
 Esta estructura permite que PostgreSQL sea incorporado posteriormente como un nuevo adaptador sin modificar las reglas principales de los casos de uso ni del dominio.
 
+
+---
+
+## Evidencia S7 — Contrato de API e integración
+
+La integración HTTP de la API principal se formaliza mediante el [contrato OpenAPI 3.1 versión 1.0.0](api/openapi.json). La estrategia síncrona está justificada en [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md), el flujo de ejecución está documentado en [arc42 sección 6](arc42/06-vista-de-ejecucion.md) y el protocolo/formato de las interacciones está reflejado en el [C4 nivel 2](c4/C4-C2.md).
+
+La conformidad entre contrato e implementación se verifica en [`test_api_contract.py`](../backend/tests/test_api_contract.py). El cliente HTTP generado a partir del contrato se encuentra en [`backend/generated/taia_api_client.py`](../backend/generated/taia_api_client.py) y se regenera mediante [`tools/generate_api_client.py`](../tools/generate_api_client.py). El workflow de CI ejecuta explícitamente la prueba de contrato y comprueba que el cliente generado permanezca sincronizado.

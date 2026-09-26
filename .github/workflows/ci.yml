@@ -24,3 +24,12 @@ jobs:
 
       - name: Run tests
         run: python -m pytest backend/tests
+
+      - name: Run API contract test
+        run: python -m pytest backend/tests/test_api_contract.py -q
+
+      - name: Regenerate API client from OpenAPI contract
+        run: python tools/generate_api_client.py
+
+      - name: Verify generated client is synchronized
+        run: git diff --exit-code -- backend/generated/taia_api_client.py

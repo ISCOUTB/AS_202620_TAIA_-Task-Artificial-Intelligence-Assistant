@@ -23,8 +23,6 @@ from app.modules.reminders.adapters.outbound.notification_provider import get_no
 from app.modules.reminders.domain.entities import Reminder
 
 router = APIRouter(prefix='/reminders', tags=['reminders'])
-CurrentUserId = Annotated[UUID, Depends(get_authenticated_user_id)]
-
 class CreateReminderRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=500)
     scheduled_at: datetime
@@ -44,8 +42,8 @@ class ReminderResponse(BaseModel):
         return cls.model_validate(reminder.model_dump())
 
 def _task_lookup() -> AcademicTaskLookupAdapter:
-    repository = get_task_repository()
-    return AcademicTaskLookupAdapter(repository.get_by_id)
+    academic_lookup = get_academic_task_lookup()
+    return AcademicTaskLookupAdapter(academic_lookup.get_summary)
 
 def get_create_use_case() -> CreateReminderPort:
     return CreateReminderUseCase(get_reminder_repository(), _task_lookup())
