@@ -69,9 +69,9 @@ class ConfirmTelegramLinkUseCase:
             raise TelegramLinkTokenInvalidError("El token de vinculación es inválido o expiró.")
 
         # Un Telegram existente solo puede pertenecer a un usuario TAIA.
-        for candidate in self._all_users():
-            if candidate.telegram_user_id == telegram_user_id and candidate.id != link.user_id:
-                raise TelegramAlreadyLinkedError("La cuenta Telegram ya está vinculada a otro usuario.")
+        owner = self._users.get_by_telegram_user_id(telegram_user_id)
+        if owner is not None and owner.id != link.user_id:
+            raise TelegramAlreadyLinkedError("La cuenta Telegram ya está vinculada a otro usuario.")
 
         user = self._users.get_by_id(link.user_id)
         if user is None:
@@ -80,8 +80,6 @@ class ConfirmTelegramLinkUseCase:
             raise UserAlreadyLinkedError("El usuario ya tiene una cuenta Telegram vinculada.")
 
         user.link_telegram(telegram_user_id)
+        self._users.save(user)
         self._links.mark_used(token)
         return user
-
-    def _all_users(self) -> list[Usuario]:
-        return self._users.list_all()

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.modules.reminders.application.errors import ReminderNotFoundError
 from app.modules.reminders.application.ports.inbound.reminder_ports import (
     ScheduleNotificationPort,
 )
@@ -7,6 +8,7 @@ from app.modules.reminders.application.ports.outbound.reminder_repository import
     ReminderRepository,
 )
 from app.modules.reminders.domain.entities import Notification
+from app.shared.clock import now_bogota
 
 
 class ScheduleNotificationUseCase(ScheduleNotificationPort):
@@ -23,11 +25,11 @@ class ScheduleNotificationUseCase(ScheduleNotificationPort):
     def execute(self, reminder_id: int, now: datetime | None = None) -> Notification:
         reminder = self._repository.get_by_id(reminder_id)
         if reminder is None:
-            raise ValueError("Recordatorio no encontrado")
+            raise ReminderNotFoundError("Recordatorio no encontrado")
 
         return Notification(
             reminder_id=reminder.id,
             message=reminder.message,
             read_status=False,
-            date_send=now or datetime.now(),
+            date_send=now or now_bogota(),
         )

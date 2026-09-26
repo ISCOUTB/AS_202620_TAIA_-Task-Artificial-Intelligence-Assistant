@@ -8,6 +8,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: taia
+          POSTGRES_PASSWORD: taia
+          POSTGRES_DB: taia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://taia:taia@localhost:5432/taia_test
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

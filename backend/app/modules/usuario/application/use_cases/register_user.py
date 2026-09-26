@@ -19,7 +19,7 @@ class RegisterUserUseCase:
         self._repository = repository
         self._password_hasher = password_hasher
 
-    def execute(self, name: str, email: str, password: str) -> Usuario:
+    def execute(self, full_name: str, email: str, password: str) -> Usuario:
         email_value = Email(email)
         if self._repository.get_by_email(email_value) is not None:
             raise UserAlreadyExistsError("Ya existe un usuario con ese correo.")
@@ -27,6 +27,6 @@ class RegisterUserUseCase:
             raise ValueError("La contraseña debe tener al menos 8 caracteres.")
 
         password_hash = self._password_hasher.hash(password)
-        user = Usuario.create(name=name, email=email_value, password_hash=password_hash)
+        user = Usuario.create(full_name=full_name, email=email_value, password_hash=password_hash)
         self._repository.add(user)
         return user

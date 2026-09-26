@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
+from app.modules.reminders.application.errors import ReminderNotFoundError
 from app.modules.reminders.application.ports.inbound.reminder_ports import (
     EditReminderPort,
 )
@@ -8,13 +9,15 @@ from app.modules.reminders.application.ports.outbound.reminder_repository import
     ReminderRepository,
 )
 from app.modules.reminders.domain.entities import Reminder
+from app.shared.clock import Clock, as_bogota, now_bogota
 
 
 class EditReminderUseCase(EditReminderPort):
     """Edits the message and/or scheduled date of an existing reminder."""
 
-    def __init__(self, repository: ReminderRepository):
+    def __init__(self, repository: ReminderRepository, now_provider: Clock | None = None):
         self._repository = repository
+        self._now_provider = now_provider or now_bogota
 
     def execute(
         self,
@@ -25,7 +28,7 @@ class EditReminderUseCase(EditReminderPort):
     ) -> Reminder:
         reminder = self._repository.get_by_id(reminder_id)
         if reminder is None or reminder.user_id != user_id:
-            raise ValueError("Recordatorio no encontrado")
+            raise ReminderNotFoundError("Recordatorio no encontrado")
 
         if reminder.is_completed:
             raise ValueError("No se puede editar un recordatorio ya completado")
@@ -34,9 +37,8 @@ class EditReminderUseCase(EditReminderPort):
             raise ValueError("El mensaje no puede estar vacío")
 
         if scheduled_at is not None:
-            candidate = scheduled_at if scheduled_at.tzinfo else scheduled_at.replace(tzinfo=timezone.utc)
-            now = datetime.now(timezone.utc)
-            if candidate <= now:
+            scheduled_at = as_bogota(scheduled_at)
+            if scheduled_at <= self._now_provider():
                 raise ValueError("La fecha programada debe ser futura")
 
         updated = reminder.model_copy(

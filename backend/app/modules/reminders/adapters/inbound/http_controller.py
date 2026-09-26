@@ -7,6 +7,7 @@ from app.modules.academic.application.ports.inbound.task_lookup import get_acade
 from app.shared.adapters.inbound.auth import CurrentUserId
 from app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
 from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
+from app.modules.reminders.application.errors import ReminderNotFoundError
 from app.modules.reminders.application.ports.inbound.reminder_ports import (
     CreateReminderPort, DeleteReminderPort, EditReminderPort, GetReminderPort,
     ListRemindersPort, MarkReminderCompletedPort, ScheduleNotificationPort, SendNotificationPort,
@@ -109,8 +110,10 @@ def get_reminder(reminder_id: int, user_id: CurrentUserId, use_case: Annotated[G
 def edit_reminder(reminder_id: int, payload: EditReminderRequest, user_id: CurrentUserId, use_case: Annotated[EditReminderPort, Depends(get_edit_use_case)]) -> ReminderResponse:
     try:
         reminder = use_case.execute(reminder_id, user_id, payload.message, payload.scheduled_at)
+    except ReminderNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
-        raise HTTPException(status_code=422 if 'no encontrado' not in str(error).lower() else 404, detail=str(error)) from error
+        raise HTTPException(status_code=422, detail=str(error)) from error
     return ReminderResponse.from_domain(reminder)
 
 @router.delete(

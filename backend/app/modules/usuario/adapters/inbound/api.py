@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -43,7 +44,7 @@ BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bear
 
 
 class UserCreateRequest(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
+    full_name: str = Field(..., min_length=1, max_length=100)
     email: str = Field(..., min_length=3)
     password: str = Field(..., min_length=8)
 
@@ -55,19 +56,21 @@ class UserLoginRequest(BaseModel):
 
 class UserResponse(BaseModel):
     id: uuid.UUID
-    name: str
+    full_name: str
     email: str
     status: str
     telegram_linked: bool
+    created_at: datetime
 
     @classmethod
     def from_domain(cls, user: Usuario) -> "UserResponse":
         return cls(
             id=user.id,
-            name=user.name,
+            full_name=user.full_name,
             email=str(user.email),
             status=user.status.value,
             telegram_linked=user.telegram_user_id is not None,
+            created_at=user.created_at,
         )
 
 
@@ -104,7 +107,7 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
     use_case = RegisterUserUseCase(_repository, _password_hasher)
     try:
         user = use_case.execute(
-            name=payload.name,
+            full_name=payload.full_name,
             email=payload.email,
             password=payload.password,
         )

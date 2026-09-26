@@ -8,7 +8,7 @@ client = TestClient(app)
 def register_and_login(email: str):
     register = client.post(
         "/users",
-        json={"name": "Estudiante", "email": email, "password": "password123"},
+        json={"full_name": "Estudiante", "email": email, "password": "password123"},
     )
     assert register.status_code == 201
     login = client.post(

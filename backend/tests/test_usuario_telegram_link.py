@@ -7,7 +7,7 @@ client = TestClient(app)
 
 
 def _register_and_login(email: str):
-    client.post("/users", json={"name": "Ana", "email": email, "password": "password123"})
+    client.post("/users", json={"full_name": "Ana", "email": email, "password": "password123"})
     response = client.post("/users/login", json={"email": email, "password": "password123"})
     return response.json()["access_token"]
 

@@ -14,7 +14,7 @@ def setup_function() -> None:
 def _register_and_login():
     register = client.post(
         "/users",
-        json={"name": "Ana", "email": "ana@example.com", "password": "password123"},
+        json={"full_name": "Ana", "email": "ana@example.com", "password": "password123"},
     )
     assert register.status_code == 201
 
@@ -36,7 +36,7 @@ def test_get_me_with_valid_token_returns_user():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["name"] == "Ana"
+    assert body["full_name"] == "Ana"
     assert body["email"] == "ana@example.com"
     assert body["telegram_linked"] is False
     assert "password" not in body

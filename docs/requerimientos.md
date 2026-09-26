@@ -162,7 +162,7 @@ El sistema debe permitir cerrar la sesión actual.
 - Después de cerrar sesión, usar el mismo token de renovación → `401`.
 
 ### RF-USR-05 · Consultar perfil
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir al usuario consultar sus datos: nombre, correo, estado de vinculación con Telegram y fecha de registro. Las estadísticas del perfil se definen en RF-PRF-01.
 

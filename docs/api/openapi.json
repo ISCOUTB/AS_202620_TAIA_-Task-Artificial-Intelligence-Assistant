@@ -1312,11 +1312,11 @@
       },
       "UserCreateRequest": {
         "properties": {
-          "name": {
+          "full_name": {
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Name"
+            "title": "Full Name"
           },
           "email": {
             "type": "string",
@@ -1331,7 +1331,7 @@
         },
         "type": "object",
         "required": [
-          "name",
+          "full_name",
           "email",
           "password"
         ],
@@ -1364,9 +1364,9 @@
             "format": "uuid",
             "title": "Id"
           },
-          "name": {
+          "full_name": {
             "type": "string",
-            "title": "Name"
+            "title": "Full Name"
           },
           "email": {
             "type": "string",
@@ -1379,15 +1379,21 @@
           "telegram_linked": {
             "type": "boolean",
             "title": "Telegram Linked"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "name",
+          "full_name",
           "email",
           "status",
-          "telegram_linked"
+          "telegram_linked",
+          "created_at"
         ],
         "title": "UserResponse"
       },

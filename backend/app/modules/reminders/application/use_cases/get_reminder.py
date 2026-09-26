@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.modules.reminders.application.errors import ReminderNotFoundError
 from app.modules.reminders.application.ports.inbound.reminder_ports import (
     GetReminderPort,
 )
@@ -18,5 +19,5 @@ class GetReminderUseCase(GetReminderPort):
     def execute(self, reminder_id: int, user_id: UUID) -> Reminder:
         reminder = self._repository.get_by_id(reminder_id)
         if reminder is None or reminder.user_id != user_id:
-            raise ValueError("Recordatorio no encontrado")
+            raise ReminderNotFoundError("Recordatorio no encontrado")
         return reminder

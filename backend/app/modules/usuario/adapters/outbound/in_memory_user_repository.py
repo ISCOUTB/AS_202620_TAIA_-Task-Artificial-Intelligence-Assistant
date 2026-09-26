@@ -16,11 +16,17 @@ class InMemoryUserRepository(UserRepository):
     def add(self, user: Usuario) -> None:
         self._users[user.id] = user
 
+    def save(self, user: Usuario) -> None:
+        self._users[user.id] = user
+
     def get_by_id(self, user_id: uuid.UUID) -> Usuario | None:
         return self._users.get(user_id)
 
     def get_by_email(self, email: Email) -> Usuario | None:
         return next((user for user in self._users.values() if user.email == email), None)
 
-    def list_all(self) -> list[Usuario]:
-        return list(self._users.values())
+    def get_by_telegram_user_id(self, telegram_user_id: int) -> Usuario | None:
+        return next(
+            (user for user in self._users.values() if user.telegram_user_id == telegram_user_id),
+            None,
+        )

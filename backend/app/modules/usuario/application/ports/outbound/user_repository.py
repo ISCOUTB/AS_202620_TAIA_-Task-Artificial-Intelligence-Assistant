@@ -15,6 +15,10 @@ class UserRepository(ABC):
         """Persiste un usuario nuevo."""
 
     @abstractmethod
+    def save(self, user: Usuario) -> None:
+        """Persiste los cambios de un usuario existente."""
+
+    @abstractmethod
     def get_by_id(self, user_id: uuid.UUID) -> Usuario | None:
         """Obtiene un usuario por su identificador."""
 
@@ -23,5 +27,5 @@ class UserRepository(ABC):
         """Obtiene un usuario por correo."""
 
     @abstractmethod
-    def list_all(self) -> list[Usuario]:
-        """Obtiene los usuarios necesarios para validaciones de identidad."""
+    def get_by_telegram_user_id(self, telegram_user_id: int) -> Usuario | None:
+        """Obtiene el usuario vinculado a una cuenta de Telegram."""

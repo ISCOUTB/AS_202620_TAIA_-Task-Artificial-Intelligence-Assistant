@@ -8,7 +8,7 @@ client = TestClient(app)
 def login_user(email: str) -> dict[str, str]:
     response = client.post(
         "/users",
-        json={"name": email, "email": email, "password": "password123"},
+        json={"full_name": email, "email": email, "password": "password123"},
     )
     assert response.status_code == 201
     login = client.post(

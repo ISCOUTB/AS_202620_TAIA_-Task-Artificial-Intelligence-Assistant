@@ -17,7 +17,7 @@ TZ = timezone(timedelta(hours=-5))
 def register_and_login(email: str) -> dict[str, str]:
     created = client.post(
         "/users",
-        json={"name": "Estudiante", "email": email, "password": "password123"},
+        json={"full_name": "Estudiante", "email": email, "password": "password123"},
     )
     assert created.status_code == 201
     login = client.post(

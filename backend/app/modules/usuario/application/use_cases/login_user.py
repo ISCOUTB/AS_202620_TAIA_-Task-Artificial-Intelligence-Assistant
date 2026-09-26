@@ -39,7 +39,7 @@ class LoginUserUseCase:
         if user is None or not self._password_hasher.verify(password, user.password_hash):
             raise InvalidCredentialsError("Correo o contraseña incorrectos.")
 
-        if user.status != UserStatus.ACTIVE:
+        if user.status is not UserStatus.ACTIVE:
             raise InactiveUserError("El usuario está inactivo.")
 
         return self._token_service.create_access_token(user)
