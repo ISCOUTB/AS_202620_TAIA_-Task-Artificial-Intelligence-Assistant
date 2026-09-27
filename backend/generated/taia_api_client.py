@@ -158,3 +158,6 @@ class TaiaApiClient:
     def health_health_get(self, body: object | None = None) -> object:
         return self._request("GET", "/health", body, **{})
 
+    def mockup_mockup_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/mockup", body, **{})
+

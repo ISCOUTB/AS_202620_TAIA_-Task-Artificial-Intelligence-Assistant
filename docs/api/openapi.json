@@ -2117,6 +2117,23 @@
           }
         }
       }
+    },
+    "/mockup": {
+      "get": {
+        "summary": "Mockup",
+        "description": "Provide a lightweight endpoint for validating deployments.",
+        "operationId": "mockup_mockup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

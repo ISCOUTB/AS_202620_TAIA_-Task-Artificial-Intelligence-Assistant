@@ -45,3 +45,9 @@ app.include_router(reminders_router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/mockup")
+def mockup():
+    """Provide a lightweight endpoint for validating deployments."""
+    return {"message": "CD pipeline test successful"}
