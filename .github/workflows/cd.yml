@@ -1,4 +1,4 @@
-name: CD
+﻿name: CD
 
 on:
   push:
@@ -53,8 +53,8 @@ jobs:
           # No reintentar POST: una respuesta perdida puede haber creado el deploy.
           # No imprimir la URL: contiene la credencial del hook.
           http_code=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 60 \
-            --request POST --output /dev/null --write-out '%{http_code}' \
-            "${RENDER_DEPLOY_HOOK}&ref=${COMMIT_SHA}")
+          --request POST --output /dev/null --write-out '%{http_code}' \
+          "${RENDER_DEPLOY_HOOK}")
           case "$http_code" in
             200|202)
               echo "Render accepted deploy request for $COMMIT_SHA (HTTP $http_code)." >> "$GITHUB_STEP_SUMMARY"
