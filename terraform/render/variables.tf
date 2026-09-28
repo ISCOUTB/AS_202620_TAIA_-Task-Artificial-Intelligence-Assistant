@@ -13,9 +13,9 @@ variable "repository_url" {
 }
 
 variable "branch" {
-  description = "Rama desplegada tras CI; usar migrate_to_render para la validacion inicial."
+  description = "Rama desplegada tras CI; debe coincidir con el trigger de CD."
   type        = string
-  default     = "main"
+  default     = "migrate_to_render"
   nullable    = false
 }
 

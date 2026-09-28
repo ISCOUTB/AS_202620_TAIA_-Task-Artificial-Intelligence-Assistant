@@ -2,11 +2,11 @@
 # Esta plantilla no contiene secretos. El plan starter es de pago.
 service_name   = "taia-backend"
 repository_url = "https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant"
-branch         = "main"
+branch         = "migrate_to_render"
 region         = "oregon"
 plan           = "starter"
 
-# Para validar esta migracion antes de cambiar main, usar branch = "migrate_to_render".
+# Mantener esta rama alineada con el trigger de .github/workflows/cd.yml.
 # Antes de crear el servicio, subir la rama con CI y Dockerfile ya actualizados.
 # Secretos: TF_VAR_database_url, TF_VAR_jwt_secret y, opcionalmente,
 # TF_VAR_additional_environment_variables (objeto JSON). Nunca versionarlos.

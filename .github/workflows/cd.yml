@@ -1,10 +1,8 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches: [migrate_to_render]
 
 permissions:
   contents: read
@@ -15,20 +13,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ci:
+    name: Validate commit before deployment
+    uses: ./.github/workflows/ci.yml
+
   deploy:
     name: Request Render deploy for validated commit
+    needs: ci
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/migrate_to_render'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-      COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      COMMIT_SHA: ${{ github.sha }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      # No checkout: no se ejecuta codigo ni se descargan artifacts del workflow_run.
+      # El job de despliegue no necesita checkout ni artifacts de CI.
       - name: Trigger Render deploy hook
         shell: bash
         run: |
@@ -41,8 +43,8 @@ jobs:
           fi
           [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
 
-          # Evitar que un CI antiguo, terminado fuera de orden, revierta main.
-          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          # Evitar que un CI antiguo revierta el ultimo commit de la rama.
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/migrate_to_render" --jq .sha)
           if [[ "$COMMIT_SHA" != "$latest_sha" ]]; then
             echo "Skipping superseded commit $COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"
             exit 0

@@ -2,10 +2,13 @@
 
 GitHub Actions ejecuta pruebas del backend con PostgreSQL, comprueba el cliente
 generado, construye y arranca Docker, y valida Terraform. Cuando CI pasa en un
-push a `main`, `.github/workflows/cd.yml` invoca `RENDER_DEPLOY_HOOK` con
+push a `migrate_to_render`, `.github/workflows/cd.yml` invoca `RENDER_DEPLOY_HOOK` con
 `ref=<SHA>` para solicitar el despliegue del commit validado.
 Render construye la imagen desde GitHub. Ya no se publica la imagen de TAIA en
 GHCR ni se ejecuta SSH desde Actions.
+
+Para probar CD, basta con subir un cambio de documentación a `migrate_to_render`:
+el pipeline también valida y despliega commits que solo modifican documentación.
 
 ## Configuración
 
@@ -15,7 +18,7 @@ GHCR ni se ejecuta SSH desde Actions.
 | Runtime | Docker |
 | Dockerfile | `backend/Dockerfile` |
 | Contexto | Raíz del repositorio (`.`); no configurar `backend` como Root Directory |
-| Rama | `main`; configurable para validar `migrate_to_render` |
+| Rama | `migrate_to_render` |
 | Auto deploy | `off`; GitHub Actions CD controla los despliegues |
 | Health check | `/health` |
 | Puerto | `0.0.0.0:$PORT`, con fallback local `8000` |
@@ -78,14 +81,16 @@ Copiar la URL completa `https://api.render.com/deploy/srv-...?key=...`, sin aña
 otros parámetros; CD añade el SHA automáticamente. No guardarla como variable
 pública ni subirla al repositorio. CD no necesita API key ni service ID;
 `RENDER_API_KEY` y `RENDER_OWNER_ID` siguen siendo necesarios solo para Terraform.
-El workflow `CD` debe existir en la rama predeterminada de GitHub para recibir
-eventos `workflow_run`. Solo despliega pushes exitosos de CI sobre `main` del
-propio repositorio; no despliega pull requests. Serializa ejecuciones y omite
-commits que ya no sean el último de `main`.
+El workflow `CD` se dispara solo con pushes a `migrate_to_render` y llama a
+`ci.yml` como workflow reutilizable. El despliegue depende de que pasen sus tres
+jobs. No necesita estar en la rama predeterminada y no despliega pull requests
+ni pushes a `main`. CI sigue ejecutándose para pull requests y las demás ramas;
+los pushes a `migrate_to_render` ejecutan CI dentro de CD para evitar duplicados.
+Serializa ejecuciones y omite commits que ya no sean el último de `migrate_to_render`.
 
 Aplicar `auto_deploy_trigger = "off"` antes de activar este CD en un servicio
 existente para evitar duplicados. Este hook de CD es el único disparador de nuevos
-commits. Asociarlo al servicio del repositorio de TAIA con la rama `main`.
+commits. Asociarlo al servicio del repositorio de TAIA con la rama `migrate_to_render`.
 
 Desde la raíz del repositorio:
 
@@ -117,7 +122,7 @@ La creación del servicio inicia un despliegue: comprobar previamente el CI de e
 commit. Los cambios posteriores de infraestructura no provocan un despliegue
 desde el provider (`skip_deploy_after_service_update = true`). El siguiente CD
 activa esos cambios. También se puede volver a ejecutar CD para el último commit
-de `main` cuyo CI haya pasado. La creación inicial del servicio es la excepción:
+de `migrate_to_render` cuyo CI haya pasado. La creación inicial del servicio es la excepción:
 Render puede iniciar su primer despliegue al crearlo.
 
 ## Validación y cambio de tráfico
@@ -139,16 +144,17 @@ Render puede iniciar su primer despliegue al crearlo.
    `/health` devuelve `{"status":"ok"}` pero no consulta PostgreSQL; por sí solo
    no demuestra que los datos estén disponibles. Comprobar también Gemini y
    Telegram cuando esas integraciones estén habilitadas.
-5. Probar un push controlado a `main`: esperar los tres jobs de CI y después el
-   workflow CD. Su resumen indica el SHA y la respuesta del hook: HTTP 200 inicia
+5. Probar un push controlado a `migrate_to_render`: esperar los tres jobs de CI dentro
+   de CD y después su job de despliegue. Su resumen indica el SHA y la respuesta del hook: HTTP 200 inicia
    el despliegue y HTTP 202 lo deja en cola. Si falla CI, CD se omite; si falla la
    solicitud, CD falla. Un CD verde solo confirma la aceptación de la solicitud:
    comprobar el build, estado Live, SHA, `/health` y `/docs` en Render. El hook no
    permite consultar la finalización; Render usa `/health` para validar el servicio.
    Un timeout de la solicitud tampoco cancela el despliegue remoto.
 6. Actualizar la URL del backend en frontend, bot e integraciones a HTTPS de Render.
-   La validación previa sobre `migrate_to_render` es manual. Antes de activar CD,
-   integrar los cambios y aplicar la variable `branch = "main"` en Terraform.
+   CD permite validar `migrate_to_render` antes de integrar los cambios. Para
+   desplegar otra rama, alinear el trigger, la condición del job, la comprobación
+   del último SHA, el filtro de CI y la variable `branch` de Terraform.
 
 ## Datos y rollback
 
@@ -163,7 +169,8 @@ Render si las bases son distintas. Reconciliar los datos escritos desde el cambi
 antes de reabrir OCI. Un rollback de aplicación no revierte las migraciones de
 Alembic: confirmar la compatibilidad del esquema con el backend anterior.
 
-El workflow de CD a OCI se reemplaza por CD a Render. Los secretos `OCI_HOST`,
+En esta rama, `cd.yml` reemplaza el CD a OCI por CD a Render. El CD existente
+en `main` no cambia hasta integrar esta rama. Los secretos `OCI_HOST`,
 `OCI_USER`, `OCI_SSH_KEY`, `GHCR_USERNAME` y `GHCR_PAT` dejan de ser necesarios
 para este pipeline; retirarlos de GitHub cuando se confirme que otros procesos no
 los usan. Conservar el acceso operativo a OCI durante el rollback. No borrar

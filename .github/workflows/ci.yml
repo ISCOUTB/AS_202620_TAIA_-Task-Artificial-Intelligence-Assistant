@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
+    branches-ignore: [migrate_to_render]
   pull_request:
+  workflow_call:
 
-# CD espera que todos estos jobs pasen antes de desplegar main en Render.
+# CD llama este workflow para migrate_to_render y espera que todos los jobs pasen.
 permissions:
   contents: read
 
