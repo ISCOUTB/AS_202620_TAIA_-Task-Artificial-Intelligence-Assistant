@@ -21,4 +21,17 @@ Esqueleto requerimientos.docx
 
 estado_backend.md
 
+# Terraform: versionar los .tf, las plantillas .example y .terraform.lock.hcl.
 .terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+*.tfplan
+
+# Credenciales OCI y claves privadas locales.
+.oci/
+*.pem
+*.key

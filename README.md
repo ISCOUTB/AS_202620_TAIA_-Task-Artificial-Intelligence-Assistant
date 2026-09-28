@@ -158,6 +158,9 @@ La decisión arquitectónica está documentada en:
 
 ## Documentación
 
+- [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
+  datos requeridos de Oracle Cloud e importación del VPS existente.
+
 La documentación del proyecto se encuentra en la carpeta docs/.
 
 - docs/ficha_problema.md — descripción del problema y propuesta de solución.

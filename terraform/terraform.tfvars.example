@@ -1,0 +1,35 @@
+# PLANTILLA: copiar a terraform.tfvars y editar SOLO la copia local.
+# No contiene credenciales. terraform.tfvars esta ignorado por Git.
+# Todos los REEMPLAZAR deben corresponder al VPS que YA existe en OCI.
+
+# Perfil de ~/.oci/config; la autenticacion se configura fuera del repositorio.
+oci_config_profile = "DEFAULT"
+
+# OCI: identificador de la region seleccionada donde esta el VPS.
+# Ejemplo de formato: us-ashburn-1 (usar TU region real).
+oci_region = "REEMPLAZAR_REGION"
+
+# OCI: Compute > Instances > tu VPS > OCID > Copy.
+# Se usa tanto en el bloque import de main.tf como en el comando terraform import.
+instance_ocid = "REEMPLAZAR_OCID_DEL_VPS"
+
+# OCI: OCID del compartment actual; si es raiz, usar el OCID de la tenancy.
+compartment_ocid = "REEMPLAZAR_OCID_DEL_COMPARTMENT"
+
+# OCI: Instance information > Availability domain; incluir el prefijo completo.
+instance_availability_domain = "REEMPLAZAR_AVAILABILITY_DOMAIN"
+
+# OCI: nombre visible EXACTO de la instancia existente.
+instance_display_name = "REEMPLAZAR_NOMBRE_ACTUAL_DEL_VPS"
+
+# OCI: Shape actual de la instancia (ej. VM.Standard.A1.Flex o VM.Standard.E2.1.Micro).
+instance_shape = "REEMPLAZAR_SHAPE_ACTUAL"
+
+# Para shape fijo: mantener null.
+# Para shape Flex: sustituir null por el objeto comentado abajo, usando los
+# valores ACTUALES de OCI. Los numeros del ejemplo no son recomendaciones.
+instance_shape_config = null
+# instance_shape_config = {
+#   ocpus         = 1 # REEMPLAZAR por las OCPU actuales (no vCPU).
+#   memory_in_gbs = 6 # REEMPLAZAR por la RAM actual en GB.
+# }
