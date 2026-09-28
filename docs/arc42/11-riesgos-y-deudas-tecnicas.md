@@ -4,7 +4,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 ## 11.1. Integraciones externas y funcionalidades pendientes
 
-**Riesgo:** PostgreSQL y la ejecución completa de Gemini todavía no están habilitados en la línea base. Telegram sí dispone de vinculación y envío explícito de notificaciones.
+**Riesgo:** Gemini y Telegram no están configurados en el despliegue (faltan `GEMINI_API_KEY` y `TAIA_TELEGRAM_BOT_TOKEN`). PostgreSQL ya está integrado (Supabase, ADR-0004).
 
 **Impacto:** La solución ejecutable actual no demuestra todavía persistencia definitiva ni el recorrido completo con un proveedor LLM configurado.
 
@@ -20,7 +20,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Mitigación:** Implementar un adaptador PostgreSQL que cumpla el contrato de `TaskRepository`, evitando modificar los casos de uso y las reglas del dominio.
 
-**Estado:** Aceptada temporalmente para el corte vertical A-01.
+**Estado:** Resuelta. Todos los módulos persisten en PostgreSQL con migraciones de Alembic; los repositorios en memoria quedan solo para las pruebas unitarias.
 
 ## 11.3. Proveedor de IA pendiente de aislamiento completo
 
@@ -36,7 +36,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 ## 11.4. Disponibilidad de infraestructura gratuita
 
-**Riesgo:** La infraestructura gratuita prevista puede suspender servicios por inactividad y presentar límites de uso.
+**Riesgo:** Supabase Free pausa el proyecto tras una semana sin actividad. La API ya no se suspende, porque corre en una VM propia (ADR-0003).
 
 **Impacto:** Las funcionalidades que dependan de ejecución programada, especialmente los recordatorios, podrían no ejecutarse exactamente en el horario esperado.
 
@@ -79,3 +79,33 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 **Mitigación:** Mantener límites claros entre módulos y dependencias mediante interfaces. Si el crecimiento futuro lo justifica, los módulos podrán evolucionar hacia componentes desplegables de forma independiente.
 
 **Estado:** Decisión aceptada para el MVP.
+
+## 11.8. Costo de la VM fuera de la capa gratuita
+
+**Riesgo:** La VM `VM.Standard.E5.Flex` no es Always Free y se cobra a la tarjeta registrada en OCI: 39,42 USD/mes a precio de lista.
+
+**Impacto:** Rompe el límite de costo cero de la sección 2 mientras la VM siga encendida.
+
+**Mitigación:** Reducir la memoria de 12 GB a 2 GB (24,82 USD/mes) y pasar a `VM.Standard.A1.Flex` (Always Free) cuando haya capacidad, construyendo la imagen también para ARM64. Ver [costo_mensual.md](../costo_mensual.md) y ADR-0003.
+
+**Estado:** Riesgo abierto.
+
+## 11.9. API sin HTTPS
+
+**Deuda técnica:** La API se expone por HTTP en el puerto 8000 de la VM.
+
+**Impacto:** Incumple RNF-04; los tokens JWT viajan sin cifrar.
+
+**Mitigación:** Configurar un dominio y un proxy inverso con TLS delante del contenedor.
+
+**Estado:** Pendiente.
+
+## 11.10. Red de OCI fuera de Terraform
+
+**Deuda técnica:** Terraform describe la VM, pero no la VCN, la subred, la IP pública ni las reglas de seguridad, que se administran desde la consola.
+
+**Impacto:** El entorno no se puede recrear por completo desde el repositorio; un cambio en la red no queda versionado.
+
+**Mitigación:** Declarar e importar esos recursos en `terraform/` con sus valores actuales.
+
+**Estado:** Pendiente.

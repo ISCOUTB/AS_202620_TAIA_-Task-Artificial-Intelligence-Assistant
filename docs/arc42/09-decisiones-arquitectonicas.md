@@ -27,11 +27,7 @@ En el corte vertical actual, esta decisión se refleja en el módulo académico 
 
 ## 9.2. Decisiones pendientes
 
-Las decisiones sobre la implementación concreta de algunos mecanismos de infraestructura se documentarán mediante nuevos ADR cuando sean necesarias.
-
-Entre ellas se encuentra la selección definitiva del mecanismo de despliegue y la implementación de los adaptadores concretos para PostgreSQL, Telegram y Gemini.
-
-Estos elementos no forman parte del recorrido ejecutable del corte vertical actual y, por tanto, no se presentan como decisiones ya implementadas.
+Queda pendiente el mecanismo que dispara los recordatorios en su hora (S2), que se documentará en su propio ADR.
 
 ## 9.3. Decisiones aplicadas en la implementación actual
 
@@ -40,3 +36,11 @@ ADR-0001 se refleja en la separación entre dominio, aplicación y adaptadores e
 ## 9.4. ADR-0002 — Integración HTTP síncrona con contrato OpenAPI
 
 La estrategia de integración de la API principal está documentada en [ADR-0002](../adr/0002-estrategia-integracion-api-sincrona.md). La decisión establece HTTP síncrono + JSON y OpenAPI 3.1 como contrato versionado.
+
+## 9.5. ADR-0003 — Plataforma de despliegue de la API
+
+La API se despliega en una VM `VM.Standard.E5.Flex` de Oracle Cloud con Docker, con la imagen en GitHub Container Registry y despliegue automático desde `main`. Se descartó Render Free por la suspensión tras 15 minutos sin tráfico, que incumple S3 y RNF-08 en la primera petición. La VM no es Always Free y cuesta 39,42 USD/mes. Ver [ADR-0003](../adr/0003-plataforma-despliegue-api.md).
+
+## 9.6. ADR-0004 — Plataforma de la base de datos
+
+La base de datos es Supabase PostgreSQL en el plan Free. Se descartaron PostgreSQL dentro de la VM (los datos quedarían atados a una sola VM, sin copias de seguridad) y Render Postgres Free (expira a los 30 días). Ver [ADR-0004](../adr/0004-plataforma-base-de-datos.md).
