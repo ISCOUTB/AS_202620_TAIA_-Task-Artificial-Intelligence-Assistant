@@ -8,11 +8,12 @@ resource "render_web_service" "taia" {
 
   runtime_source = {
     docker = {
-      repo_url            = var.repository_url
-      branch              = var.branch
-      dockerfile_path     = "backend/Dockerfile"
-      context             = "."
-      auto_deploy_trigger = "checksPass"
+      repo_url        = var.repository_url
+      branch          = var.branch
+      dockerfile_path = "backend/Dockerfile"
+      context         = "."
+      # GitHub Actions CD es el unico disparador para nuevos commits.
+      auto_deploy_trigger = "off"
     }
   }
 

@@ -11,6 +11,6 @@ terraform {
 
 # Autenticacion externa: RENDER_API_KEY y RENDER_OWNER_ID.
 provider "render" {
-  # Los cambios de infraestructura se despliegan manualmente tras revisar CI.
+  # El workflow CD despliega los cambios tras CI; evitar despliegues duplicados.
   skip_deploy_after_service_update = true
 }

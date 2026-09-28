@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
 
-# Render espera todos estos checks antes de desplegar la rama configurada.
+# CD espera que todos estos jobs pasen antes de desplegar main en Render.
 permissions:
   contents: read
 

@@ -2,8 +2,8 @@
 
 El despliegue activo se configura en **[render/](render/README.md)**, con un
 estado independiente. Ejecutar sus comandos con `terraform -chdir=terraform/render`
-desde la raíz del repositorio. GitHub Actions valida CI; Render construye y
-despliega el backend después de los checks.
+desde la raíz del repositorio. GitHub Actions valida CI y el workflow CD solicita
+a Render construir y desplegar el commit validado.
 
 Los `.tf`, el lockfile y el estado local de este directorio siguen perteneciendo
 a **OCI**, y se conservan para rollback. No copiar su estado a `render/`, eliminar

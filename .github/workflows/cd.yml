@@ -1,0 +1,65 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Serializar solicitudes; el despliegue remoto sigue ejecutandose en Render.
+concurrency:
+  group: render-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Request Render deploy for validated commit
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # No checkout: no se ejecuta codigo ni se descargan artifacts del workflow_run.
+      - name: Trigger Render deploy hook
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${RENDER_DEPLOY_HOOK:?Configure the RENDER_DEPLOY_HOOK repository secret}"
+          # Usar la URL completa copiada de Render, sin ref ni parametros adicionales.
+          if [[ ! "$RENDER_DEPLOY_HOOK" =~ ^https://api\.render\.com/deploy/srv-[a-zA-Z0-9]+\?key=[a-zA-Z0-9_-]+$ ]]; then
+            echo "RENDER_DEPLOY_HOOK must be the complete deploy hook URL from Render Settings."
+            exit 1
+          fi
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          # Evitar que un CI antiguo, terminado fuera de orden, revierta main.
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$COMMIT_SHA" != "$latest_sha" ]]; then
+            echo "Skipping superseded commit $COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # No reintentar POST: una respuesta perdida puede haber creado el deploy.
+          # No imprimir la URL: contiene la credencial del hook.
+          http_code=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 60 \
+            --request POST --output /dev/null --write-out '%{http_code}' \
+            "${RENDER_DEPLOY_HOOK}&ref=${COMMIT_SHA}")
+          case "$http_code" in
+            200|202)
+              echo "Render accepted deploy request for $COMMIT_SHA (HTTP $http_code)." >> "$GITHUB_STEP_SUMMARY"
+              echo "Check build, Live status and health in Render; hook acceptance does not confirm deployment completion." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "Unexpected deploy hook response: HTTP $http_code"
+              exit 1
+              ;;
+          esac

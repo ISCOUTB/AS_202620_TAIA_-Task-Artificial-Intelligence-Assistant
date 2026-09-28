@@ -1,9 +1,11 @@
 # TAIA en Render
 
 GitHub Actions ejecuta pruebas del backend con PostgreSQL, comprueba el cliente
-generado, construye y arranca Docker, y valida Terraform. Render construye desde
-GitHub y despliega la rama configurada cuando pasan los checks. Ya no se publica
-la imagen de TAIA en GHCR ni se ejecuta SSH desde Actions.
+generado, construye y arranca Docker, y valida Terraform. Cuando CI pasa en un
+push a `main`, `.github/workflows/cd.yml` invoca `RENDER_DEPLOY_HOOK` con
+`ref=<SHA>` para solicitar el despliegue del commit validado.
+Render construye la imagen desde GitHub. Ya no se publica la imagen de TAIA en
+GHCR ni se ejecuta SSH desde Actions.
 
 ## Configuración
 
@@ -14,7 +16,7 @@ la imagen de TAIA en GHCR ni se ejecuta SSH desde Actions.
 | Dockerfile | `backend/Dockerfile` |
 | Contexto | Raíz del repositorio (`.`); no configurar `backend` como Root Directory |
 | Rama | `main`; configurable para validar `migrate_to_render` |
-| Auto deploy | `checksPass` / After CI Checks Pass |
+| Auto deploy | `off`; GitHub Actions CD controla los despliegues |
 | Health check | `/health` |
 | Puerto | `0.0.0.0:$PORT`, con fallback local `8000` |
 | Réplicas | 1; Alembic se ejecuta antes de iniciar Uvicorn |
@@ -27,11 +29,10 @@ hacer el respaldo y la restauración por separado y proporcionar su URL.
 ## Preparar Render y los secretos
 
 1. Conectar la cuenta de GitHub con Render y conceder acceso al repositorio de TAIA.
-   La integración Git es necesaria para auto deploy; una URL pública sin conexión
-   no basta. Subir la rama con el Dockerfile y CI nuevos antes del primer despliegue.
+   Subir la rama con el Dockerfile y CI nuevos antes del primer despliegue.
 2. Obtener una API key y el owner ID del workspace de Render. Proporcionarlos al
-   proceso de Terraform como `RENDER_API_KEY` y `RENDER_OWNER_ID`. No hacen falta
-   secretos de Render en GitHub Actions: CI no ejecuta `plan` ni `apply`.
+   proceso de Terraform como `RENDER_API_KEY` y `RENDER_OWNER_ID`. CI no ejecuta
+   `plan` ni `apply`. CD necesita los secretos de GitHub descritos abajo.
 3. Copiar `terraform.tfvars.example` a `terraform.tfvars` **dentro de esta carpeta**,
    sin sobrescribir una copia existente. Configurar rama, nombre, región y plan.
 4. Cargar los secretos del backend desde el gestor de secretos o entorno local:
@@ -65,6 +66,27 @@ configurar un backend de estado compartido con acceso restringido y bloqueo.
 
 ## Validar y crear el servicio
 
+En GitHub → Settings → Secrets and variables → Actions, configurar este
+**repository secret** para CD:
+
+| Secreto | Valor |
+| --- | --- |
+| `RENDER_DEPLOY_HOOK` | URL completa de Render → Service → Settings → Deploy Hook |
+
+El workflow inyecta el secreto como variable de entorno `RENDER_DEPLOY_HOOK`.
+Copiar la URL completa `https://api.render.com/deploy/srv-...?key=...`, sin añadir
+otros parámetros; CD añade el SHA automáticamente. No guardarla como variable
+pública ni subirla al repositorio. CD no necesita API key ni service ID;
+`RENDER_API_KEY` y `RENDER_OWNER_ID` siguen siendo necesarios solo para Terraform.
+El workflow `CD` debe existir en la rama predeterminada de GitHub para recibir
+eventos `workflow_run`. Solo despliega pushes exitosos de CI sobre `main` del
+propio repositorio; no despliega pull requests. Serializa ejecuciones y omite
+commits que ya no sean el último de `main`.
+
+Aplicar `auto_deploy_trigger = "off"` antes de activar este CD en un servicio
+existente para evitar duplicados. Este hook de CD es el único disparador de nuevos
+commits. Asociarlo al servicio del repositorio de TAIA con la rama `main`.
+
 Desde la raíz del repositorio:
 
 ```bash
@@ -93,9 +115,10 @@ Alinear variables con el servicio importado y revisar cualquier diferencia.
 `prevent_destroy` bloquea reemplazos mientras el recurso siga declarado.
 La creación del servicio inicia un despliegue: comprobar previamente el CI de ese
 commit. Los cambios posteriores de infraestructura no provocan un despliegue
-desde el provider (`skip_deploy_after_service_update = true`); tras revisar CI,
-desplegar manualmente para activar cambios de configuración. El auto deploy de
-nuevos commits queda a cargo de Render.
+desde el provider (`skip_deploy_after_service_update = true`). El siguiente CD
+activa esos cambios. También se puede volver a ejecutar CD para el último commit
+de `main` cuyo CI haya pasado. La creación inicial del servicio es la excepción:
+Render puede iniciar su primer despliegue al crearlo.
 
 ## Validación y cambio de tráfico
 
@@ -116,13 +139,16 @@ nuevos commits queda a cargo de Render.
    `/health` devuelve `{"status":"ok"}` pero no consulta PostgreSQL; por sí solo
    no demuestra que los datos estén disponibles. Comprobar también Gemini y
    Telegram cuando esas integraciones estén habilitadas.
-5. Probar un push controlado en la rama desplegada: esperar los tres jobs de CI,
-   el despliegue automático de Render y comprobar el nuevo SHA y los endpoints.
-   Al fallar un check no debe iniciarse el auto deploy. No configurar además un
-   deploy hook: produciría un segundo mecanismo de despliegue.
+5. Probar un push controlado a `main`: esperar los tres jobs de CI y después el
+   workflow CD. Su resumen indica el SHA y la respuesta del hook: HTTP 200 inicia
+   el despliegue y HTTP 202 lo deja en cola. Si falla CI, CD se omite; si falla la
+   solicitud, CD falla. Un CD verde solo confirma la aceptación de la solicitud:
+   comprobar el build, estado Live, SHA, `/health` y `/docs` en Render. El hook no
+   permite consultar la finalización; Render usa `/health` para validar el servicio.
+   Un timeout de la solicitud tampoco cancela el despliegue remoto.
 6. Actualizar la URL del backend en frontend, bot e integraciones a HTTPS de Render.
-   Si se validó sobre `migrate_to_render`, cambiar la variable `branch` a `main`
-   después de integrar los cambios y validar su CI.
+   La validación previa sobre `migrate_to_render` es manual. Antes de activar CD,
+   integrar los cambios y aplicar la variable `branch = "main"` en Terraform.
 
 ## Datos y rollback
 
@@ -137,7 +163,7 @@ Render si las bases son distintas. Reconciliar los datos escritos desde el cambi
 antes de reabrir OCI. Un rollback de aplicación no revierte las migraciones de
 Alembic: confirmar la compatibilidad del esquema con el backend anterior.
 
-El workflow de CD a OCI se elimina en esta rama. Los secretos `OCI_HOST`,
+El workflow de CD a OCI se reemplaza por CD a Render. Los secretos `OCI_HOST`,
 `OCI_USER`, `OCI_SSH_KEY`, `GHCR_USERNAME` y `GHCR_PAT` dejan de ser necesarios
 para este pipeline; retirarlos de GitHub cuando se confirme que otros procesos no
 los usan. Conservar el acceso operativo a OCI durante el rollback. No borrar
@@ -148,4 +174,4 @@ integraciones y completar el período de observación.
 
 - [Provider oficial de Render](https://registry.terraform.io/providers/render-oss/render/1.9.1/docs).
 - [Web Service y esquema Docker](https://registry.terraform.io/providers/render-oss/render/1.9.1/docs/resources/web_service).
-- [Auto deploy después de CI](https://render.com/docs/deploys#integrating-with-ci).
+- [Deploy hooks y parámetro ref](https://render.com/docs/deploy-hooks).
