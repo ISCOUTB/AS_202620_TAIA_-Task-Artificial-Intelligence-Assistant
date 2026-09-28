@@ -99,7 +99,7 @@ La configuración utilizada para el prototipo fue:
 | Plan | Free |
 | Base de datos | Supabase PostgreSQL |
 | Variables de entorno | Configuradas en Render |
-| URL | [completar URL de Render] |
+| URL | https://taia-backend-latest.onrender.com |
 
 Render permite desplegar Web Services gratuitamente en el plan Free.
 
@@ -209,15 +209,13 @@ http://157.137.215.57:8000/docs
 
 ## 6.1 Versión de la API
 
-Para que la comparación sea válida, ambas plataformas deben utilizar la misma versión del código.
-
-Se recomienda registrar:
+Para que la comparación sea válida, ambas plataformas utilizaron la misma imagen Docker de la API:
 
 ```text
-Commit: [COMPLETAR]
-Fecha: [COMPLETAR]
-Imagen Docker: ghcr.io/dei0811/taia_backend:[TAG]
+ghcr.io/dei0811/taia_backend:v2
 ```
+
+Desde que existe el workflow de CD, cada imagen se etiqueta además con los 12 primeros caracteres del SHA del commit, por lo que la versión desplegada se puede rastrear hasta su commit.
 
 
 # 7. Escenario de prueba
@@ -268,8 +266,17 @@ Oracle, en cambio, mantiene la VM y el contenedor ejecutándose mientras los rec
 
 | Plataforma | Petición normal | Primera petición después de inactividad |
 |---|---:|---:|
-| Render | [0.14 ms] | [0.96 ms] |
-| Oracle Cloud | [0.13 ms] | [0.22 ms] |
+| Render | 0,14 s | 0,96 s |
+| Oracle Cloud | 0,13 s | 0,22 s |
+
+Medición adicional del 27/09/2026 sobre `GET /health`, con el servicio de Render suspendido por inactividad:
+
+| Plataforma | Tiempo de respuesta |
+|---|---:|
+| Render (`https://taia-backend-latest.onrender.com/health`) | 53,4 s |
+| Oracle Cloud (`http://157.137.215.57:8000/health`) | 0,07 s |
+
+Esta segunda medición sí muestra el arranque en frío de Render, cercano al minuto que indica su documentación.
 
 
 # 9. Costos
