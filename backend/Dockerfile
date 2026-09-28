@@ -4,7 +4,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-COPY requirements.lock.txt .
+COPY backend/requirements.lock.txt ./requirements.lock.txt
 
 
 
