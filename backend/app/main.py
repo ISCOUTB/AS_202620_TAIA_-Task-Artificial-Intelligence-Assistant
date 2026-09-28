@@ -26,12 +26,15 @@ from app.modules.academic.adapters.inbound.structure_api import (
 from app.modules.ai.adapters.inbound.api import router as ai_router
 from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from app.modules.usuario.adapters.inbound.api import router as usuario_router
+from app.shared.adapters.inbound.observability import install_observability
 
 app = FastAPI(
     title="TAIA",
     version="1.0.0",
     description="Contrato versionado de la API HTTP principal de TAIA. La API utiliza HTTP síncrono y JSON para solicitudes y respuestas.",
 )
+
+install_observability(app)
 
 app.include_router(academic_router)
 app.include_router(academic_subjects_router)

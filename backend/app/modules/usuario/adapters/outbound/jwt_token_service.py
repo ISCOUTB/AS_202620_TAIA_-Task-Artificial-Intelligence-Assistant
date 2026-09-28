@@ -19,11 +19,10 @@ class JwtTokenService(TokenService):
     expires_minutes = 30
 
     def __init__(self, secret: str | None = None) -> None:
-        # En producción TAIA_JWT_SECRET debe configurarse como secreto del entorno.
-        self._secret = secret or os.getenv(
-            "TAIA_JWT_SECRET",
-            "dev-only-change-me-please-set-a-real-secret",
-        )
+        # RNF-02: sin secreto no hay valor por defecto y la API no arranca.
+        self._secret = secret or os.getenv("TAIA_JWT_SECRET")
+        if not self._secret:
+            raise RuntimeError("La variable de entorno TAIA_JWT_SECRET no está configurada.")
 
     def create_access_token(self, user: Usuario) -> str:
         now = datetime.now(timezone.utc)

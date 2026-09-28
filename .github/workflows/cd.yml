@@ -58,17 +58,27 @@ jobs:
     steps:
       - name: Actualizar contenedor por SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          # Secretos de la aplicación: se envían por SSH y no quedan en el repositorio ni en la imagen.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TAIA_JWT_SECRET: ${{ secrets.TAIA_JWT_SECRET }}
         with:
+          envs: DATABASE_URL,TAIA_JWT_SECRET
           # Secrets a crear en Settings → Secrets and variables → Actions:
           #   OCI_HOST     -> 157.137.215.57
           #   OCI_USER     -> opc
           #   OCI_SSH_KEY  -> contenido privado de ~/.ssh/oci_taia.key
+          #   DATABASE_URL, TAIA_JWT_SECRET -> ver .env.example
           host: ${{ secrets.OCI_HOST }}
           username: ${{ secrets.OCI_USER }}
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
             set -e
             IMAGE="ghcr.io/dei0811/taia_backend:${{ needs.build-and-push.outputs.image_tag }}"
+
+            echo "Escribiendo ~/taia.env desde los secretos de GitHub"
+            umask 077
+            printf 'DATABASE_URL=%s\nTAIA_JWT_SECRET=%s\n' "$DATABASE_URL" "$TAIA_JWT_SECRET" > ~/taia.env
 
             echo "Descargando $IMAGE"
             sudo docker pull "$IMAGE"
