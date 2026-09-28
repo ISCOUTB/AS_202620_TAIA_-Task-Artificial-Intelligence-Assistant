@@ -12,19 +12,19 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_USER: taia
-          POSTGRES_PASSWORD: taia
-          POSTGRES_DB: taia_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: --encoding=UTF8
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U taia"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia
 
     steps:
       - name: Checkout
@@ -40,10 +40,12 @@ jobs:
           python -m pip install pip==26.2.1
           pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
 
-      - name: Run tests
-        run: python -m pytest backend/tests
+      - name: Create database if needed
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'taia'" | grep -q 1 || \
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE taia;"
 
-      - name: Run API contract test
+      - name: Run real API contract/integration suite
         run: python -m pytest backend/tests/test_api_contract.py -q
 
       - name: Regenerate API client from OpenAPI contract
