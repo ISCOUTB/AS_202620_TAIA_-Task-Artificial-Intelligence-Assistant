@@ -1,14 +1,11 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.modules.usuario.adapters.inbound.api import _repository
 
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    _repository._users.clear()
+pytestmark = pytest.mark.usefixtures("clean_db")
 
 
 def _register_and_login():
@@ -58,4 +55,3 @@ def test_get_me_with_invalid_token_returns_401():
 
     assert response.status_code == 401
     assert response.headers["WWW-Authenticate"] == "Bearer"
-    

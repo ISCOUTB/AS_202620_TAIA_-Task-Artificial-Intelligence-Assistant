@@ -158,8 +158,10 @@ La decisión arquitectónica está documentada en:
 
 ## Documentación
 
-- [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
-  datos requeridos de Oracle Cloud e importación del VPS existente.
+- [Despliegue en Render](terraform/render/README.md): Docker, variables de producción,
+  CI en GitHub Actions y procedimiento de migración desde OCI.
+- [Infraestructura y rollback OCI](terraform/README.md): estados separados y
+  conservación del VPS durante la migración.
 
 La documentación del proyecto se encuentra en la carpeta docs/.
 

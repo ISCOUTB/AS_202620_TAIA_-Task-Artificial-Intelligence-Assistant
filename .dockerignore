@@ -1,0 +1,12 @@
+.git
+.github
+terraform
+docs
+**/.env
+**/.env.*
+**/taia.env
+**/*.pem
+**/*.key
+**/.venv
+**/__pycache__
+**/.pytest_cache

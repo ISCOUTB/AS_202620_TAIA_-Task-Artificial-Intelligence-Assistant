@@ -14,6 +14,7 @@ env/
 # Secretos locales
 .env
 .env.local
+taia.env
 
 claude.md
 

@@ -4,9 +4,14 @@ on:
   push:
   pull_request:
 
+# Render espera todos estos checks antes de desplegar la rama configurada.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -14,6 +19,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taia
           POSTGRES_INITDB_ARGS: --encoding=UTF8
         ports:
           - 5432:5432
@@ -25,6 +31,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia
 
     steps:
       - name: Checkout
@@ -40,16 +47,87 @@ jobs:
           python -m pip install pip==26.2.1
           pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
 
-      - name: Create database if needed
-        run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'taia'" | grep -q 1 || \
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE taia;"
-
-      - name: Run real API contract/integration suite
-        run: python -m pytest backend/tests/test_api_contract.py -q
+      - name: Run backend tests, migrations and API contract checks
+        run: python -m pytest backend/tests -q
 
       - name: Regenerate API client from OpenAPI contract
         run: python tools/generate_api_client.py
 
       - name: Verify generated client is synchronized
         run: git diff --exit-code -- backend/generated/taia_api_client.py
+
+  docker:
+    name: Docker build and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build the Render Dockerfile from the repository root
+        run: docker build -f backend/Dockerfile -t taia-ci .
+
+      - name: Verify migrations, PORT, health and Swagger
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia
+          TAIA_JWT_SECRET: ci-only-not-a-production-secret
+        run: |
+          docker run -d --name taia-ci --network host \
+            -e DATABASE_URL -e TAIA_JWT_SECRET -e PORT=10000 taia-ci
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error --max-time 5 \
+                http://localhost:10000/health; then
+              curl --fail --silent --show-error --max-time 5 \
+                http://localhost:10000/docs > /dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Show container logs
+        if: always()
+        run: docker logs taia-ci || true
+
+      - name: Remove test container
+        if: always()
+        run: docker rm -f taia-ci || true
+
+  terraform:
+    name: Validate Render infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: terraform/render
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.4"
+
+      - name: Check formatting
+        run: terraform fmt -check
+
+      - name: Initialize providers without production state
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate configuration
+        run: terraform validate

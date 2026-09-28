@@ -1,8 +1,21 @@
-# Terraform para TAIA en OCI
+# Terraform para TAIA: Render y rollback OCI
+
+El despliegue activo se configura en **[render/](render/README.md)**, con un
+estado independiente. Ejecutar sus comandos con `terraform -chdir=terraform/render`
+desde la raíz del repositorio. GitHub Actions valida CI; Render construye y
+despliega el backend después de los checks.
+
+Los `.tf`, el lockfile y el estado local de este directorio siguen perteneciendo
+a **OCI**, y se conservan para rollback. No copiar su estado a `render/`, eliminar
+el recurso OCI ni ejecutar `destroy` durante la migración. Los archivos locales
+`terraform.tfvars` y `terraform.tfstate` existentes no se modifican.
+
+## Configuración anterior: adopción del VPS de OCI
 
 Esta configuración prepara la adopción del **VPS existente** como
-`oci_core_instance.taia`. No instala Docker ni despliega la aplicación: GitHub
-Actions conserva el CI/CD, la publicación en GHCR y el despliegue por SSH.
+`oci_core_instance.taia`. No instala Docker ni despliega la aplicación. El antiguo
+CD por SSH y la publicación en GHCR se retiraron; el contenedor existente debe
+mantenerse disponible hasta terminar la validación de Render.
 
 La primera etapa administra la instancia y consulta sus IP actuales. La VCN,
 subnet, VNIC, IP pública, Internet Gateway, rutas y reglas de seguridad existentes
