@@ -15,7 +15,7 @@ Este documento compara dos alternativas de despliegue para una pieza concreta de
 La comparación se realiza entre:
 
 1. **Render Web Service**, utilizando su instancia Free.
-2. **Oracle Cloud Infrastructure (OCI) Compute**, utilizando una máquina virtual AMD Always Free y Docker.
+2. **Oracle Cloud Infrastructure (OCI) Compute**, utilizando una máquina virtual AMD `VM.Standard.E5.Flex` y Docker.
 
 La base de datos PostgreSQL utilizada por TAIA se mantiene como una dependencia externa común a ambas alternativas. En ambos escenarios se utiliza **Supabase PostgreSQL**, por lo que la comparación no evalúa el despliegue de la base de datos.
 
@@ -62,7 +62,7 @@ Para realizar una comparación reproducible se establecen los siguientes supuest
 - Las pruebas deben utilizar los mismos endpoints y cargas.
 - La comparación de costos considera principalmente el alojamiento de la API.
 - Los costos de Supabase no se atribuyen a ninguna de las dos alternativas porque es una dependencia compartida.
-- La alternativa de Oracle utiliza una VM AMD Always Free con Docker.
+- La alternativa de Oracle utiliza una VM AMD `VM.Standard.E5.Flex` (1 OCPU, 12 GB) con Docker. Esta VM no forma parte de los recursos Always Free (ver 9.2).
 - La alternativa de Render utiliza un Web Service Free.
 
 ---
@@ -133,13 +133,14 @@ La configuración utilizada fue:
 | Servicio | Compute VM |
 | Arquitectura | x86_64 / AMD |
 | Shape | VM.Standard.E5.Flex |
+| Recursos | 1 OCPU, 12 GB de memoria |
 | Sistema operativo | Oracle Linux Server 10.2 |
 | Contenedor | Docker |
 | Imagen | `ghcr.io/dei0811/taia_backend:v2` |
 | Puerto | `8000` |
 | Base de datos | Supabase PostgreSQL |
 
-Oracle documenta que `VM.Standard.E2.1.Micro` corresponde a una instancia AMD incluida en Always Free, con hasta dos instancias de este tipo disponibles por tenancy. Oracle también indica 1 GB de memoria para estas instancias.
+Los únicos shapes de cómputo Always Free de OCI son `VM.Standard.E2.1.Micro` (AMD, 1/8 de OCPU y 1 GB, hasta dos instancias) y `VM.Standard.A1.Flex` (ARM, 2 OCPU y 12 GB en total). Al crear la VM, A1.Flex no tenía capacidad disponible y la consola no ofreció E2.1.Micro, por lo que se utilizó `VM.Standard.E5.Flex`, que **no es Always Free** y se factura por hora.
 
 La arquitectura desplegada es:
 
@@ -304,34 +305,29 @@ El límite se alcanza al superar las **750 horas mensuales de instancia** del wo
 
 ---
 
-## 10.2 Oracle Cloud
+## 9.2 Oracle Cloud
 
-Oracle incluye la instancia `VM.Standard.E5.Flex` dentro de sus recursos Always Free. La oferta actual contempla hasta dos instancias AMD de este tipo por tenancy.
+La VM utilizada, `VM.Standard.E5.Flex` con 1 OCPU y 12 GB, **no forma parte de los recursos Always Free**. Se factura por hora encendida, con precio de lista de 0,03 USD por OCPU-hora y 0,002 USD por GB-hora:
 
-Oracle también documenta:
+```text
+730 h × (1 OCPU × 0,03 + 12 GB × 0,002) USD = 39,42 USD/mes
+```
 
-- 1 GB de memoria por instancia AMD Always Free.
-- 200 GB totales de Block Volume Always Free.
-- 10 TB/mes de transferencia de datos saliente Always Free.
+Costo por recurso:
 
-| Recurso | Límite Always Free |
-|---|---:|
-| VM.Standard.E2.1.Micro | Hasta 2 |
-| Memoria por VM | 1 GB |
-| Block Volume | 200 GB total |
-| Transferencia saliente | 10 TB/mes |
-| Costo dentro del límite | $0 |
+| Recurso | Límite Always Free | Uso de TAIA | Costo |
+|---|---:|---:|---:|
+| VM `VM.Standard.E5.Flex` | No aplica | 730 h/mes | 39,42 USD/mes |
+| Block Volume | 200 GB total | Volumen de arranque de la VM | 0 USD |
+| Transferencia saliente | 10 TB/mes | Menos de 1 GB/mes | 0 USD |
+
+La cuenta de OCI exige registrar una tarjeta, y el costo de la VM se carga a ella.
 
 ### Punto de ruptura
 
-El consumo deja de estar dentro de los recursos Always Free cuando se superan los límites establecidos por Oracle, por ejemplo:
+La VM de cómputo está fuera de la capa gratuita desde la primera hora. Los demás recursos se rompen al superar los 200 GB de Block Volume o los 10 TB/mes de salida.
 
-- más instancias AMD Always Free de las permitidas;
-- más almacenamiento de Block Volume que la cuota gratuita;
-- más transferencia saliente que la cuota incluida;
-- uso de otros recursos que no sean Always Free.
-
-Oracle señala que los recursos Always Free no tienen límite temporal mientras se mantengan dentro de las capacidades indicadas.
+Para volver a costo cero habría que usar `VM.Standard.A1.Flex` (Always Free) cuando la región tenga capacidad, construyendo la imagen también para ARM64, o `VM.Standard.E2.1.Micro` con solo 1 GB de memoria. El cálculo con el volumen supuesto de TAIA está en [costo_mensual.md](../costo_mensual.md).
 
 ---
 
@@ -343,7 +339,7 @@ Oracle señala que los recursos Always Free no tienen límite temporal mientras 
 | Modelo | Web Service administrado | VM/IaaS |
 | Docker | Compatible | Control directo |
 | SO administrado por usuario | No | Sí |
-| RAM | 512 MB | 1 GB |
+| RAM | 512 MB | 12 GB |
 | URL pública | Sí | Sí |
 | TLS administrado | Sí | Debe configurarse |
 | Inactividad | Suspensión después de 15 min | Permanece ejecutándose |
@@ -352,7 +348,7 @@ Oracle señala que los recursos Always Free no tienen límite temporal mientras 
 | Despliegue | Simplificado | Manual |
 | Rollback | Dos deploys anteriores | Versiones Docker |
 | Operación | Menor carga | Mayor responsabilidad |
-| Costo Free | $0 dentro de límites | $0 dentro de Always Free |
+| Costo | $0 dentro de límites | 39,42 USD/mes (E5.Flex no es Always Free) |
 
 ---
 
@@ -434,7 +430,7 @@ TAIA requiere desplegar su API FastAPI de forma pública para permitir el consum
 Se evaluaron dos alternativas que pueden utilizarse para esta pieza:
 
 - Render Web Service Free.
-- Oracle Cloud Compute `VM.Standard.E5.Flex ` + Docker.
+- Oracle Cloud Compute `VM.Standard.E5.Flex` + Docker.
 
 La base de datos PostgreSQL se mantiene en Supabase en ambos escenarios.
 
@@ -446,7 +442,7 @@ Render proporciona un Web Service administrado, con despliegue simplificado, URL
 
 ### Alternativa 2 — Oracle Cloud
 
-Oracle Cloud proporciona una VM AMD Always Free sobre la cual se ejecuta Docker. Esto permite controlar directamente el sistema operativo, el runtime y el ciclo de vida del contenedor. La VM `VM.Standard.E5.Flex ` forma parte de los recursos Always Free de OCI.
+Oracle Cloud proporciona una VM AMD sobre la cual se ejecuta Docker. Esto permite controlar directamente el sistema operativo, el runtime y el ciclo de vida del contenedor. La VM `VM.Standard.E5.Flex` no forma parte de los recursos Always Free de OCI: A1.Flex no tenía capacidad y E2.1.Micro no estaba disponible, y su costo es de 39,42 USD/mes.
 
 ## Decisión
 
@@ -458,7 +454,6 @@ La decisión se fundamenta en los requisitos definidos para el prototipo:
 - control directo sobre Docker;
 - acceso SSH al servidor;
 - posibilidad de administrar el sistema operativo;
-- disponibilidad de una VM AMD dentro del programa Always Free;
 - posibilidad de mantener las imágenes versionadas en GHCR.
 
 Render se mantiene como alternativa viable cuando se prioriza la reducción de tareas operativas y la simplicidad del proceso de despliegue.
@@ -469,7 +464,6 @@ Render se mantiene como alternativa viable cuando se prioriza la reducción de t
 - Se dispone de acceso directo al sistema operativo.
 - Docker permite controlar explícitamente la versión desplegada.
 - GHCR permite distribuir las imágenes de la API.
-- El recurso de cómputo utilizado pertenece al conjunto Always Free de OCI mientras se respeten sus límites.
 
 ## Consecuencias negativas
 
@@ -478,6 +472,7 @@ Render se mantiene como alternativa viable cuando se prioriza la reducción de t
 - HTTPS y DNS requieren configuración adicional.
 - Los rollbacks deben gestionarse mediante versiones de imágenes Docker.
 - Se requiere supervisar el uso de recursos.
+- La VM `VM.Standard.E5.Flex` no es Always Free: cuesta 39,42 USD/mes a precio de lista.
 
 ---
 
@@ -489,7 +484,7 @@ Render proporciona una experiencia de despliegue más administrada, mientras que
 
 En el escenario evaluado, Render presenta como característica relevante la suspensión del Web Service Free después de 15 minutos de inactividad y la posterior reactivación ante una nueva solicitud.
 
-Oracle Cloud permite mantener una VM AMD dentro del programa Always Free y ejecutar directamente el contenedor Docker, siempre que el consumo permanezca dentro de las cuotas correspondientes.
+Oracle Cloud permite ejecutar directamente el contenedor Docker en una VM siempre encendida. La VM utilizada, `VM.Standard.E5.Flex`, no es Always Free y cuesta 39,42 USD/mes; el cómputo Always Free (A1.Flex) no tenía capacidad disponible al crearla.
 
 Los resultados de rendimiento obtenidos durante las pruebas deben interpretarse junto con estas diferencias operativas y económicas. La elección documentada para este prototipo es Oracle Cloud Compute + Docker, debido a los requisitos definidos de control del entorno y ejecución continua de la API.
 
