@@ -11,9 +11,10 @@ COPY requirements.lock.txt .
 RUN uv pip install --system --no-cache -r requirements.lock.txt
 
 
-COPY app ./app
-COPY alembic.ini .
-COPY alembic ./alembic
+COPY backend/app ./app
+COPY backend/alembic.ini .
+COPY backend/alembic ./alembic
+
 
 EXPOSE 8000
 
