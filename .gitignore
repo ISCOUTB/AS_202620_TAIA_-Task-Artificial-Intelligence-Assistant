@@ -35,3 +35,4 @@ crash.*.log
 .oci/
 *.pem
 *.key
+docker-compose.local.yml

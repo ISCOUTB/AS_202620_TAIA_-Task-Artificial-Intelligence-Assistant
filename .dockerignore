@@ -1,0 +1,14 @@
+# Solo los archivos necesarios para construir el backend entran al contexto.
+**
+!backend/
+!backend/Dockerfile
+!backend/requirements.lock.txt
+!backend/app/
+!backend/app/**
+!backend/alembic.ini
+!backend/alembic/
+!backend/alembic/**
+**/__pycache__/
+**/*.py[cod]
+**/.env
+**/.env.*

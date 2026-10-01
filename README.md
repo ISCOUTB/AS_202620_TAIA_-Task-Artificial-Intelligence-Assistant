@@ -158,8 +158,10 @@ La decisión arquitectónica está documentada en:
 
 ## Documentación
 
+- [Despliegue con Docker Compose y Dokploy](docs/despliegue-dokploy.md):
+  configuración del servicio, variables, dominio HTTPS y CD mediante la API de Dokploy.
 - [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
-  datos requeridos de Oracle Cloud e importación del VPS existente.
+  opcional para administrar el servidor existente; independiente de Dokploy.
 
 La documentación del proyecto se encuentra en la carpeta docs/.
 
@@ -172,6 +174,24 @@ La documentación del proyecto se encuentra en la carpeta docs/.
 - docs/adr/ — decisiones arquitectónicas.
 
 ## Requisitos
+
+### Docker Compose / Dokploy
+
+El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
+`DATABASE_URL` (PostgreSQL) y `TAIA_JWT_SECRET` siguiendo `.env.example`.
+Para Dokploy, seleccionar `./docker-compose.yml` y configurar el dominio del
+servicio `backend` en el puerto interno `8000`.
+
+Para ejecutar localmente, copiar `.env.example` a `.env`, completar los valores y usar:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
+```
+
+La API estará en `http://127.0.0.1:8000/docs`. PostgreSQL se configura por separado.
+Consultar la [guía de despliegue](docs/despliegue-dokploy.md) para redes, secrets y CI/CD.
+
+### Ejecución directa con Python
 
 Para ejecutar el proyecto se requiere:
 

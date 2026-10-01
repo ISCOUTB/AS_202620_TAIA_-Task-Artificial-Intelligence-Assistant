@@ -1,5 +1,9 @@
 # Comparación de alternativas de despliegue para la API TAIA
 
+> Evidencia histórica de septiembre de 2026. Los comandos SSH, imágenes GHCR
+> y direcciones de esta comparación pertenecen al despliegue anterior.
+> La configuración vigente utiliza [Docker Compose y Dokploy](../despliegue-dokploy.md).
+
 **Asignatura:** Arquitectura de Software - Metacurso 202620  
 **Proyecto:** TAIA — Task Artificial Intelligence Assistant  
 **Pieza evaluada:** API TAIA  

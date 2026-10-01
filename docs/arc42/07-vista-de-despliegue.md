@@ -1,5 +1,10 @@
 # 7. Vista de despliegue
 
+> Actualización operativa: el backend se despliega mediante `docker-compose.yml`
+> y Dokploy, con PostgreSQL configurable, migraciones Alembic y health check.
+> La [guía de despliegue vigente](../despliegue-dokploy.md) sustituye las
+> instrucciones de operación del corte inicial descrito en esta vista histórica.
+
 La arquitectura de despliegue distingue entre la **arquitectura objetivo** y el **corte vertical actualmente ejecutable**.
 
 ## 7.1. Arquitectura de despliegue objetivo

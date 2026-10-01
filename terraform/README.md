@@ -1,8 +1,12 @@
 # Terraform para TAIA en OCI
 
 Esta configuración prepara la adopción del **VPS existente** como
-`oci_core_instance.taia`. No instala Docker ni despliega la aplicación: GitHub
-Actions conserva el CI/CD, la publicación en GHCR y el despliegue por SSH.
+`oci_core_instance.taia`. Es opcional e independiente del despliegue de TAIA.
+No instala Docker ni Dokploy ni despliega la aplicación: GitHub Actions ejecuta
+CI y solicita el despliegue por la API de Dokploy, que construye y ejecuta
+`docker-compose.yml`. Consultar la [guía de Dokploy](../docs/despliegue-dokploy.md).
+Terraform se comunica con la API de OCI para administrar infraestructura;
+no abre conexiones SSH al servidor.
 
 La primera etapa administra la instancia y consulta sus IP actuales. La VCN,
 subnet, VNIC, IP pública, Internet Gateway, rutas y reglas de seguridad existentes
