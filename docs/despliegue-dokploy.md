@@ -14,7 +14,11 @@ iniciar Uvicorn. PostgreSQL debe estar disponible y la base de datos debe existi
    `TAIA_JWT_SECRET`. Usar `postgresql+psycopg://usuario:password@host:5432/taia`,
    con usuario/password codificados para URL cuando tengan caracteres especiales.
    Las variables de Gemini y Telegram son opcionales; habilitan esas integraciones.
-   El Compose pasa estas variables explícitamente al contenedor.
+   Dokploy guarda Environment en `.env`, junto a `docker-compose.yml`.
+   Compose carga ese archivo mediante `env_file: .env` y pasa sus variables
+   al entorno del contenedor; el backend las lee con `os.getenv`.
+   `DATABASE_URL` y `TAIA_JWT_SECRET` conservan la validación obligatoria.
+   No es necesario copiar ni montar `.env` dentro de la imagen.
 3. Configurar **Domains** para el servicio `backend`, puerto `8000`, ruta `/`,
    con el dominio de la API y HTTPS. Dokploy agrega la configuración de Traefik
    y su red al servicio. Apuntar el DNS del dominio al servidor de Dokploy.

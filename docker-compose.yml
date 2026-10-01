@@ -4,13 +4,12 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env
+    # Validar las variables obligatorias; el resto se carga desde .env.
     environment:
       DATABASE_URL: ${DATABASE_URL:?Configura DATABASE_URL para PostgreSQL}
       TAIA_JWT_SECRET: ${TAIA_JWT_SECRET:?Configura TAIA_JWT_SECRET}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
-      TAIA_TELEGRAM_BOT_TOKEN: ${TAIA_TELEGRAM_BOT_TOKEN:-}
-      TAIA_TELEGRAM_BOT_USERNAME: ${TAIA_TELEGRAM_BOT_USERNAME:-taia_bot}
     expose:
       - "8000"
     healthcheck:
