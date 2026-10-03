@@ -1,0 +1,176 @@
+==============================================================================
+EVIDENCIA S8 - PRE-FIX
+==============================================================================
+generado    : 2026-10-03T14:54:13.083294-05:00
+python      : 3.12.10
+plataforma  : win32
+rama        : Mark
+commit      : fd126f29c25306890f0c8744596965b0ea4ca162
+TEST_DATABASE_URL -> localhost:5433/taia_test
+DATABASE_URL      -> localhost:5433/taia
+
+comando     : python -m pytest backend/tests -q
+
+------------------------------------------------------------------------------
+SALIDA DE PYTEST
+------------------------------------------------------------------------------
+........................................................................ [ 38%]
+..............FFF..FFFF................................................. [ 77%]
+...........................................                              [100%]
+================================== FAILURES ===================================
+____________ test_confirmacion_crea_la_tarea[acentuada-minuscula] _____________
+
+respuesta = 'sí'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: 'sí' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+___________ test_confirmacion_crea_la_tarea[acentuada-capitalizada] ___________
+
+respuesta = 'Sí'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: 'Sí' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+____________ test_confirmacion_crea_la_tarea[acentuida-mayuscula] _____________
+
+respuesta = 'SÍ'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: 'SÍ' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+____________ test_confirmacion_crea_la_tarea[acentuada-con-punto] _____________
+
+respuesta = 'sí.'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: 'sí.' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+___________ test_confirmacion_crea_la_tarea[acentuada-con-espacios] ___________
+
+respuesta = '  sí  '
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: '  sí  ' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+_________ test_confirmacion_crea_la_tarea[acentuada-con-exclamacion] __________
+
+respuesta = 'sí!'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: 'sí!' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+________ test_confirmacion_crea_la_tarea[acentuada-con-exclamaciones] _________
+
+respuesta = '¡Sí!'
+
+    @pytest.mark.parametrize("respuesta", CONFIRMAN)
+    def test_confirmacion_crea_la_tarea(respuesta):
+        caso, academic = _montar()
+    
+        reply = caso.execute(
+            IncomingRequest(user_id="u1", text=respuesta, channel=Channel.TELEGRAM)
+        )
+    
+        tareas = academic.list_tasks("u1", TaskFilters())
+>       assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
+E       AssertionError: '¡Sí!' no creo la tarea: 'No lo tome como un si, asi que cancele. Dime otra vez que necesitas.'
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+backend\tests\test_ai_create_task_confirmation.py:93: AssertionError
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv\Lib\site-packages\starlette\testclient.py:53
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-minuscula]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-capitalizada]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuida-mayuscula]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-punto]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-espacios]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-exclamacion]
+FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-exclamaciones]
+7 failed, 180 passed, 2 warnings in 30.51s
+
+------------------------------------------------------------------------------
+codigo de salida: 1
+------------------------------------------------------------------------------
