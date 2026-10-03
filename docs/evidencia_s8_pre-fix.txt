@@ -1,11 +1,11 @@
 ==============================================================================
 EVIDENCIA S8 - PRE-FIX
 ==============================================================================
-generado    : 2026-10-03T14:54:13.083294-05:00
+generado    : 2026-10-03T15:57:42.333649-05:00
 python      : 3.12.10
 plataforma  : win32
-rama        : Mark
-commit      : fd126f29c25306890f0c8744596965b0ea4ca162
+rama        : HEAD
+commit      : 74a512615e221a5e5708bf5ce05239032800cffe
 TEST_DATABASE_URL -> localhost:5433/taia_test
 DATABASE_URL      -> localhost:5433/taia
 
@@ -169,20 +169,31 @@ FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea
 FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-espacios]
 FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-exclamacion]
 FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea_la_tarea[acentuada-con-exclamaciones]
-7 failed, 180 passed, 2 warnings in 30.51s
+7 failed, 180 passed, 2 warnings in 29.00s
 
 ------------------------------------------------------------------------------
 codigo de salida: 1
 ------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
-EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions, rama Mark)
+EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions)
 ------------------------------------------------------------------------------
-Este push no despliego nada: .github/workflows/cd.yml solo se ejecuta para
-workflow_run sobre la rama main. No hubo corrida de CD para Mark.
+Ninguno de estos pushes desplego: .github/workflows/cd.yml solo se ejecuta
+para workflow_run sobre la rama main. No hubo corrida de CD para Mark.
 
-(referencia) VERDE  commit fd126f2  (locks reparados, suite completa, prueba auth)
-       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149498432
+VERDE   rama Mark              commit fa8fe6e   suite completa
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153135794
 
-ROJO   commit 4391cd1  (prueba D-S8-01 antes del arreglo)
-       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149638479
+ROJO    commit 74a5126         D-S8-01 antes del arreglo, 7 failed / 180 passed
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153176450
+
+VERDE   commit 9160c4b         D-S8-01 despues del arreglo
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153179644
+
+Nota sobre estas tres corridas. Los mensajes de los commits de S8 se acortaron
+reescribiendo el historial, y un force-push genera un unico evento de push: CI
+solo corrio para la nueva cabeza fa8fe6e. Para volver a obtener la corrida roja
+y la verde se publicaron los commits 74a5126 y 9160c4b en las ramas
+temporarias evidencia-d-s8-01-rojo y evidencia-d-s8-01-verde, que ya se
+eliminaron. Son los mismos objetos de commit que estan en Mark, por lo que las
+corridas corresponden a ese historial. El tag s8-pre-fix apunta a 74a5126.

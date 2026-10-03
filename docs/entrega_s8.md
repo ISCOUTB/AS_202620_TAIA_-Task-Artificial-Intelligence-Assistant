@@ -72,7 +72,7 @@ falsamente preciso.
 
 | ID | Defecto | Gravedad | Estado |
 | --- | --- | --- | --- |
-| **D-S8-01** | "Sí" con tilde nunca confirma; la tarea se pierde | Alta | Corregido, commit `e41f7ea` |
+| **D-S8-01** | "Sí" con tilde nunca confirma; la tarea se pierde | Alta | Corregido, commit `9160c4b` |
 | **D-DEP-01** | `python-dotenv==1.1.1` afectada por CVE-2026-28684 | Media | Corregido a 1.2.4 |
 | **D-DEP-02** | `requirements.lock.txt` con `python-dotenv` sin versión ni hash | Alta | Corregido |
 | **D-DEP-03** | Locks sin dependencias de Windows: instalación local imposible | Alta | Corregido |

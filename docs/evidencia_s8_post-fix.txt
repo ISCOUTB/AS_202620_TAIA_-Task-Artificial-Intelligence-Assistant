@@ -1,11 +1,11 @@
 ==============================================================================
 EVIDENCIA S8 - POST-FIX
 ==============================================================================
-generado    : 2026-10-03T14:57:27.256366-05:00
+generado    : 2026-10-03T15:58:18.659553-05:00
 python      : 3.12.10
 plataforma  : win32
 rama        : Mark
-commit      : 4391cd1d61f0736cf3b3a6a93f0ec2a5cc9ef462
+commit      : fa8fe6e972d43e90766524299ac0dfac950e9055
 TEST_DATABASE_URL -> localhost:5433/taia_test
 DATABASE_URL      -> localhost:5433/taia
 
@@ -14,9 +14,9 @@ comando     : python -m pytest backend/tests -q
 ------------------------------------------------------------------------------
 SALIDA DE PYTEST
 ------------------------------------------------------------------------------
-........................................................................ [ 38%]
-........................................................................ [ 77%]
-...........................................                              [100%]
+........................................................................ [ 35%]
+........................................................................ [ 71%]
+..........................................................               [100%]
 ============================== warnings summary ===============================
 .venv\Lib\site-packages\fastapi\testclient.py:1
   E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
@@ -27,20 +27,31 @@ SALIDA DE PYTEST
     _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-187 passed, 2 warnings in 28.17s
+202 passed, 2 warnings in 29.11s
 
 ------------------------------------------------------------------------------
 codigo de salida: 0
 ------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
-EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions, rama Mark)
+EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions)
 ------------------------------------------------------------------------------
-Este push no despliego nada: .github/workflows/cd.yml solo se ejecuta para
-workflow_run sobre la rama main. No hubo corrida de CD para Mark.
+Ninguno de estos pushes desplego: .github/workflows/cd.yml solo se ejecuta
+para workflow_run sobre la rama main. No hubo corrida de CD para Mark.
 
-VERDE  commit fd126f2  (locks reparados, suite completa, prueba auth)
-       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149498432
+VERDE   rama Mark              commit fa8fe6e   suite completa
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153135794
 
-ROJO   commit 4391cd1  (prueba D-S8-01 antes del arreglo)
-       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149638479
+ROJO    commit 74a5126         D-S8-01 antes del arreglo, 7 failed / 180 passed
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153176450
+
+VERDE   commit 9160c4b         D-S8-01 despues del arreglo
+        https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37153179644
+
+Nota sobre estas tres corridas. Los mensajes de los commits de S8 se acortaron
+reescribiendo el historial, y un force-push genera un unico evento de push: CI
+solo corrio para la nueva cabeza fa8fe6e. Para volver a obtener la corrida roja
+y la verde se publicaron los commits 74a5126 y 9160c4b en las ramas
+temporarias evidencia-d-s8-01-rojo y evidencia-d-s8-01-verde, que ya se
+eliminaron. Son los mismos objetos de commit que estan en Mark, por lo que las
+corridas corresponden a ese historial. El tag s8-pre-fix apunta a 74a5126.

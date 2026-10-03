@@ -475,9 +475,9 @@ También propuso y ejecutó, en el mismo trabajo, cuatro correcciones de entorno
 ### Verificación realizada
 
 * Línea base sobre la rama `Mark` antes de cualquier cambio de D-S8-01: `171 passed`, tras corregir los tres errores de `test_usuario_auth_me.py`. Evidencia en `docs/evidencia_s8_baseline.txt`.
-* Con el defecto presente: `7 failed, 9 passed`, y los siete fallos son exactamente las variantes acentuadas. Evidencia en `docs/evidencia_s8_pre-fix.txt`, commit `4391cd1`.
+* Con el defecto presente: `7 failed, 180 passed` en la suite completa, y los siete fallos son exactamente las variantes acentuadas; en el archivo aislado son `7 failed, 9 passed`. Evidencia en `docs/evidencia_s8_pre-fix.txt`, commit `74a5126`.
 * Tras la corrección: `16 passed` en el archivo nuevo y `187 passed` en la suite completa, sin regresiones. Evidencia en `docs/evidencia_s8_post-fix.txt`.
-* Integración continua: el commit `4391cd1` produce una corrida roja pública y el commit del arreglo la deja verde. La URL de ambas corridas está en las evidencias. Ninguno de esos push activó despliegue, porque `cd.yml` solo se ejecuta para `workflow_run` sobre `main`.
+* Integración continua: el commit `74a5126` produce una corrida roja pública y el commit `9160c4b` del arreglo la deja verde. La URL de ambas corridas está en las evidencias. Ninguno de esos push activó despliegue, porque `cd.yml` solo se ejecuta para `workflow_run` sobre `main`.
 
 ## Entrada 012
 
@@ -563,4 +563,4 @@ Se pidió: eliminar los valores por defecto de credenciales en `run.bat`, hacer 
 * Prueba de la lógica de comprobación con cuatro casos: valor vacío, valor presente, valor con espacio inicial y clave ausente.
 * `python tools/eval_llm.py --dry-run` → 39 casos, cinco intenciones, mínimo tres por intención.
 * Sin `GEMINI_API_KEY`, `tools/eval_llm.py` sale con código 2 y declara la medición pendiente.
-* Integración continua verde en `f31f18e` y `c48d47b`; 202 pruebas en verde en local.
+* Integración continua verde en `eadc8f2` y `4eaa75c`, y en la cabeza actual `fa8fe6e`; 202 pruebas en verde en local.
