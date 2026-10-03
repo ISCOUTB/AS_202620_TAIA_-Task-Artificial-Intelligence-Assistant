@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.application.ports.llm import LLMError, LLMUsage, LLMPort
 from app.modules.ai.domain.messages import (
     COLOMBIA_TZ,
     ExtractedFilters,
@@ -87,6 +87,7 @@ class GeminiLLM(LLMPort):
         self._api_key = api_key
         self._model = model
         self._client = client or httpx.Client(timeout=timeout)
+        self._last_usage: LLMUsage | None = None
 
     @classmethod
     def from_env(cls, client: httpx.Client | None = None) -> "GeminiLLM":
@@ -155,7 +156,11 @@ class GeminiLLM(LLMPort):
         except ValueError as error:
             raise LLMError("Gemini devolvio un cuerpo que no es JSON") from error
 
+        self._last_usage = _extract_usage(data, self._model)
         return _extract_text(data)
+
+    def last_usage(self) -> LLMUsage | None:
+        return self._last_usage
 
 
 # -- capa anticorrupcion: de la respuesta de Gemini a conceptos de TAIA ----
@@ -176,6 +181,42 @@ def _extract_text(data: Any) -> str:
     if not isinstance(text, str):
         raise LLMError("Gemini no devolvio texto")
     return text
+
+
+def _extract_usage(data: Any, model: str) -> LLMUsage:
+    """Lee `usageMetadata` para poder medir el costo por llamada (S5).
+
+    Gemini no garantiza todos los campos, y con cortes de precio se creo
+    `thoughtsTokenCount`, asi que cualquier campo ausente se trata como cero en
+    lugar de fallar: un detalle de facturacion no debe tumbar la conversacion.
+    """
+
+    def entero(valor: Any) -> int:
+        return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
+
+    bruto = data.get("usageMetadata") if isinstance(data, dict) else None
+    bruto = bruto if isinstance(bruto, dict) else {}
+
+    candidates = data.get("candidates") if isinstance(data, dict) else None
+    finish: str | None = None
+    if isinstance(candidates, list) and candidates and isinstance(candidates[0], dict):
+        bruto_finish = candidates[0].get("finishReason")
+        if isinstance(bruto_finish, str):
+            finish = bruto_finish
+
+    total = entero(bruto.get("totalTokenCount"))
+    prompt = entero(bruto.get("promptTokenCount"))
+    candidatos_tok = entero(bruto.get("candidatesTokenCount"))
+    if total == 0:
+        total = prompt + candidatos_tok
+
+    return LLMUsage(
+        model=model,
+        prompt_tokens=prompt,
+        candidates_tokens=candidatos_tok,
+        total_tokens=total,
+        finish_reason=finish,
+    )
 
 
 def _load_json(text: str) -> dict[str, Any]:

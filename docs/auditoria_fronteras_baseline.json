@@ -1,0 +1,5 @@
+[
+  "R1|backend/app/modules/academic/adapters/inbound/structure_api.py",
+  "R1|backend/app/modules/reminders/adapters/inbound/http_controller.py",
+  "V-03|backend/app/modules/ai/adapters/outbound/academic_gateway.py"
+]

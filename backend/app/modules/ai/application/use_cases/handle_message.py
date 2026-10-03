@@ -17,7 +17,7 @@ from app.modules.ai.application.ports.academic_gateway import (
     TaskDataRejected,
 )
 from app.modules.ai.application.ports.conversation_store import ConversationStore
-from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.application.ports.llm import LLMError, LLMUsage, LLMPort
 from app.modules.ai.domain.conversation import Conversation
 from app.modules.ai.domain.messages import (
     COLOMBIA_TZ,
@@ -65,6 +65,11 @@ class HandleUserMessageUseCase:
         self._academic = academic
         self._conversations = conversations
         self._now = now or (lambda: datetime.now(COLOMBIA_TZ))
+
+    def last_usage(self) -> LLMUsage | None:
+        """Consumo de la ultima llamada al modelo, para medir el costo (S5)."""
+
+        return self._llm.last_usage()
 
     def execute(self, request: IncomingRequest) -> AssistantReply:
         text = request.text.strip()

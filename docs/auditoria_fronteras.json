@@ -1,0 +1,126 @@
+{
+  "contextos": [
+    "__pycache__",
+    "academic",
+    "ai",
+    "reminders",
+    "usuario"
+  ],
+  "adaptadores_de_entrada_analizados": 9,
+  "fronteras_anteriores": {
+    "V-01": [],
+    "V-02": [],
+    "V-03": [
+      "backend/app/modules/ai/adapters/outbound/academic_gateway.py"
+    ]
+  },
+  "infracciones": [
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 43,
+      "detalle": "get_subject_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 43,
+      "detalle": "get_schedule_block_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 43,
+      "detalle": "get_task_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 47,
+      "detalle": "get_subject_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 47,
+      "detalle": "get_schedule_block_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/academic/adapters/inbound/structure_api.py",
+      "linea": 51,
+      "detalle": "get_academic_period_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 50,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 52,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 54,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 56,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 58,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 60,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 64,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 68,
+      "detalle": "get_notification_sender(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 68,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "R1",
+      "archivo": "backend/app/modules/reminders/adapters/inbound/http_controller.py",
+      "linea": 163,
+      "detalle": "get_reminder_repository(): proveedor de persistencia propio invocado desde el transporte"
+    },
+    {
+      "regla": "V-03",
+      "archivo": "backend/app/modules/ai/adapters/outbound/academic_gateway.py",
+      "linea": 0,
+      "detalle": "AI no debe importar la entidad de dominio Task de Academic (1 apariciones)"
+    }
+  ],
+  "infracciones_totales": 17,
+  "linea_base": "docs/auditoria_fronteras_baseline.json",
+  "aceptadas_en_linea_base": 17,
+  "regresiones": [],
+  "regresiones_totales": 0
+}

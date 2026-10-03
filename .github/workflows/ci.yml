@@ -30,6 +30,11 @@ jobs:
       # capa de datos. Apunta a una base separada: conftest.py ejecuta
       # "alembic downgrade base" al iniciar la sesion.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia_test
+      # Marcador de posicion. `app.main` compone el adaptador de Gemini al
+      # importar, asi que sin la variable el fallo aparece al importar y no
+      # como un 503 por peticion. Ninguna prueba llama a la API real: el LLM se
+      # sustituye por FakeLLM o por httpx.MockTransport.
+      GEMINI_API_KEY: placeholder-not-used-in-tests
 
     steps:
       - name: Checkout

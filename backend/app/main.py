@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.modules.usuario.adapters.outbound.provider import repository as usuario_repository, token_service as usuario_token_service
@@ -17,21 +19,58 @@ academic_repository = get_task_repository()
 configure_academic_task_lookup(AcademicTaskLookupService(academic_repository))
 configure_academic_task_management(AcademicTaskManagementService(academic_repository, get_subject_repository()))
 
+# IA se compone aqui y no en su adaptador HTTP. Construir el LLM aqui mantiene
+# un unico cliente httpx para toda la vida del proceso: antes se creaba uno por
+# peticion y nunca se cerraba. Ademas, si falta GEMINI_API_KEY el proceso no
+# arranca, en vez de responder 503 en cada peticion mientras /health dice ok.
+from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import (
+    SqlAlchemyConversationStore,
+)
+from app.modules.ai.adapters.inbound.api import (
+    configure_ai_use_case,
+    router as ai_router,
+)
+from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
+from app.shared.adapters.outbound.database import get_session_factory
+
+gemini_llm = GeminiLLM.from_env()
+configure_ai_use_case(
+    HandleUserMessageUseCase(
+        llm=gemini_llm,
+        academic=AcademicGatewayAdapter(),
+        conversations=SqlAlchemyConversationStore(get_session_factory()),
+    )
+)
+
 from app.modules.academic.adapters.inbound.api import router as academic_router
 from app.modules.academic.adapters.inbound.structure_api import (
     period_router as academic_period_router,
     schedule_router as academic_schedule_router,
     subjects_router as academic_subjects_router,
 )
-from app.modules.ai.adapters.inbound.api import router as ai_router
 from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from app.modules.usuario.adapters.inbound.api import router as usuario_router
 from app.shared.adapters.inbound.observability import install_observability
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Libera el cliente httpx del proveedor de lenguaje al apagar.
+
+    El cliente se crea una sola vez en el composition root y se comparte, asi
+    que el pool de conexiones se reutiliza y hay que cerrarlo explicitamente.
+    """
+
+    yield
+    gemini_llm.close()
+
 
 app = FastAPI(
     title="TAIA",
     version="1.0.0",
     description="Contrato versionado de la API HTTP principal de TAIA. La API utiliza HTTP síncrono y JSON para solicitudes y respuestas.",
+    lifespan=lifespan,
 )
 
 install_observability(app)
