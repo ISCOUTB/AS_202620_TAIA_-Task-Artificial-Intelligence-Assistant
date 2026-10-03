@@ -478,3 +478,89 @@ También propuso y ejecutó, en el mismo trabajo, cuatro correcciones de entorno
 * Con el defecto presente: `7 failed, 9 passed`, y los siete fallos son exactamente las variantes acentuadas. Evidencia en `docs/evidencia_s8_pre-fix.txt`, commit `4391cd1`.
 * Tras la corrección: `16 passed` en el archivo nuevo y `187 passed` en la suite completa, sin regresiones. Evidencia en `docs/evidencia_s8_post-fix.txt`.
 * Integración continua: el commit `4391cd1` produce una corrida roja pública y el commit del arreglo la deja verde. La URL de ambas corridas está en las evidencias. Ninguno de esos push activó despliegue, porque `cd.yml` solo se ejecuta para `workflow_run` sobre `main`.
+
+## Entrada 012
+
+**Fecha:** 2026-10-03
+
+**Herramienta:** Claude Code (Anthropic), con apertura de código del repositorio y ejecución de comandos en el entorno local del estudiante.
+
+**Objetivo:** Cerrar el bloque de verificación de dependencias y credenciales de la entrega S8, y auditar si las fronteras de contexto y la propiedad de datos que S6 declaró cerradas seguían cerradas.
+
+### Solicitud realizada
+
+Se pidió: (a) comprobar que cada dependencia declarada exista y sea la legítima, con las vulnerabilidades reales de cada versión fijada; (b) comprobar que ninguna credencial real estuviera versionada; (c) reauditar la erosión de contexto y la propiedad de datos, partiendo de la auditoría de S6.
+
+### Resultado generado
+
+La IA construyó dos verificadores sin red ni base de datos.
+
+`tools/verificar_dependencias.py` comprueba que todo paquete de los dos lock files tenga versión fijada y al menos un hash SHA-256, que las dependencias exclusivas de Windows estén presentes y que el árbol versionado no contenga credenciales de producción. Reporta 24 paquetes de producción y 31 de desarrollo, ninguno sin fijar, y **0 hallazgos** de credenciales. El escáner compone sus propios literales por trozos y se excluye a sí mismo del barrido, porque un detector de secretos que coincide consigo mismo no sirve.
+
+`docs/verificacion_dependencias_s8.md` registra cuatro defectos y cómo se cerraron:
+
+* **D-DEP-01** `python-dotenv==1.1.1` tiene la **CVE-2026-28684** (PYSEC-2026-2270, GHSA-mf9w-mj56-hr94): `set_key()` y `unset_key()` siguen enlaces simbólicos y pueden sobrescribir archivos arbitrarios. La exposición real de TAIA es baja porque el proyecto solo usa `load_dotenv()`. Se subió a 1.2.4.
+* **D-DEP-02** `backend/requirements.lock.txt` declaraba `python-dotenv` sin versión ni hash. Con `--require-hashes` eso es un error obligatorio: la instalación de producción no podía funcionar.
+* **D-DEP-03** Los locks se generaron en Linux y omitían `tzdata` y `colorama`, que solo se instalan en Windows. Eso explicaba por qué el CI en `ubuntu-latest` estaba verde y la instalación local en Windows era imposible.
+* **D-DEP-04** `backend/Dockerfile` copiaba `uv` desde `:latest`, una etiqueta mutable. Ahora se fija por etiqueta y por digest.
+
+La auditoría de erosión encontró algo que S6 había dado por cerrado. `docs/auditoria_violaciones_s6.md:48` afirma que "no encontró imports desde `AI` hacia `academic.domain.entities.task`", pero `ai/adapters/outbound/academic_gateway.py:19` importa `TaskStatus`. La misma nota, en `arc42/08-conceptos-transversales.md:118`, repetía una afirmación sobre la concentración de la composición que solo era cierta para dos de los cuatro contextos.
+
+De ahí salieron cinco hallazgos. **E-01** era el más grave: `get_ai_use_case()` llamaba a `GeminiLLM.from_env()` en cada petición, y `GeminiLLM.__init__` abre un `httpx.Client` que ningún código de la aplicación cierra. Una fuga de cliente por petición, y sin reutilización cada llamada al modelo pagaba un apretón de manos TCP y TLS completo, que es exactamente lo que S3 mide como p95. **E-03** construía el store y el gateway al importar el módulo, con dos vidas distintas para los colaboradores de un mismo caso de uso. **E-04** convertía la falta de `GEMINI_API_KEY` en un 503 por petición mientras `/health` respondía `ok`, de modo que un despliegue roto pasaba la comprobación de CD.
+
+### Aceptado
+
+* **Mover la composición de IA a `backend/app/main.py`**, siguiendo el patrón de `configure_identity_service` y `configure_academic_task_management` que ya usaban Usuario y Academic. Un único `GeminiLLM` por vida del proceso, cerrado con el evento `lifespan`.
+* **Cambiar el modo de fallo**: que la falta de la clave detenga el arranque en lugar de servir un servicio inservible. Es preferible no levantar antes que responder 503 a todo.
+* **Exponer `usageMetadata` para S5** como `LLMUsage` en el puerto, registrado por el adaptador y anotado en el log. No se devuelve en la respuesta porque el contrato HTTP está congelado.
+* **Una línea base para el auditor de fronteras**, con las infracciones ya analizadas y aceptadas. Sin ella el primer resultado habría sido ruidoso; con ella, el comando sale con código cero mientras no aparezca algo nuevo.
+
+### Rechazado o modificado
+
+* **No se corrigió E-05** (el import de `TaskStatus` al dominio de Academic). `TaskQuery.status` está tipado `TaskStatus | None`, así que no basta con pasar el string equivalente: hay que cambiar el contrato público de Academic, con su propio ciclo rojo-verde. Queda abierto y documentado, con la solución recomendada: que el puerto de Academic exponga la traducción del texto libre al estado canónico, para que sea Academic quien posea el vocabulario.
+* **No se movió la composición de Reminders ni la de `structure_api` de Academic** (E-02). Son veinte dependencias entre archivos y un riesgo real sobre las 187 pruebas. Quedan en la línea base como R1 y el auditor marcará la regresión si empeoran.
+* **Se rechazó medir S1 y S3 con Gemini.** Sin `GEMINI_API_KEY`, `tools/eval_llm.py` imprime que la medición queda pendiente y sale con código 2, distinto del 1 de una corrida fallida. Un precio de tokens no se escribe en el código: cambia con frecuencia y una tabla desactualizada daría un costo falsamente preciso; se pasa por parámetro.
+
+### Verificación realizada
+
+* `python tools/verificar_dependencias.py` → 24 y 31 paquetes, 0 sin fijar, 0 credenciales, veredicto `ok`.
+* `python tools/audit_boundaries.py` → 9 adaptadores de entrada analizados, salida 0. Las reglas R3 y R4 de IA estaban en la línea base antes del cambio y **desaparecieron** después: esa es la evidencia de que E-03 y E-04 se corrigieron.
+* Hashes de `python-dotenv` 1.2.4 y 1.2.2 calculados sobre la distribución descargada y contrastados con la API de PyPI; digest de `uv` obtenido del manifiesto OCI.
+* `git log --all -S` sobre el patrón del *pooler* de Supabase y sobre el prefijo de la clave de Gemini: sin coincidencias en todo el historial.
+* Suite completa: **193 pruebas** en verde tras el refactor, 202 tras añadir el dataset.
+
+## Entrada 013
+
+**Fecha:** 2026-10-03
+
+**Herramienta:** Claude Code (Anthropic), con apertura de código del repositorio y ejecución de comandos en el entorno local del estudiante.
+
+**Objetivo:** Cerrar los riesgos de configuración que permitirían que el proyecto se despliegue o se pruebe con secretos de desarrollo, y dejar la trazabilidad de S8 completa.
+
+### Solicitud realizada
+
+Se pidió: eliminar los valores por defecto de credenciales en `run.bat`, hacer alcanzable la plantilla de configuración que tres documentos ya referenciaban, y completar el documento maestro de la entrega.
+
+### Resultado generado
+
+`run.bat` definía dos valores por defecto. `TAIA_JWT_SECRET=dev-local-jwt-secret` contradecía directamente RNF-02, cuya razón de ser es que no exista valor por defecto y que la API no arranque sin secreto, y era además un secreto de firma publicado en el repositorio. El otro era peor en silencio: `load_dotenv` no sobrescribe variables ya definidas, así que el `DATABASE_URL` de `run.bat` tenía prioridad sobre `backend/.env` y el archivo del desarrollador se ignoraba sin aviso.
+
+`tools/audit_boundaries.py` encontró además que `.gitignore` ignoraba `.env.example`, de modo que el archivo al que apuntaban el README, `cd.yml` y `arc42/07` no existía y no podía crearse sin `-f`. La ignorar queda anulada y la plantilla se versiona: una plantilla sin secretos es precisamente lo que pertenece al repositorio.
+
+### Aceptado
+
+* **`run.bat` sin ninguna credencial.** Comprueba que exista `backend/.env`, comprueba que `GEMINI_API_KEY` tenga valor, aplica migraciones y levanta Uvicorn.
+* **Documentar en `.env.example` las seis variables** que el backend lee, y advertir que `conftest.py` ejecuta `alembic downgrade base` y `TRUNCATE`, de modo que `TEST_DATABASE_URL` nunca debe apuntar a la base de desarrollo.
+
+### Rechazado o modificado
+
+* **Se descartó `findstr /B` para comprobar la clave.** Exige que la coincidencia empiece en la posición 0, y un `.env` guardado como UTF-8 con BOM —que es lo que produce `Set-Content -Encoding utf8` de PowerShell 5.1— empieza con `EF BB BF`. Con `/B` la comprobación rechazaba siempre, incluso con la clave puesta. Se usa `for /f` separando por `=`, que sí distingue el valor vacío, y el trade-off queda anotado en el propio script: sin `/B` también encuentra una línea comentada, y en ese caso la API falla al arrancar con su propio `RuntimeError`.
+* **Se corrigieron enlaces rotos que no eran de S8.** `docs/aspectos.md` y `docs/adr/0001` apuntaban a `test_academic_register_task.py` y `test_usuario_api.py`, que ya no existen. Una comprobación sobre los 39 documentos de `docs/` más el README deja ahora **0 enlaces relativos rotos**.
+
+### Verificación realizada
+
+* `cmd /c run.bat` sin clave → mensaje accionable y código de salida 1, en lugar de arrancar con un secreto publicado.
+* Prueba de la lógica de comprobación con cuatro casos: valor vacío, valor presente, valor con espacio inicial y clave ausente.
+* `python tools/eval_llm.py --dry-run` → 39 casos, cinco intenciones, mínimo tres por intención.
+* Sin `GEMINI_API_KEY`, `tools/eval_llm.py` sale con código 2 y declara la medición pendiente.
+* Integración continua verde en `f31f18e` y `c48d47b`; 202 pruebas en verde en local.
