@@ -1,0 +1,39 @@
+{"id": "c001", "text": "crea una tarea taller de arquitectura para el viernes", "intent": "create_task", "title": "taller de arquitectura", "note": "forma canonica de alta"}
+{"id": "c002", "text": "crea una tarea Ensayo de métodos para mañana a las 5pm", "intent": "create_task", "title": "ensayo de métodos", "note": "minuscula tras el verbo"}
+{"id": "c003", "text": "Crea una tarea lectura del capitulo 4 para el lunes", "intent": "create_task", "title": "lectura del capitulo 4", "note": "verbo con mayuscula inicial"}
+{"id": "c004", "text": "CREA UNA TAREA TP2 DE BASE DE DATOS PARA HOY", "intent": "create_task", "title": "tp2 de base de datos", "note": "todo en mayusculas"}
+{"id": "c005", "text": "crea una tarea!, porfa,staller 3 para el martes", "intent": "create_task", "title": "staller 3", "note": "signos intercalados"}
+{"id": "c006", "text": "nueva tarea: cotización deElles para el 30", "intent": "create_task", "title": "cotización de ellas", "note": "acentos y dos puntos"}
+{"id": "c007", "text": "agrega al calendario el parcial de cálculo para el jueves", "intent": "unknown", "note": "no pide crear tarea de forma literal, ambigua"}
+{"id": "c008", "text": "necesito hacer un trabajo grupal para el viernes", "intent": "unknown", "note": "menciona trabajo pero no es una orden explicita"}
+{"id": "q001", "text": "qué tareas tengo", "intent": "query_tasks", "note": "consulta minima"}
+{"id": "q002", "text": "mis tareas", "intent": "query_tasks", "note": "elipsis"}
+{"id": "q003", "text": "QUE TAREAS TENGO", "intent": "query_tasks", "note": "mayusculas"}
+{"id": "q004", "text": "cuáles tareas tengo pendientes", "intent": "query_tasks", "note": "con tilde y acento"}
+{"id": "q005", "text": "que me falta para esta semana", "intent": "query_tasks", "note": "pregunta por rango temporal"}
+{"id": "q006", "text": "muestra mis tareas de arquitectura", "intent": "query_tasks", "subject": "arquitectura", "note": "filtra por asignatura"}
+{"id": "q007", "text": "listo mis tareas", "intent": "query_tasks", "note": "arranca con palabra de confirmacion"}
+{"id": "q008", "text": "dame las tareas completadas", "intent": "query_tasks", "status": "completed", "note": "filtra por estado"}
+{"id": "q009", "text": "tareas atrasadas", "intent": "query_tasks", "status": "overdue", "note": "estado derivado, synonymo colloquial"}
+{"id": "u001", "text": "cambia la fecha del taller al jueves", "intent": "update_task", "task_hint": "taller", "note": "actualizacion con referencia"}
+{"id": "u002", "text": "CAMBIA LA FECHA DEL TALLER AL JUEVES", "intent": "update_task", "task_hint": "taller", "note": "actualizacion en mayusculas"}
+{"id": "u003", "text": "mueve el ensayo de métodos al viernes", "intent": "update_task", "task_hint": "ensayo de métodos", "note": "verbo distinto"}
+{"id": "u004", "text": "edita la tarea taller y ponla para el lunes", "intent": "update_task", "task_hint": "taller", "note": "actualizacion descriptiva"}
+{"id": "u005", "text": "renombra la lectura al capitulo 5", "intent": "update_task", "task_hint": "lectura", "note": "cambia el titulo"}
+{"id": "h001", "text": "qué puedes hacer", "intent": "system_help", "note": "pregunta de capacidades"}
+{"id": "h002", "text": "QUÉ PUEDES HACER", "intent": "system_help", "note": "en mayusculas"}
+{"id": "h003", "text": "para qué sirves", "intent": "system_help", "note": "otra formulation de la ayuda"}
+{"id": "h004", "text": "ayúdame", "intent": "unknown", "note": "pide ayuda pero no informa de la funcionalidad"}
+{"id": "x001", "text": "jajaja", "intent": "unknown", "note": "ruido"}
+{"id": "x002", "text": "", "intent": "unknown", "note": "vacio, se rechaza antes del modelo"}
+{"id": "x003", "text": "asdkjhaskdjh", "intent": "unknown", "note": "teclado aleatorio"}
+{"id": "x004", "text": "¿?", "intent": "unknown", "note": "simbolo suelto"}
+{"id": "x005", "text": "gracias", "intent": "unknown", "note": "agradecimiento, no es peticion"}
+{"id": "x006", "text": "ok", "intent": "unknown", "note": "es respuesta a una confirmacion, no peticion nueva"}
+{"id": "x007", "text": "Buenos días, ¿cómo amanecen?", "intent": "unknown", "note": "charla no relacionada"}
+{"id": "x008", "text": "canta la canción de la banda", "intent": "unknown", "note": "peticion fuera de alcance"}
+{"id": "s001", "text": "repite la tarea del profe todo otra vez", "intent": "unknown", "note": "no encaja en ninguna intencion"}
+{"id": "s002", "text": "borra la tarea taller", "intent": "unknown", "note": "no existe intencion de borrado"}
+{"id": "s003", "text": "completa la tarea taller", "intent": "unknown", "note": "no existe intencion de completar"}
+{"id": "s004", "text": "da de alta un recordatorio para el taller", "intent": "unknown", "note": "recordatorio vive en otro contexto"}
+{"id": "s005", "text": "inscribe una nota para el taller", "intent": "unknown", "note": "calificaciones no implementadas"}
