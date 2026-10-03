@@ -1,14 +1,15 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.modules.usuario.adapters.inbound.api import _repository
 
 
 client = TestClient(app)
 
 
-def setup_function() -> None:
-    _repository._users.clear()
+@pytest.fixture(autouse=True)
+def _base_de_datos_limpia(clean_db) -> None:
+    """Cada prueba arranca con las tablas vacías: el repositorio ya es SQLAlchemy."""
 
 
 def _register_and_login():

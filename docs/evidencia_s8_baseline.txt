@@ -1,0 +1,34 @@
+==============================================================================
+EVIDENCIA S8 - BASELINE
+==============================================================================
+generado    : 2026-10-03T14:51:16.546742-05:00
+python      : 3.12.10
+plataforma  : win32
+rama        : Mark
+commit      : 4b0724247c6a58f82bc6091f78ab8872d58456de
+TEST_DATABASE_URL -> localhost:5433/taia_test
+DATABASE_URL      -> localhost:5433/taia
+
+comando     : python -m pytest backend/tests -q
+
+------------------------------------------------------------------------------
+SALIDA DE PYTEST
+------------------------------------------------------------------------------
+........................................................................ [ 42%]
+........................................................................ [ 84%]
+...........................                                              [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv\Lib\site-packages\starlette\testclient.py:53
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+171 passed, 2 warnings in 30.67s
+
+------------------------------------------------------------------------------
+codigo de salida: 0
+------------------------------------------------------------------------------
