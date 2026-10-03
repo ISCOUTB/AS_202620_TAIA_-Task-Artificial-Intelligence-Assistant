@@ -14,7 +14,10 @@ env/
 # Secretos locales
 .env
 .env.local
-.env.example
+# La plantilla SI se versiona: no contiene secretos y sin ella nadie sabe qué
+# variables espera el backend. Antes estaba ignorada y no existía, así que tres
+# documentos del repositorio apuntaban a un archivo que no se podía leer.
+!.env.example
 
 
 claude.md

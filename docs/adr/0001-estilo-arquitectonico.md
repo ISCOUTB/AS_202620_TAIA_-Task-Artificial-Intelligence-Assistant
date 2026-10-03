@@ -116,5 +116,5 @@ Se acepta la complejidad adicional de utilizar puertos y adaptadores únicamente
 - **Escenarios de calidad:** S1 — Registro correcto de información académica; S5 — Sustitución del modelo de IA
 - **C4:** [C4 nivel 1](../c4/C4-C1.md), [C4 nivel 2](../c4/C4-C2.md)
 - **Código relacionado:** `backend/app/modules/academic/`
-- **Pruebas:** [test_academic_register_task.py](../../backend/tests/test_academic_register_task.py), [test_academic_task_domain.py](../../backend/tests/test_academic_task_domain.py)
+- **Pruebas:** [test_academic_tasks_api.py](../../backend/tests/test_academic_tasks_api.py), [test_academic_task_domain.py](../../backend/tests/test_academic_task_domain.py)
 - **Evidencia:** [README](../../README.md)

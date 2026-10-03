@@ -91,7 +91,7 @@ reporta vulnerabilidades para 2026.5 ni para `colorama` 0.4.6.
 `ghcr.io/astral-sh/uv:latest`. La etiqueta `latest` es mutable: dos builds del
 mismo `Dockerfile` en fechas distintas instalan binarios distintos, y eso rompe
 la reproducibilidad que exige RNF-08 y la estrategia de calidad descrita en
-[arc42 §4](../arc42/04-estrategia-de-calidad.md).
+[arc42 §4](arc42/04-estrategia-de-solucion.md).
 
 Ahora queda fijada por etiqueta **y** por digest:
 

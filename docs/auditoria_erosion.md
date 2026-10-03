@@ -37,7 +37,7 @@ de cierre no se puede reproducir sobre el código vigente. Queda abierta como
 **E-05**.
 
 La misma afirmación se repite en
-[`arc42/08-conceptos-transversales.md:118`](../arc42/08-conceptos-transversales.md),
+[`arc42/08-conceptos-transversales.md:118`](arc42/08-conceptos-transversales.md),
 que atribuye a `main.py` una concentración de la composición que solo era cierta
 para dos de los cuatro contextos (E-02). Ninguna de las dos notas fue
 retroalimentada por una comprobación automática; por eso este auditor existe.
