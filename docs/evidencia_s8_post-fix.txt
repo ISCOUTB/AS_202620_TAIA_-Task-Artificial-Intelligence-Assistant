@@ -1,0 +1,46 @@
+==============================================================================
+EVIDENCIA S8 - POST-FIX
+==============================================================================
+generado    : 2026-10-03T14:57:27.256366-05:00
+python      : 3.12.10
+plataforma  : win32
+rama        : Mark
+commit      : 4391cd1d61f0736cf3b3a6a93f0ec2a5cc9ef462
+TEST_DATABASE_URL -> localhost:5433/taia_test
+DATABASE_URL      -> localhost:5433/taia
+
+comando     : python -m pytest backend/tests -q
+
+------------------------------------------------------------------------------
+SALIDA DE PYTEST
+------------------------------------------------------------------------------
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+...........................................                              [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv\Lib\site-packages\starlette\testclient.py:53
+  E:\Universidad\Triste sexto semestre\TAIA\AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant\TAIA-nuevo\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+187 passed, 2 warnings in 28.17s
+
+------------------------------------------------------------------------------
+codigo de salida: 0
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions, rama Mark)
+------------------------------------------------------------------------------
+Este push no despliego nada: .github/workflows/cd.yml solo se ejecuta para
+workflow_run sobre la rama main. No hubo corrida de CD para Mark.
+
+VERDE  commit fd126f2  (locks reparados, suite completa, prueba auth)
+       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149498432
+
+ROJO   commit 4391cd1  (prueba D-S8-01 antes del arreglo)
+       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149638479

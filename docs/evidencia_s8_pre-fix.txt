@@ -174,3 +174,15 @@ FAILED backend/tests/test_ai_create_task_confirmation.py::test_confirmacion_crea
 ------------------------------------------------------------------------------
 codigo de salida: 1
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+EVIDENCIA EN INTEGRACION CONTINUA (GitHub Actions, rama Mark)
+------------------------------------------------------------------------------
+Este push no despliego nada: .github/workflows/cd.yml solo se ejecuta para
+workflow_run sobre la rama main. No hubo corrida de CD para Mark.
+
+(referencia) VERDE  commit fd126f2  (locks reparados, suite completa, prueba auth)
+       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149498432
+
+ROJO   commit 4391cd1  (prueba D-S8-01 antes del arreglo)
+       https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions/runs/37149638479

@@ -431,3 +431,50 @@ La IA ayudó a estructurar:
 ### Verificación realizada
 
 La suite local de contrato se ejecuta con `python -m pytest backend/tests/test_api_contract.py -q`. La demostración `tools/demo_contract_break.py` produce `AssertionError` y código de salida 1 al eliminar `/health` de la implementación. El workflow contiene pasos separados para ejecutar la prueba de contrato, regenerar el cliente y verificar su sincronización.
+
+## Entrada 011
+
+**Fecha:** 2026-10-03
+
+**Herramienta:** Claude Code (Anthropic), con apertura de código del repositorio y ejecución de comandos en el entorno local del estudiante.
+
+**Objetivo:** Implementar la entrega de la Semana 8 sobre una porción real del producto: la confirmación de escrituras por lenguaje natural en español (aspectos A-01 y A-03), con un defecto reproducible, una prueba que lo detecte y una corrección verificable.
+
+### Solicitud realizada
+
+Se pidió apoyo para: leer `backend/app/modules/ai/application/use_cases/handle_message.py`, localizar un defecto real en el manejo de la confirmación, escribir la prueba que lo expone antes de corregirlo, aplicar la corrección mínima y medir el resultado. Se pidió explícitamente que la línea base se repitiera sobre la rama `Mark` y no sobre la rama `migrate_to_dockploy` usada en un análisis previo.
+
+### Resultado generado
+
+La IA leyó el caso de uso y señaló el defecto en dos puntos conectados:
+
+* `_YES` (línea 34) solo contenía `si` sin tilde, pese a que el producto atiende estudiantes hispanohablantes.
+* `_resolve_pending` (línea 173) normalizaba únicamente con `.lower().strip(" .!?")`, de modo que `Sí` quedaba como `sí` y no coincidía con el conjunto.
+
+También propuso y ejecutó, en el mismo trabajo, cuatro correcciones de entorno que no estaban en el encargo original pero que bloqueaban la medición:
+
+* `backend/requirements.lock.txt` declaraba `python-dotenv` sin versión ni hash, por lo que `--require-hashes` no podía funcionar.
+* Ambos lock files se generaron en Linux y omitían las dependencias exclusivas de Windows (`tzdata` vía `psycopg`, `colorama` vía `pytest`).
+* `python-dotenv==1.1.1`, la versión fijada por el proyecto, está afectada por **CVE-2026-28684** (PYSEC-2026-2270): `set_key()` y `unset_key()` siguen enlaces simbólicos y permiten sobrescribir archivos arbitrarios.
+* `backend/tests/test_usuario_auth_me.py` seguía vaciando `SqlAlchemyUserRepository._users`, un atributo en memoria que ya no existe.
+
+### Aceptado
+
+* **Opción A** para la normalización: eliminar tildes con `unicodedata`, pasar a minúsculas con `casefold()` y quitar signos de puntuación en los extremos. Se descartó añadir cada variante acentuada a mano a `_YES`.
+* La corrección se limitó a una función auxiliar `_normalizar_respuesta`, sin tocar el flujo de confirmación ni los contratos del dominio.
+* La prueba se escribió antes del arreglo, con 16 casos parametrizados: diez que deben crear la tarea y seis que no.
+* La elevación de `python-dotenv` a `1.2.4`, versión que corrige la CVE. El código solo invoca `load_dotenv()`, cuyo comportamiento se verificó idéntico antes y después.
+
+### Rechazado o modificado
+
+* **Se rechazó usar la credencial de producción de Supabase que el estudiante proporcionó** para las pruebas de integración. `backend/tests/conftest.py` ejecuta `alembic downgrade base` al iniciar la sesión y `TRUNCATE` sobre las tablas de datos: apuntar `TEST_DATABASE_URL` a esa base habría destruido los datos de producción. Se sustituyó por un cluster PostgreSQL local desechable, con autenticación `trust` y puerto propio.
+* **Se rechazó regenerar los lock files con la herramienta original en Linux**, porque eso habría vuelto a omitir las dependencias de Windows, que es precisamente el defecto que se quería cerrar. Las entradas se añadieron a mano con marcador `sys_platform == "win32"` y hash verificado contra PyPI.
+* **Se modificó el alcance de CI**: hasta ese momento `.github/workflows/ci.yml` no definía `TEST_DATABASE_URL`, por lo que `conftest.py` omitía en silencio toda prueba de integración y el job pasaba sin ejercitar la capa de datos. Se añadió la variable, la creación de `taia_test` y la ejecución de la suite completa.
+* **Se rechazaron las mediciones S1 (exactitud) y S3 (latencia p95) con Gemini.** No hay `GEMINI_API_KEY` en el entorno. Se construyó el arnés y el conjunto de evaluación, y ambos valores quedan marcados como pendientes en lugar de estimarse.
+
+### Verificación realizada
+
+* Línea base sobre la rama `Mark` antes de cualquier cambio de D-S8-01: `171 passed`, tras corregir los tres errores de `test_usuario_auth_me.py`. Evidencia en `docs/evidencia_s8_baseline.txt`.
+* Con el defecto presente: `7 failed, 9 passed`, y los siete fallos son exactamente las variantes acentuadas. Evidencia en `docs/evidencia_s8_pre-fix.txt`, commit `4391cd1`.
+* Tras la corrección: `16 passed` en el archivo nuevo y `187 passed` en la suite completa, sin regresiones. Evidencia en `docs/evidencia_s8_post-fix.txt`.
+* Integración continua: el commit `4391cd1` produce una corrida roja pública y el commit del arreglo la deja verde. La URL de ambas corridas está en las evidencias. Ninguno de esos push activó despliegue, porque `cd.yml` solo se ejecuta para `workflow_run` sobre `main`.
