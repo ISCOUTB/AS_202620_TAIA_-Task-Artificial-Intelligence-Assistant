@@ -87,6 +87,7 @@ Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters
 - [ADR-0002 — Integración HTTP síncrona con OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
 - [ADR-0003 — Plataforma de despliegue de la API](docs/adr/0003-plataforma-despliegue-api.md)
 - [ADR-0004 — Plataforma de la base de datos](docs/adr/0004-plataforma-base-de-datos.md)
+- [ADR-0005 — Normalización de la confirmación escrita en español](docs/adr/0005-normalizacion-confirmacion-espanol.md)
 
 ## Ejecución local
 

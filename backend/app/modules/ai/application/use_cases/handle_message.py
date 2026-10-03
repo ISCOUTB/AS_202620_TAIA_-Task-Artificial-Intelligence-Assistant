@@ -36,7 +36,7 @@ _YES = {"si", "s", "dale", "ok", "confirmo", "yes", "listo", "hazlo"}
 _NO = {"no", "n", "cancela", "cancelar"}
 
 #_Un estudiante escribe "Sí", "SÍ", "¡Sí!" o "sí." tan seguido como "si".
-_MARCAS = " \t\n\r.,;:!?¿¡\"'-«»()"
+_MARCAS = " \t\n\r.,;:!?¿¡\"'«»()…[]{}–—"
 
 
 def _normalizar_respuesta(text: str) -> str:
