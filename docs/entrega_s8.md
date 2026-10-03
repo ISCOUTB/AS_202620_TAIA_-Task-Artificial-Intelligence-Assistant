@@ -119,6 +119,7 @@ devuelve "no confirmed" y **no** escribe nada. Ante la duda, no escribir.
 
 | Documento | Contenido |
 | --- | --- |
+| [bitacora_s8.md](bitacora_s8.md) | Recorrido paso a paso y dónde está cada evidencia, incluidas las corridas rojas |
 | [ADR-0005](adr/0005-normalizacion-confirmacion-espanol.md) | Por qué normalizar en vez de enumerar o preguntar al modelo |
 | [verificacion_dependencias_s8.md](verificacion_dependencias_s8.md) | Dependencias, CVE y credenciales |
 | [auditoria_erosion.md](auditoria_erosion.md) | E-01 a E-06 y el auditor que los detecta |
