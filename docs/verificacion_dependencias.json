@@ -1,0 +1,358 @@
+{
+  "locks": {
+    "produccion": {
+      "archivo": "backend/requirements.lock.txt",
+      "paquetes": 24,
+      "sin_version_fijada": [],
+      "sin_hash": [],
+      "detalle": {
+        "alembic": {
+          "nombre": "alembic",
+          "version": "1.20.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "annotated-doc": {
+          "nombre": "annotated-doc",
+          "version": "0.0.5",
+          "hashes": 2,
+          "marcador": null
+        },
+        "annotated-types": {
+          "nombre": "annotated-types",
+          "version": "0.8.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "anyio": {
+          "nombre": "anyio",
+          "version": "4.15.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "certifi": {
+          "nombre": "certifi",
+          "version": "2026.7.22",
+          "hashes": 2,
+          "marcador": null
+        },
+        "click": {
+          "nombre": "click",
+          "version": "8.5.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "fastapi": {
+          "nombre": "fastapi",
+          "version": "0.141.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "h11": {
+          "nombre": "h11",
+          "version": "0.16.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "httpcore": {
+          "nombre": "httpcore",
+          "version": "1.0.9",
+          "hashes": 2,
+          "marcador": null
+        },
+        "httpx": {
+          "nombre": "httpx",
+          "version": "0.28.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "idna": {
+          "nombre": "idna",
+          "version": "3.19",
+          "hashes": 2,
+          "marcador": null
+        },
+        "mako": {
+          "nombre": "mako",
+          "version": "1.4.3",
+          "hashes": 2,
+          "marcador": null
+        },
+        "markupsafe": {
+          "nombre": "markupsafe",
+          "version": "3.0.3",
+          "hashes": 89,
+          "marcador": null
+        },
+        "psycopg": {
+          "nombre": "psycopg",
+          "version": "3.3.6",
+          "hashes": 2,
+          "marcador": null
+        },
+        "psycopg-binary": {
+          "nombre": "psycopg-binary",
+          "version": "3.3.6",
+          "hashes": 66,
+          "marcador": null
+        },
+        "pydantic": {
+          "nombre": "pydantic",
+          "version": "2.13.5",
+          "hashes": 2,
+          "marcador": null
+        },
+        "pydantic-core": {
+          "nombre": "pydantic-core",
+          "version": "2.46.5",
+          "hashes": 120,
+          "marcador": null
+        },
+        "pyjwt": {
+          "nombre": "pyjwt",
+          "version": "2.10.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "python-dotenv": {
+          "nombre": "python-dotenv",
+          "version": "1.2.4",
+          "hashes": 1,
+          "marcador": null
+        },
+        "sqlalchemy": {
+          "nombre": "sqlalchemy",
+          "version": "2.1.1",
+          "hashes": 72,
+          "marcador": null
+        },
+        "starlette": {
+          "nombre": "starlette",
+          "version": "1.6.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "typing-extensions": {
+          "nombre": "typing-extensions",
+          "version": "4.16.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "typing-inspection": {
+          "nombre": "typing-inspection",
+          "version": "0.4.4",
+          "hashes": 2,
+          "marcador": null
+        },
+        "uvicorn": {
+          "nombre": "uvicorn",
+          "version": "0.52.4",
+          "hashes": 2,
+          "marcador": null
+        }
+      }
+    },
+    "desarrollo": {
+      "archivo": "backend/requirements-dev.lock.txt",
+      "paquetes": 31,
+      "sin_version_fijada": [],
+      "sin_hash": [],
+      "detalle": {
+        "alembic": {
+          "nombre": "alembic",
+          "version": "1.20.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "annotated-doc": {
+          "nombre": "annotated-doc",
+          "version": "0.0.5",
+          "hashes": 2,
+          "marcador": null
+        },
+        "annotated-types": {
+          "nombre": "annotated-types",
+          "version": "0.8.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "anyio": {
+          "nombre": "anyio",
+          "version": "4.15.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "certifi": {
+          "nombre": "certifi",
+          "version": "2026.7.22",
+          "hashes": 2,
+          "marcador": null
+        },
+        "click": {
+          "nombre": "click",
+          "version": "8.5.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "colorama": {
+          "nombre": "colorama",
+          "version": "0.4.6",
+          "hashes": 1,
+          "marcador": "sys_platform == \"win32\" --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+        },
+        "fastapi": {
+          "nombre": "fastapi",
+          "version": "0.141.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "h11": {
+          "nombre": "h11",
+          "version": "0.16.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "httpcore": {
+          "nombre": "httpcore",
+          "version": "1.0.9",
+          "hashes": 2,
+          "marcador": null
+        },
+        "httpx": {
+          "nombre": "httpx",
+          "version": "0.28.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "idna": {
+          "nombre": "idna",
+          "version": "3.19",
+          "hashes": 2,
+          "marcador": null
+        },
+        "iniconfig": {
+          "nombre": "iniconfig",
+          "version": "2.3.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "mako": {
+          "nombre": "mako",
+          "version": "1.4.3",
+          "hashes": 2,
+          "marcador": null
+        },
+        "markupsafe": {
+          "nombre": "markupsafe",
+          "version": "3.0.3",
+          "hashes": 89,
+          "marcador": null
+        },
+        "packaging": {
+          "nombre": "packaging",
+          "version": "26.3",
+          "hashes": 2,
+          "marcador": null
+        },
+        "pluggy": {
+          "nombre": "pluggy",
+          "version": "1.6.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "psycopg": {
+          "nombre": "psycopg",
+          "version": "3.3.6",
+          "hashes": 2,
+          "marcador": null
+        },
+        "psycopg-binary": {
+          "nombre": "psycopg-binary",
+          "version": "3.3.6",
+          "hashes": 66,
+          "marcador": null
+        },
+        "pydantic": {
+          "nombre": "pydantic",
+          "version": "2.13.5",
+          "hashes": 2,
+          "marcador": null
+        },
+        "pydantic-core": {
+          "nombre": "pydantic-core",
+          "version": "2.46.5",
+          "hashes": 120,
+          "marcador": null
+        },
+        "pygments": {
+          "nombre": "pygments",
+          "version": "2.21.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "pyjwt": {
+          "nombre": "pyjwt",
+          "version": "2.10.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "pytest": {
+          "nombre": "pytest",
+          "version": "9.1.1",
+          "hashes": 2,
+          "marcador": null
+        },
+        "python-dotenv": {
+          "nombre": "python-dotenv",
+          "version": "1.2.4",
+          "hashes": 1,
+          "marcador": null
+        },
+        "sqlalchemy": {
+          "nombre": "sqlalchemy",
+          "version": "2.1.1",
+          "hashes": 72,
+          "marcador": null
+        },
+        "starlette": {
+          "nombre": "starlette",
+          "version": "1.6.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "typing-extensions": {
+          "nombre": "typing-extensions",
+          "version": "4.16.0",
+          "hashes": 2,
+          "marcador": null
+        },
+        "typing-inspection": {
+          "nombre": "typing-inspection",
+          "version": "0.4.4",
+          "hashes": 2,
+          "marcador": null
+        },
+        "tzdata": {
+          "nombre": "tzdata",
+          "version": "2026.5",
+          "hashes": 1,
+          "marcador": "sys_platform == \"win32\" --hash=sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac"
+        },
+        "uvicorn": {
+          "nombre": "uvicorn",
+          "version": "0.52.4",
+          "hashes": 2,
+          "marcador": null
+        }
+      }
+    }
+  },
+  "windows_dependencias_requeridas": [
+    "colorama",
+    "tzdata"
+  ],
+  "windows_dependencias_faltantes": [],
+  "credenciales_en_arbol_versionado": [],
+  "problemas": 0,
+  "veredicto": "ok"
+}
