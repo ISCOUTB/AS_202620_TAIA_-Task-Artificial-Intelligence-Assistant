@@ -44,6 +44,7 @@ TZ = timezone(timedelta(hours=-5))
 AHORA = datetime(2026, 9, 10, 12, 0, tzinfo=TZ)
 
 INTENCIONES = {i.value for i in Intent}
+PAUSA_ENTRE_LLAMADAS = 6  # segundos; evita el limite por minuto del nivel gratuito
 
 
 def cargar_dataset() -> list[dict]:
@@ -103,6 +104,7 @@ def evaluar(filas: list[dict], precio_input: float, precio_output: float) -> dic
     tokens_salida = 0
 
     for fila in filas:
+        time.sleep(PAUSA_ENTRE_LLAMADAS)
         request = IncomingRequest(
             user_id="u-eval", text=fila["text"], channel=Channel.TELEGRAM
         )
@@ -112,7 +114,7 @@ def evaluar(filas: list[dict], precio_input: float, precio_output: float) -> dic
         except Exception as error:  # noqa: BLE001 - el fallo se contabiliza
             matriz[(fila["intent"], f"error:{type(error).__name__}")] += 1
             fallos.append(
-                {"id": fila["id"], "esperado": fila["intent"], "error": type(error).__name__}
+                {"id": fila["id"], "esperado": fila["intent"], "error": "{}: {}".format(type(error).__name__, error)}
             )
             continue
         tiempos.append((time.perf_counter() - inicio) * 1000)

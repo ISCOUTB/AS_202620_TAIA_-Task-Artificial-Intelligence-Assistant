@@ -1,0 +1,105 @@
+{
+  "integridad": {
+    "casos": 39,
+    "por_intencion": {
+      "create_task": 6,
+      "query_tasks": 9,
+      "system_help": 3,
+      "unknown": 16,
+      "update_task": 5
+    },
+    "vacios": 1
+  },
+  "S1_exactitud_intencion": 0.8205,
+  "S1_matriz_de_confusion": {
+    "create_task->create_task": 6,
+    "query_tasks->query_tasks": 9,
+    "system_help->system_help": 3,
+    "unknown->create_task": 4,
+    "unknown->system_help": 2,
+    "unknown->unknown": 10,
+    "update_task->unknown": 1,
+    "update_task->update_task": 4
+  },
+  "S1_por_intencion": {
+    "create_task": {
+      "casos": 6,
+      "aciertos": 6,
+      "exactitud": 1.0
+    },
+    "query_tasks": {
+      "casos": 9,
+      "aciertos": 9,
+      "exactitud": 1.0
+    },
+    "system_help": {
+      "casos": 3,
+      "aciertos": 3,
+      "exactitud": 1.0
+    },
+    "unknown": {
+      "casos": 16,
+      "aciertos": 10,
+      "exactitud": 0.625
+    },
+    "update_task": {
+      "casos": 5,
+      "aciertos": 4,
+      "exactitud": 0.8
+    }
+  },
+  "S1_fallos": [
+    {
+      "id": "c007",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    },
+    {
+      "id": "c008",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    },
+    {
+      "id": "u002",
+      "esperado": "update_task",
+      "obtenido": "unknown",
+      "referencia_esperada": "taller",
+      "referencia_obtenida": null
+    },
+    {
+      "id": "h004",
+      "esperado": "unknown",
+      "obtenido": "system_help"
+    },
+    {
+      "id": "x007",
+      "esperado": "unknown",
+      "obtenido": "system_help"
+    },
+    {
+      "id": "s004",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    },
+    {
+      "id": "s005",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    }
+  ],
+  "S3_latencia_ms": {
+    "muestras": 39,
+    "p50": 1293.3,
+    "p95": 1618.8,
+    "maximo": 1687.5
+  },
+  "S5_tokens": {
+    "prompt": 16302,
+    "candidates": 2915,
+    "costo_usd": 0.012178,
+    "precio_declarado": {
+      "input_por_millon_usd": 0.3,
+      "output_por_millon_usd": 2.5
+    }
+  }
+}

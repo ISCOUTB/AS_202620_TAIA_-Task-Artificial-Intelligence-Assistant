@@ -4,13 +4,13 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 ## 11.1. Integraciones externas y funcionalidades pendientes
 
-**Riesgo:** Gemini y Telegram no están configurados en el despliegue (faltan `GEMINI_API_KEY` y `TAIA_TELEGRAM_BOT_TOKEN`). PostgreSQL ya está integrado (Supabase, ADR-0004).
+**Riesgo:** Ni Gemini ni Telegram están configurados **en el despliegue** (faltan `GEMINI_API_KEY` y `TAIA_TELEGRAM_BOT_TOKEN` en el entorno de la VM). PostgreSQL ya está integrado (Supabase, ADR-0004). La credencial de Gemini sí está configurada en el entorno local del desarrollador, y eso permitió medir S1, S3 y S5; el recorrido desplegado sigue sin ejercitarse.
 
 **Impacto:** La solución ejecutable actual no demuestra todavía persistencia definitiva ni el recorrido completo con un proveedor LLM configurado.
 
 **Mitigación:** Mantener las integraciones detrás de adaptadores y sustituir los repositorios en memoria por implementaciones persistentes cuando corresponda.
 
-**Estado:** Parcialmente atendido.
+**Estado:** Parcialmente atendido. La integración de PostgreSQL y la lectura del LLM quedaron probadas en local; el despliegue con las tres credenciales sigue pendiente.
 
 ## 11.2. Persistencia temporal en memoria
 
@@ -32,7 +32,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Relación:** S5 — Sustitución del modelo de IA.
 
-**Estado:** Preparado; pendiente de validación con credenciales reales.
+**Estado:** Parcialmente atendido. El recorrido real **sí** se validó con credencial y contra la API de Google: 39 llamadas reales a `gemini-3.5-flash-lite`. Lo que sigue sin probarse es la **sustitución completa** de proveedor, que exigiría un segundo adaptador y sus pruebas. Se comprobó además que cambiar de modelo no requiere tocar el dominio ni los casos de uso: se cambia `GEMINI_MODEL` o la constante del adaptador.
 
 ## 11.4. Disponibilidad de infraestructura gratuita
 
@@ -70,7 +70,31 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Estado:** Riesgo abierto.
 
-## 11.7. Evolución del monolito modular
+**Riesgo:** El nivel gratuito de Gemini impone un **límite de llamadas por minuto**, y una ráfaga de peticiones produce LLMError. Es un riesgo distinto del de 11.6: no es un límite de cuota mensual ni de contexto, sino de **cadencia**.
+
+**Impacto:** El asistente falla sin explicar nada al estudiante. `GeminiLLM` convierte el `429` en `LLMError` con el código de estado (`gemini_llm.py:156`), y un fallo de transporte en un `LLMError` que solo registra el **tipo** de excepción, no su mensaje (`gemini_llm.py:153`). El estudiante ve que el asistente no responde, sin ningún motivo.
+
+**Mitigación:** Tres medidas, dos aplicadas y una pendiente. Aplicadas: pausar entre llamadas en `tools/eval_llm.py` (`PAUSA_ENTRE_LLAMADAS = 6`) y registrar el mensaje completo del error, no solo su tipo. Pendiente: **reintentar con espera ante `429`** y devolver un mensaje accionable al estudiante en lugar de un fallo opaco.
+
+**Evidencia:** En la primera corrida de 	ools/eval_llm.py, 10 de 39 llamadas fallaron con LLMError y la exactitud cayó a 64,1 %. Los nueve primeros fallos eran **consecutivos** en el orden del dataset, lo que un defecto del modelo no explica. Un diagnóstico con pausa de 6 segundos respondió **7 de 7** correctamente sobre esos mismos casos, y la corrida con pausa dio 39 llamadas sin ningún error y 82,05 % de exactitud. La causa exacta —límite por minuto o saturación del servicio— **no se confirmó**, porque el arnés solo guardaba el nombre del error; lo que sí quedó probado es que el ritmo de las llamadas era la variable.
+
+**Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje.
+
+**Estado:** **Abierto.** La evaluación sortea el problema con una pausa; el producto no lo sortea, porque la aplicación no reintenta ni explica el `429`.
+
+## 11.7. Retirada de modelos del proveedor
+
+**Riesgo:** El proveedor retira modelos. `gemini-2.5-flash`, que era el valor por defecto de `GeminiLLM`, devolvió **404** a una credencial recién obtenida. Google limita el acceso a los modelos 2.5 a las cuentas que ya los usaban.
+
+**Impacto:** Sin cambios, un clon nuevo del repositorio nace roto: `_DEFAULT_MODEL` apunta a un modelo al que esa cuenta no tiene acceso, y falla en la primera petición real con un error que no dice «modelo retirado» sino «404». Un despliegue existente con `GEMINI_MODEL` explícito en su entorno habría seguido funcionando, lo que hace el fallo más difícil de detectar: funciona en el entorno de quien lo configuró y no en el de nadie más.
+
+**Mitigación:** Fijar el modelo por defecto en el código a uno accesible —ahora `gemini-3.5-flash-lite`— en vez de dejarlo en el proveedor implícito, y permitir la sustitución por `GEMINI_MODEL` sin tocar el adaptador. El puerto `LLM` sigue encapsulando al proveedor, así que cambiar de modelo es cambiar una constante.
+
+**Relación:** S5 — Sustitución del modelo de IA.
+
+**Estado:** **Atendido en S8** para el modelo concreto. El riesgo de fondo —que el proveedor retire el que sea— sigue abierto: no hay comprobación automática que detecte un 404 por modelo.
+
+## 11.8. Evolución del monolito modular
 
 **Deuda técnica:** El sistema se mantiene como un único despliegue.
 

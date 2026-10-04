@@ -564,3 +564,55 @@ Se pidió: eliminar los valores por defecto de credenciales en `run.bat`, hacer 
 * `python tools/eval_llm.py --dry-run` → 39 casos, cinco intenciones, mínimo tres por intención.
 * Sin `GEMINI_API_KEY`, `tools/eval_llm.py` sale con código 2 y declara la medición pendiente.
 * Integración continua verde en `eadc8f2` y `4eaa75c`, y en la cabeza actual `fa8fe6e`; 202 pruebas en verde en local.
+
+## Entrada 014
+
+**Fecha:** 2026-10-04
+
+**Herramienta:** Claude (Anthropic), en conversación web. A diferencia de las entradas 011 a 013, **no tuvo acceso en vivo al repositorio**: analizó una copia extraída de `TAIA-nuevo.rar` en un entorno aislado. Los comandos sobre el equipo del estudiante los ejecutó el estudiante, y los resultados los interpretó la IA desde el texto pegado en la conversación.
+
+**Objetivo:** Verificar la entrega S8 frente a la cadena pedida —aspecto, ADR, código, prueba que falla, medición, extracto de IA, auditoría de erosión, dependencias, credenciales y componente generativo— y cerrar la evaluación del componente generativo: exactitud, latencia y costo por operación.
+
+### Solicitud realizada
+
+Se pidió, en este orden: valorar qué tan avanzada y bien hecha estaba la entrega; corregir la configuración de credenciales (`.env` y `.env.example`); obtener una clave de Gemini; ejecutar `tools/eval_llm.py`; e interpretar y documentar los resultados.
+
+### Resultado generado
+
+La IA reprodujo la verificación sobre la copia del proyecto y entregó un informe con hallazgos, guías de comandos para PowerShell y un guion de diagnóstico (`tools/diag_fallos.py`) que repite los casos fallidos de uno en uno, con pausa, e imprime el **mensaje** completo del error en lugar de solo su tipo.
+
+Hallazgos de la revisión:
+
+- El `.env` de la raíz contenía una `DATABASE_URL` del *pooler* de Supabase con contraseña. No estaba versionado, pero viajaba dentro del archivo comprimido, y `tools/verificar_dependencias.py` no lo detecta porque solo escanea el árbol versionado.
+- `gemini-2.5-flash`, el modelo por defecto del adaptador, devolvía **404** con una clave nueva.
+- La primera corrida de `tools/eval_llm.py` dio **64,1 %** (25 de 39) con 10 errores `LLMError`. La IA los exportó como ruido y sin explicar; el estudiante los examinó.
+- Faltaba la evaluación del componente generativo: había dataset y arnés, pero ningún resultado ni estimación de costo por operación.
+
+### Aceptado
+
+* **Cambiar el modelo a `gemini-3.5-flash-lite`.** Primero con la variable `GEMINI_MODEL`, sin tocar el adaptador, y después en el propio código: `_DEFAULT_MODEL` pasó de `gemini-2.5-flash` a `gemini-3.5-flash-lite` en `backend/app/modules/ai/adapters/outbound/gemini_llm.py`. Sin ese cambio, un clon sin `GEMINI_MODEL` recibiría 404. Se consultó la página oficial de deprecaciones de Google, que atribuye la restricción de los modelos 2.5 a las cuentas que ya los usaban, y la corrida que cierra la entrega confirmó que `gemini-3.5-flash-lite` responde: 39 llamadas, ninguna rechazada.
+* **Pausar entre llamadas** en `eval_llm.py` (`PAUSA_ENTRE_LLAMADAS = 6`), porque el nivel gratuito de Gemini tiene límite de llamadas por minuto.
+* **Guardar el mensaje del error**, no solo `type(error).__name__`, para que un fallo sea diagnosticable.
+* **Declarar los precios por parámetro** y citar la fuente y la fecha: 0,30 USD de entrada y 2,50 USD de salida por millón de tokens, de la tabla de `gemini-3.5-flash-lite` en la documentación de Google, consultada el 2026-10-04.
+* **Mover la clave de Gemini a `backend/.env`** y dejar `.env.example` sin valores reales. Verificado: `backend/.env` contiene la clave y `.env.example` la tiene vacía.
+* **Eliminar el `.env` de la raíz** y **rotar la contraseña de Supabase**. Ambas hechas; ver la sección de verificación.
+
+### Rechazado o modificado
+
+* **Se rechazó el 64,1 % como medición válida.** Los diez errores no eran ruido aleatorio: nueve eran **consecutivos** en el orden del dataset (`u001` a `h004`), lo que un problema del modelo no explica. El diagnóstico con pausa de 6 segundos entre llamadas respondió **7 de 7 correctamente** en esos mismos casos (`u001`, `u003`, `u005`, `h001`, `h003`, `h004`, `x003`), lo que apunta al ritmo de las llamadas y no al modelo. La causa exacta —límite por minuto o saturación del servicio— **no se confirmó**, y no se afirma: el arnés solo guardaba el nombre del error, que era justamente lo que faltaba.
+* **Se corrigió un dato de la propia IA.** Afirmó que las claves de Gemini empiezan por `AIza`; la clave del estudiante empezaba por otro prefijo. No se validó el formato por reglas, sino con una llamada real.
+* **Se corrigió el diagnóstico del primer fallo.** El error `Illegal header value` no era ni la clave ni la red: `backend/.env` tenía un **espacio inicial** antes del valor, y `httpx` rechaza eso como cabecera. Se resolvió quitando el espacio del archivo, **no** en el código: `gemini_llm.py:100` sigue haciendo `os.getenv("GEMINI_API_KEY", "")` sin `.strip()`, así que un `.env` reescrito con `Set-Content` de PowerShell puede reproducirlo. Queda como deuda técnica.
+* **Se aclararon los precios.** Primero se usaron 0,30 y 2,50 USD, que eran los de `gemini-2.5-flash`. Al cambiar de modelo, la IA los marcó como no válidos mientras no se contrastaran con la fuente. La tabla de `gemini-3.5-flash-lite` aportada por el estudiante los confirmó iguales, pero por el camino quedó escrito de dónde salían y de cuándo se habían consultado: es lo que hace comparables dos corridas de modelos distintos.
+* **Se descartó escribir un segundo adaptador de otro proveedor.** Cerraría S5, pero es trabajo de código y pruebas fuera del alcance de esta entrega.
+* **Se descartó `diag_fallos.py` como entregable.** Es una herramienta temporal de diagnóstico y no se versiona; la evidencia de que se ejecutó queda en esta entrada.
+* **La clave de Gemini quedó expuesta en la conversación**, en un mensaje y en un *traceback*. Se eliminó en AI Studio y se creó otra.
+
+### Verificación realizada
+
+* **Credenciales, sobre el repositorio del estudiante.** `git log --all -S` sobre `.env` y `backend/.env`, y sobre el patrón del *pooler* de Supabase y el prefijo de la clave de Gemini: **sin coincidencias**. `git grep` sobre el árbol versionado, buscando clave de Gemini, URL con contraseña, clave PEM, token de GitHub y JWT: **0 hallazgos**. El `.env` de la raíz ya no existe.
+* **Rotación de credenciales.** La contraseña de producción de Supabase **fue rotada** por el estudiante en el panel del proveedor. La clave de Gemini expuesta **fue eliminada en AI Studio** y la que está en uso es distinta.
+* **Diagnóstico con pausa:** 7 de 7 casos que antes fallaban respondieron correctamente, en 1 068 a 1 882 ms.
+* **Corrida válida, `docs/evaluacion_ia/resultado_s1_s3.json`:** 39 llamadas, **ningún error**, **32 de 39** (82,05 %) de acierto en intención; latencia p50 1 293,3 ms, p95 1 618,8 ms, máximo 1 687,5 ms sobre 39 muestras; 16 302 tokens de entrada y 2 915 de salida; 0,012178 USD, es decir **0,000312 USD por operación**. Tardó unos cuatro minutos con la pausa de seis segundos.
+* **Llamada única de comprobación**, ejecutada por el estudiante: intención `create_task`, título `taller`, fecha 2026-10-09 (UTC-5), correcta para «el viernes» siendo domingo 2026-10-04.
+* **Limitaciones que se declaran en `entrega_s8.md`:** S1 mide intención sobre 39 mensajes mientras el escenario habla de campos en 100; S3 mide el tramo del modelo desde el equipo del estudiante, no de extremo a extremo; y el arnés no aplica el descarte previo que el propio dataset declara para el caso vacío `x002`.
+* **Pendiente:** el arnés no registra en el JSON qué modelo produjo el resultado. El modelo, la fecha y los precios están declarados en el documento maestro, no en el artefacto. Cerrarlo es trabajo futuro del arnés.

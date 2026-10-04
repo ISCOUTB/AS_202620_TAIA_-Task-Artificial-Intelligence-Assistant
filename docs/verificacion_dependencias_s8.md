@@ -113,9 +113,44 @@ clave privada PEM, token de GitHub y JWT. Resultado: **0 hallazgos**.
 Dos precisiones sobre el alcance de esa afirmación:
 
 - **El escaneo cubre el árbol versionado**, no el historial completo. Para el historial se ejecutó `git log --all -S` sobre el patrón del *pooler* de Supabase y sobre el prefijo de la clave de Gemini: sin coincidencias. Ninguna credencial de producción entró en un commit.
-- **Una credencial de producción sí fue compartida durante esta sesión por el estudiante**, en el canal de conversación, y llegó a escribirse en `backend/.env` antes de ser detectada y eliminada. Ese archivo está en `.gitignore:15`, nunca se versionó, y `git grep` confirma que no aparece en el índice. Aun así, la contraseña quedó expuesta fuera del repositorio y **debe rotarse**: rotar una contraseña filtrada fuera del control de versiones es responsabilidad de quien la expone, no del repositorio.
+- **Una credencial de producción sí fue compartida durante esta sesión por el estudiante**, en el canal de conversación, y llegó a escribirse en `backend/.env` antes de ser detectada y eliminada. Ese archivo está en `.gitignore:15`, nunca se versionó, y `git grep` confirma que no aparece en el índice.
+
+### Tres hallazgos de credenciales que el escaneo no podía ver
+
+El escaneo de arriba es el del estado **versionado**, y por diseño es ciego a tres
+cosas que sí importaban. Las tres se resolvieron.
+
+**1. Un `.env` con contraseña en la raíz del proyecto.** Había un `.env` en la raíz
+con una `DATABASE_URL` del *pooler* de Supabase **con contraseña**. No estaba
+versionado —`git log --all` no lo muestra nunca, porque `.gitignore` lo excluía— pero
+viajaba dentro del archivo comprimido con el que se compartió el proyecto. Ningún
+escaneo de repositorio lo detecta, porque el repositorio no lo contenía.
+
+*Cómo se detectó:* al revisar el contenido del archivo comprimido, no el árbol de
+Git. *Cómo se corrigió:* se eliminó el archivo y **el estudiante rotó la contraseña
+en el panel del proveedor**. Verificado: la raíz ya no tiene `.env`.
+
+**2. La clave de Gemini expuesta en la conversación.** La clave apareció en un mensaje
+y en un *traceback*. Una credencial que sale del repositorio por el canal de
+conversación no la arregla limpiar el repositorio.
+
+*Cómo se detectó:* en la propia salida del error. *Cómo se corrigió:* la clave se
+**eliminó en AI Studio** y se creó otra. La que está en uso vive únicamente en
+`backend/.env`; verificado que `.env.example` tiene `GEMINI_API_KEY=` vacío.
+
+**3. La clave se leía sin recortar espacios.** `gemini_llm.py:100` hace
+`os.getenv("GEMINI_API_KEY", "")`, sin `.strip()`. Con un **espacio inicial** en el
+valor —lo produce `Set-Content` de PowerShell—, `httpx` lanza `Illegal header value`
+y ni el mensaje ni el arranque dicen que el problema es un espacio. Es un defecto
+latente de manejo de credenciales, no un incidente, y queda como deuda técnica en la
+[bitácora](bitacora_s8.md).
 
 La lección de diseño que sí queda incorporada al código: `backend/app/shared/adapters/outbound/database.py:17` llama a `load_dotenv()` **en el momento de importar el módulo**. Cualquier comando del proyecto —`pytest`, `alembic upgrade head`, `run.bat`— abre automáticamente la base que esté en ese archivo. Por eso un `.env` mal escrito no es un error visible: es un `alembic upgrade head` apuntando a donde no debía. Las pruebas lo agravan, porque `backend/tests/conftest.py` ejecuta `command.downgrade(config, "base")` al iniciar la sesión.
+
+Y la lección de procedimiento, que es la que más se aplicó en S8: **una credencial
+filtrada se rota, no se borra.** Los dos archivos de este caso se eliminaron el mismo
+día, pero lo que deshace la exposición es el giro de la contraseña en el panel del
+proveedor, y ambas están hechas.
 
 ## Cómo reproducir
 

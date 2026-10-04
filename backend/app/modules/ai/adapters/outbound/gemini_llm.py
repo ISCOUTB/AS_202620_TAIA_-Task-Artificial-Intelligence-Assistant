@@ -24,7 +24,11 @@ from app.modules.ai.domain.messages import (
 )
 
 _BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
-_DEFAULT_MODEL = "gemini-2.5-flash"
+# gemini-2.5-flash dejo de estar accesible para proyectos nuevos: la pagina de
+# deprecaciones de Google limito su acceso a las cuentas que ya lo usaban. Con
+# este valor por defecto, un clon sin GEMINI_MODEL recibia 404. Ver
+# docs/arc42/11-riesgos-y-deudas-tecnicas.md, seccion 11.7.
+_DEFAULT_MODEL = "gemini-3.5-flash-lite"
 _DEFAULT_TIMEOUT = 20.0
 _MAX_HELP_CHARS = 1200
 

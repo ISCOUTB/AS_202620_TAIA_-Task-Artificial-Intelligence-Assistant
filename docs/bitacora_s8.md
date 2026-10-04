@@ -21,9 +21,10 @@ Si solo te interesa una sección, ve directo al [mapa de evidencias](#1-mapa-de-
 | Las dependencias están íntegras y no hay credenciales | [`verificacion_dependencias_s8.md`](verificacion_dependencias_s8.md) + [`verificacion_dependencias.json`](verificacion_dependencias.json) | — | 24 + 31 paquetes, 0 sin hash, 0 credenciales |
 | Los límites del módulo siguen donde deben | [`auditoria_fronteras.json`](auditoria_fronteras.json) + [`auditoria_fronteras_baseline.json`](auditoria_fronteras_baseline.json) | — | auditor en exit 0, 3 hallazgos en línea base |
 | El defecto de S6 sí existía | [`auditoria_erosion.md`](auditoria_erosion.md) | — | 6 hallazgos: E-01 a E-06 |
-| El modelo tiene casos etiquetados para cuando exista clave | [`evaluacion_ia/dataset.jsonl`](evaluacion_ia/dataset.jsonl) | — | 39 casos, 5 intenciones |
+| El modelo tiene casos etiquetados | [`evaluacion_ia/dataset.jsonl`](evaluacion_ia/dataset.jsonl) | — | 39 casos, 5 intenciones |
+| **Y ya se midió contra el modelo real** | [`evaluacion_ia/resultado_s1_s3.json`](evaluacion_ia/resultado_s1_s3.json) | — | S1 82,05 %, S3 p95 1 618,8 ms, S5 0,000312 USD/op, 0 errores |
 | La entrega está completa y auditable | [`entrega_s8.md`](entrega_s8.md) | `fa8fe6e` | índice maestro |
-| La trazabilidad de IA de la semana | [`ia.md`](ia.md) entradas 011-013 | — | qué se aceptó y qué se rechazó |
+| La trazabilidad de IA de la semana | [`ia.md`](ia.md) entradas 011-014 | — | qué se aceptó y qué se rechazó |
 
 ---
 
@@ -230,6 +231,53 @@ que un número ausente.
   estilo que el repositorio ya usaba. Eso reescribió el historial, así que **todas las
   evidencias se regeneraron** y se actualizaron las referencias (commit `97b8996`).
 
+### Paso 9 — Credenciales, cambio de modelo y la medición de S1, S3 y S5
+
+Este paso cerró lo que los ocho anteriores dejaron como hueco explícito: **S1, S3 y S5
+estaban pendientes por falta de `GEMINI_API_KEY`**.
+
+**Las credenciales primero.** El `.env` de la raíz contenía una `DATABASE_URL` del
+*pooler* de Supabase **con contraseña**. No estaba versionado —`git log --all` no lo
+muestra nunca— pero viajaba dentro del archivo comprimido del proyecto. Se eliminó, y
+la contraseña **fue rotada** por el estudiante en el panel del proveedor. La clave de
+Gemini quedó expuesta en la conversación, en un mensaje y en un *traceback*: se
+eliminó en AI Studio y se creó otra, que es la que vive hoy en `backend/.env`.
+`.env.example` quedó con `GEMINI_API_KEY=` vacío. Los detalles están en
+[`verificacion_dependencias_s8.md`](verificacion_dependencias_s8.md).
+
+**El primer fallo no era de la clave.** `Illegal header value` apareció por primera
+vez al probar la llamada. La IA señaló la clave o la red; el error real era un
+**espacio inicial** en el valor de `backend/.env`, que `httpx` rechaza como
+cabecera. Se quitó el espacio del archivo. El código **no** se cambió:
+`gemini_llm.py:100` sigue leyendo la variable sin `.strip()`.
+
+**El modelo por defecto ya no existía.** `gemini-2.5-flash` devolvió **404** con una
+credencial nueva. Se consultó la página oficial de deprecaciones, que atribuye la
+restricción de los modelos 2.5 a las cuentas que ya los usaban, y se pasó a
+`gemini-3.5-flash-lite`: primero con `GEMINI_MODEL`, y después en el código, porque un
+clon sin esa variable habría nacido roto. El riesgo quedó documentado en la sección 11.7
+de [`arc42/11`](arc42/11-riesgos-y-deudas-tecnicas.md).
+
+**La primera medición no valía.** `tools/eval_llm.py` dio **64,1 %** (25 de 39) con 10
+errores `LLMError`. La IA los reportó como ruido. No lo eran: nueve eran
+**consecutivos** en el orden del dataset (`u001` a `h004`), y un problema del modelo no
+produce un bloque de nueve. Para poder distinguirlo hizo falta un dato que el arnés no
+guardaba —el **mensaje** del error, no solo su tipo— y un guion de diagnóstico que
+repetía siete de los casos fallidos de uno en uno, con seis segundos de pausa entre
+llamadas. Los siete respondieron **7 de 7** correctamente.
+
+**La corrección fue al arnés, no al modelo.** Se añadieron `PAUSA_ENTRE_LLAMADAS = 6` y
+el mensaje completo del error. Con eso, la corrida de 39 llamadas terminó **sin un solo
+error** y con **82,05 %** de exactitud: es la medición que se reporta en
+[`resultado_s1_s3.json`](evaluacion_ia/resultado_s1_s3.json), con p50 1 293,3 ms, p95
+1 618,8 ms y 0,000312 USD por operación.
+
+> **Lo que este paso no resolvió.** El producto sigue sin manejar el `429`: el arnés
+> sortea el límite por minuto con una pausa, la aplicación no lo sortea. Y la causa
+> exacta de los errores de la primera corrida **no se confirmó** —límite por minuto o
+> saturación—, porque el arnés solo guardaba el nombre del error, que es justo el dato
+> que faltaba. Está anotado como deuda técnica en la sección 7.
+
 ---
 
 ## 4. Índice de evidencias
@@ -270,6 +318,7 @@ suite completa y graba la salida tal cual, con el commit y la base de datos usad
 | [`auditoria_fronteras.json`](auditoria_fronteras.json) | [`tools/audit_boundaries.py`](../tools/audit_boundaries.py) |
 | [`auditoria_fronteras_baseline.json`](auditoria_fronteras_baseline.json) | el mismo auditor, lista de excepciones aceptadas |
 | [`evaluacion_ia/dataset.jsonl`](evaluacion_ia/dataset.jsonl) | a mano, 39 casos etiquetados |
+| [`evaluacion_ia/resultado_s1_s3.json`](evaluacion_ia/resultado_s1_s3.json) | [`tools/eval_llm.py`](../tools/eval_llm.py), 39 llamadas a `gemini-3.5-flash-lite` |
 
 ### 4.4 Etiqueta de Git
 
@@ -307,9 +356,19 @@ python tools/audit_boundaries.py
 # el dataset con clave, o solo la validación sin clave
 python tools/eval_llm.py --dry-run
 
+# S1, S3 y S5: la corrida del Paso 9 (~4 min, con 6 s de pausa entre llamadas)
+python tools/eval_llm.py --precio-input 0.30 --precio-output 2.50 `
+  --json docs/evaluacion_ia/resultado_s1_s3.json
+
 # regenerar las evidencias.txt
 python tools/evidencia_s8.py post-fix
 ```
+
+La corrida con clave necesita `GEMINI_API_KEY` en `backend/.env` y **no** debe
+usar `GEMINI_API_KEY=placeholder-not-used-in-tests` como la de las pruebas: el
+arnés llama a la API de verdad. Los precios se pasan por argumento y hay que
+volver a consultarlos; los de arriba son los declarados el 2026-10-04 para
+`gemini-3.5-flash-lite`.
 
 `PYTHONUTF8=1` hace falta en Windows porque el generador de evidencia lee la salida de
 pytest con la codificación del sistema, que en Windows es `cp1252`, y el output de pytest
@@ -330,37 +389,76 @@ git show s8-pre-fix:backend/app/modules/ai/application/use_cases/handle_message.
 | Medición | Estado | Motivo |
 | --- | --- | --- |
 | S2: confirmación | **Medida** | No depende de la IA |
-| S1: qué tan bien responde el modelo | **Pendiente** | Sin `GEMINI_API_KEY` |
-| S3: latencia extremo a extremo | **Pendiente** | Sin `GEMINI_API_KEY` |
+| S1: qué tan bien responde el modelo | **Medida** | 82,05 % (32 de 39), sin errores. Limitada a la intención, no a los campos; ver `entrega_s8.md` |
+| S3: latencia | **Medida** | p95 1 618,8 ms sobre 39 muestras, **solo del tramo del modelo** |
+| S5: costo por operación | **Medida** | 0,000312 USD por operación a los precios declarados |
 | S4: disponibilidad real | **Pendiente** | Sin despliegue desde `main` |
-| S5: costo por token | **Pendiente** | Instrumentado, pero sin clave no hay cifras |
 
-El arnés y el dataset están listos y probados para cuando exista la clave. Mientras tanto
-`eval_llm.py` sale con código 2 y lo dice, en vez de devolver números.
+`tools/eval_llm.py` **sigue** saliendo con código 2 cuando no hay `GEMINI_API_KEY`: esa
+rama no se tocó y no se le dio un valor por defecto. Los precios de token tampoco están
+en el código, se pasan por argumento.
+
+### Lo que S3 no es
+
+S3 se reporta como medida, con una salvedad que conviene no perder de vista: mide el
+tramo entre la máquina del estudiante y la respuesta de Gemini. **No** incluye Telegram,
+ni el gateway académico, ni la base de datos, ni el cifrado de la API. El p95 de
+1,62 s es una cota optimista de lo que verá el estudiante, y por eso el escenario S3
+sigue sin cerrarse del todo.
 
 ---
 
 ## 7. Deudas técnicas que quedan
 
-**1. Rotar la contraseña de producción de Supabase.** Se compartió en el canal de
-conversación y estuvo en `backend/.env`. **No está en ningún commit ni en el historial**
-del repositorio, y el escaneo de credenciales lo confirma. Pero la exposición ocurrió
-fuera del control de versiones, y borrar el archivo no deshace que alguien la haya
-leído. Esta acción depende del estudiante en el panel del proveedor.
+**1. La aplicación no maneja el `429`.** Es la deuda que dejó el Paso 9. El nivel
+gratuito de Gemini limita las llamadas por minuto; el arnés lo sortea con
+`PAUSA_ENTRE_LLAMADAS = 6`, y `GeminiLLM` no reintenta ni explica. Un estudiante en el
+récord de uso vería que el asistente no responde, sin motivo. Además,
+`gemini_llm.py:153` registra solo `type(error).__name__`, de modo que un fallo de
+transporte no deja rastro útil en el log. El riesgo está en la sección 11.6 de
+[`arc42/11`](arc42/11-riesgos-y-deudas-tecnicas.md).
 
-**2. Definir `GEMINI_API_KEY`.** Desbloquea S1, S3 y S5.
+**2. La clave se lee sin `.strip()`.** `gemini_llm.py:100` hace
+`os.getenv("GEMINI_API_KEY", "")`. Un `backend/.env` con un espacio antes del valor
+—lo produce `Set-Content` de PowerShell— produce `Illegal header value` y ni el
+mensaje ni el arranque dicen por qué. El arreglo es una llamada. Se documentó en vez
+de aplicarse porque quedaba fuera del alcance del paso.
 
-**3. E-05 abierto a propósito.** `academic_gateway.py` importa `TaskStatus` desde el
+**3. El arnés no aplica el descarte que el dataset declara.** `dataset.jsonl:28`
+(`x002`) tiene el texto vacío y la nota «vacío, se rechaza antes del modelo», pero
+`tools/eval_llm.py` lo envía al modelo como cualquier otro caso. El modelo lo respondió
+`unknown`, así que el caso cuenta como acierto y no baja la media. S1 se reporta como
+32 de 39 y no como 32 de 38, porque 32 de 39 es lo que el arnés midió. Cerrarlo exige
+implementar el filtro y volver a medir.
+
+**4. El JSON de evaluación no es auto-descriptivo.** `resultado_s1_s3.json` registra
+métricas, pero **no** qué modelo las produjo, ni la fecha, ni el commit. El modelo
+(`gemini-3.5-flash-lite`), la fecha (2026-10-04) y los precios (0,30 y 2,50 USD por
+millón) están declarados en `entrega_s8.md`, que es la fuente. Añadir esos campos al
+arnés es trabajo futuro; no se rellenaron a mano, porque retocar un artefacto de
+medición después de producido lo convierte en una cifra sin procedencia.
+
+**5. ~~Rotar la contraseña de producción de Supabase.~~ Cerrada en el Paso 9.** Se
+compartió en el canal de conversación y estuvo en `backend/.env`. Nunca estuvo en
+ningún commit, y `git log --all -S` sobre el patrón del *pooler* no devuelve
+coincidencias. Aun así, la exposición ocurrió fuera del control de versiones y borrar
+el archivo no deshace que alguien la haya leído, así que **el estudiante la rotó en el
+panel del proveedor**. Lo mismo se hizo con la clave de Gemini que apareció en la
+conversación: se eliminó en AI Studio y se creó otra. Se conservan aquí las dos
+entradas, y no como deudas, porque el valor de esta bitácora es también registrar qué
+se cerró.
+
+**6. E-05 abierto a propósito.** `academic_gateway.py` importa `TaskStatus` desde el
 dominio de Academic. Corregirlo **rompe la interfaz pública** de `task_management.py`,
 porque `TaskQuery.status` está tipado con ese enum. Exige cambiar el contrato y
 reejecutar las pruebas de contrato. Se documentó la solución recomendada en vez de
 aplicar un parche a medias que dejara el contrato inconsistente.
 
-**4. `tools/evidencia_s8.py` falla en Windows.** Ya descrito en la
+**7. `tools/evidencia_s8.py` falla en Windows.** Ya descrito en la
 [sección 5](#5-cómo-reproducir-cada-paso). El arreglo es una línea: pasar `encoding="utf-8"`
 al `subprocess.run` de la línea 64.
 
-**5. `postgres:18` en `.github/workflows/ci.yml` es una etiqueta mutable.** Cambiar el
+**8. `postgres:18` en `.github/workflows/ci.yml` es una etiqueta mutable.** Cambiar el
 contenido de la imagen no requiere cambiar la etiqueta, así que dos corridas distintas
 podrían usar imágenes distintas. Ninguna documentación de esta entrega afirma que el
 supply chain esté cerrado en su totalidad. Fijar el digest es un cambio de una línea.
