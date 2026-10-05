@@ -96,7 +96,68 @@ Requisitos: Python 3.12 y PostgreSQL con el usuario `taia` (contraseña `taia`) 
 pip install -r backend/requirements-dev.txt
 ```
 
+<<<<<<< HEAD
 Desde la raíz del repositorio, en Windows:
+=======
+- [Despliegue con Docker Compose y Dokploy](docs/despliegue-dokploy.md):
+  configuración del servicio, variables, dominio HTTPS y CD mediante la API de Dokploy.
+- [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
+  opcional para administrar el servidor existente; independiente de Dokploy.
+
+La documentación del proyecto se encuentra en la carpeta docs/.
+
+- docs/ficha_problema.md — descripción del problema y propuesta de solución.
+- docs/aspectos.md — aspectos arquitectónicos y trazabilidad.
+- docs/ia.md — registro del uso de inteligencia artificial.
+- docs/arc42/ — documentación de arquitectura mediante arc42.
+- docs/c4/ — diagramas de arquitectura C4.
+- docs/calidad/ — atributos y escenarios de calidad.
+- docs/adr/ — decisiones arquitectónicas.
+
+La API desplegada está disponible en:
+
+- API: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
+- Documentación interactiva: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs
+- Health check: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health
+
+## Requisitos
+
+### Docker Compose / Dokploy
+
+El despliegue actual de la API está publicado en
+`http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io`.
+
+El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
+`DATABASE_URL` (PostgreSQL) y `TAIA_JWT_SECRET` siguiendo `.env.example`.
+Para Dokploy, seleccionar `./docker-compose.yml` y configurar el dominio del
+servicio `backend` en el puerto interno `8000`.
+
+Para ejecutar localmente, copiar `.env.example` a `.env`, completar los valores y usar:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
+```
+
+La API estará en `http://127.0.0.1:8000/docs`. PostgreSQL se configura por separado.
+Consultar la [guía de despliegue](docs/despliegue-dokploy.md) para redes, secrets y CI/CD.
+
+### Ejecución directa con Python
+
+Para ejecutar el proyecto se requiere:
+
+Python 3.14 o compatible.
+Las dependencias especificadas en backend/requirements.txt.
+
+### Instalar las dependencias:
+
+pip install -r backend/requirements.txt
+
+### Ejecución
+
+El proyecto cuenta con un backend ejecutable del monolito modular.
+
+Desde la raíz del repositorio, ejecutar:
+>>>>>>> migrate_to_dockploy
 
 ```bat
 .\run.bat

@@ -30,6 +30,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Compose and build deployment image
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/taia
+          TAIA_JWT_SECRET: ci-only-compose-validation-secret
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.local.yml config --quiet
+          docker compose build backend
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

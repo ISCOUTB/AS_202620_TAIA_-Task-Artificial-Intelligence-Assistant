@@ -1,5 +1,11 @@
 # Comparación de alternativas de despliegue para la API TAIA
 
+> Evidencia histórica de septiembre de 2026. Los comandos SSH, imágenes GHCR
+> y direcciones de esta comparación pertenecen al despliegue anterior.
+> La configuración vigente utiliza [Docker Compose y Dokploy](../despliegue-dokploy.md).
+> La API actualmente desplegada está disponible en
+> `http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io`.
+
 **Asignatura:** Arquitectura de Software - Metacurso 202620  
 **Proyecto:** TAIA — Task Artificial Intelligence Assistant  
 **Pieza evaluada:** API TAIA  
@@ -99,7 +105,7 @@ La configuración utilizada para el prototipo fue:
 | Plan | Free |
 | Base de datos | Supabase PostgreSQL |
 | Variables de entorno | Configuradas en Render |
-| URL | https://taia-backend-latest.onrender.com |
+| URL | No corresponde al despliegue vigente; evidencia histórica |
 
 Render permite desplegar Web Services gratuitamente en el plan Free.
 
@@ -197,10 +203,10 @@ La variable de conexión a PostgreSQL se mantuvo fuera de la imagen mediante:
 
 De esta manera, las credenciales no forman parte del repositorio ni de la imagen Docker.
 
-La API fue posteriormente accesible mediante:
+En el despliegue anterior, la API fue accesible mediante:
 
 ```text
-http://157.137.215.57:8000/docs
+http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs
 ```
 
 ---

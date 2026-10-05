@@ -1,116 +1,63 @@
-name: CD
+﻿name: CD
 
-# Se dispara solo cuando el workflow "CI" termina en verde sobre main.
-# Así el pipeline nunca publica ni despliega una imagen que no pasó las pruebas.
 on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: dokploy-production
+  cancel-in-progress: false
+
 jobs:
-  build-and-push:
-    name: Build & push imagen a GHCR
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    outputs:
-      image_tag: ${{ steps.vars.outputs.image_tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Calcular tag de imagen
-        id: vars
-        env:
-            COMMIT_SHA: ${{ github.event.workflow_run.head_sha}}
-        run: echo "image_tag=${COMMIT_SHA:0:12}" >> "$GITHUB_OUTPUT"
-
-      - name: Login en GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          # GHCR_USERNAME/GHCR_PAT: mismo usuario y PAT (write:packages, read:packages)
-          # que se usa hoy manualmente con `docker login ghcr.io`.
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_PAT }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build & push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: backend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/dei0811/taia_backend:${{ steps.vars.outputs.image_tag }}
-            ghcr.io/dei0811/taia_backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
-    name: Desplegar en la VPS Oracle
+    name: Solicitar despliegue en Dokploy
     runs-on: ubuntu-latest
-    needs: build-and-push
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     steps:
-      - name: Actualizar contenedor por SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Comprobar que CI corresponde al último commit de main
+        id: revision
         env:
-          # Secretos de la aplicación: se envían por SSH y no quedan en el repositorio ni en la imagen.
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          TAIA_JWT_SECRET: ${{ secrets.TAIA_JWT_SECRET }}
-        with:
-          envs: DATABASE_URL,TAIA_JWT_SECRET
-          # Secrets a crear en Settings → Secrets and variables → Actions:
-          #   OCI_HOST     -> 157.137.215.57
-          #   OCI_USER     -> opc
-          #   OCI_SSH_KEY  -> contenido privado de ~/.ssh/oci_taia.key
-          #   DATABASE_URL, TAIA_JWT_SECRET -> ver .env.example
-          host: ${{ secrets.OCI_HOST }}
-          username: ${{ secrets.OCI_USER }}
-          key: ${{ secrets.OCI_SSH_KEY }}
-          script: |
-            set -e
-            IMAGE="ghcr.io/dei0811/taia_backend:${{ needs.build-and-push.outputs.image_tag }}"
-
-            echo "Escribiendo ~/taia.env desde los secretos de GitHub"
-            umask 077
-            printf 'DATABASE_URL=%s\nTAIA_JWT_SECRET=%s\n' "$DATABASE_URL" "$TAIA_JWT_SECRET" > ~/taia.env
-
-            echo "Descargando $IMAGE"
-            sudo docker pull "$IMAGE"
-
-            echo "Deteniendo contenedor anterior (si existe)"
-            sudo docker stop taia_backend || true
-            sudo docker rm taia_backend || true
-
-            echo "Creando contenedor nuevo"
-            sudo docker run -d \
-              --name taia_backend \
-              --env-file ~/taia.env \
-              -p 8000:8000 \
-              --restart unless-stopped \
-              "$IMAGE"
-
-            echo "Estado tras el despliegue:"
-            sudo docker ps --filter "name=taia_backend"
-
-      - name: Verificar health check externo
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          for attempt in {1..12}; do
-            if curl --fail --silent --show-error \
-                --connect-timeout 5 \
-                "http://${{ secrets.OCI_HOST }}:8000/health"; then
-              echo "✓ Health check passed"
-              exit 0
-            fi
+          set -euo pipefail
+          current_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$current_sha" = "$TESTED_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Se omite este CI antiguo; main ya cambió."
+          fi
 
-            echo "Health check failed (attempt $attempt/12), retrying in 5s..."
-            sleep 5
-          done
-
-          echo "✗ Service did not respond after 60 seconds"
-          exit 1
+      - name: Desplegar Docker Compose mediante la API de Dokploy
+        if: steps.revision.outputs.current == 'true'
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          : "${DOKPLOY_URL:?Configura el secret DOKPLOY_URL}"
+          : "${DOKPLOY_API_KEY:?Configura el secret DOKPLOY_API_KEY}"
+          : "${DOKPLOY_COMPOSE_ID:?Configura el secret DOKPLOY_COMPOSE_ID}"
+          case "$DOKPLOY_URL" in
+            https://*) ;;
+            *) echo "DOKPLOY_URL debe usar HTTPS"; exit 1 ;;
+          esac
+          payload=$(jq -n --arg id "$DOKPLOY_COMPOSE_ID" --arg sha "$TESTED_SHA" \
+            '{composeId: $id, title: ("CI main " + $sha)}')
+          curl --fail --silent --show-error --output /dev/null \
+            --connect-timeout 10 --max-time 60 \
+            --request POST "${DOKPLOY_URL%/}/api/compose.deploy" \
+            --header "Content-Type: application/json" \
+            --header "x-api-key: $DOKPLOY_API_KEY" \
+            --data "$payload"
+          echo "Solicitud aceptada. Consulta el resultado y el health check en Dokploy."

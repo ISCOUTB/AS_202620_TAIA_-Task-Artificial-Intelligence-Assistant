@@ -1,6 +1,11 @@
 # 7. Vista de despliegue
 
-TAIA se despliega como un **único contenedor** (monolito modular, ADR-0001) en una VM de Oracle Cloud, con la base de datos en Supabase. El despliegue es automático desde `main`. Las decisiones de plataforma están en [ADR-0003](../adr/0003-plataforma-despliegue-api.md) (API) y [ADR-0004](../adr/0004-plataforma-base-de-datos.md) (base de datos), y el costo en [costo_mensual.md](../costo_mensual.md).
+> Actualización operativa: el backend se despliega mediante `docker-compose.yml`
+> y Dokploy, con PostgreSQL configurable, migraciones Alembic y health check.
+> La [guía de despliegue vigente](../despliegue-dokploy.md) sustituye las
+> instrucciones de operación del corte inicial descrito en esta vista histórica.
+
+La arquitectura de despliegue distingue entre la **arquitectura objetivo** y el **corte vertical actualmente ejecutable**.
 
 | | |
 |---|---|
@@ -59,7 +64,36 @@ TAIA se despliega como un **único contenedor** (monolito modular, ADR-0001) en 
 | 8 | Telegram Bot API | Telegram | Envío de notificaciones | `TAIA_TELEGRAM_BOT_TOKEN`; aún no está configurado en el despliegue |
 | 9 | Terraform | Equipo del operador, con estado local | Describe la VM de OCI y la adopta mediante `import` | `terraform/` |
 
+<<<<<<< HEAD
 ## 7.2. Flujo de despliegue
+=======
+El despliegue actual utiliza Docker Compose administrado por Dokploy. La API
+publicada está disponible en el dominio sslip.io documentado arriba.
+
+## 7.2. Corte vertical actualmente ejecutable
+
+El despliegue remoto actual utiliza Docker Compose y Dokploy. La API publicada
+está disponible en:
+
+```text
+http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
+```
+
+El corte vertical actualmente ejecutable corresponde al **backend de TAIA ejecutado como una única aplicación FastAPI**. Puede ejecutarse localmente mediante Uvicorn y está desplegado para acceso remoto mediante Docker Compose y Dokploy.
+
+Este corte integra los cuatro módulos actualmente implementados:
+
+* **Usuario**
+* **Academic**
+* **AI**
+* **Reminders**
+
+La arquitectura mantiene un despliegue como **monolito modular**: los módulos se encuentran separados lógicamente dentro del código fuente, pero se ejecutan dentro del mismo proceso de aplicación.
+
+### 7.2.1. Infraestructura de ejecución
+
+El despliegue local actualmente utilizado puede representarse de la siguiente manera:
+>>>>>>> migrate_to_dockploy
 
 ```text
 push a main ─► CI (ci.yml) ─► verde ─► CD (cd.yml)
@@ -96,8 +130,200 @@ En local, `run.bat` levanta la misma aplicación con Uvicorn contra un PostgreSQ
 
 ## 7.6. Límites del despliegue actual
 
+<<<<<<< HEAD
 - La VM no es Always Free: cuesta 39,42 USD/mes (ADR-0003, arc42 §11).
 - La API se expone por HTTP sin TLS, lo cual incumple RNF-04 hasta configurar un dominio y un proxy con HTTPS.
 - Terraform describe la VM, pero no la VCN, la subred ni las reglas de seguridad, que siguen administradas desde la consola de OCI.
 - Gemini y Telegram no están configurados en el despliegue; las funciones que no dependen de ellos funcionan (RNF-09).
 - No hay un scheduler que dispare los recordatorios en su hora (S2).
+=======
+No existe actualmente un proceso independiente por módulo.
+
+Esta decisión corresponde al estilo de **monolito modular** adoptado para el MVP.
+
+### 7.2.3. Persistencia del corte actualmente ejecutable
+
+El corte actual utiliza almacenamiento en memoria para permitir la ejecución local y las pruebas sin depender de una infraestructura de base de datos externa.
+
+```text
+FastAPI
+   │
+   ├── Usuario
+   │      ├── InMemoryUserRepository
+   │      └── InMemoryTelegramLinkRepository
+   │
+   ├── Academic
+   │      └── InMemoryTaskRepository
+   │
+   ├── AI
+   │      └── InMemoryConversationStore
+   │
+   └── Reminders
+          └── InMemoryReminderRepository
+```
+
+Estas implementaciones son **volátiles**: los datos almacenados se pierden cuando se detiene o reinicia el proceso.
+
+Por esta razón, este despliegue debe considerarse un **entorno de desarrollo y validación del corte vertical**, no todavía un despliegue productivo.
+
+### 7.2.4. Dependencias externas
+
+El backend contiene adaptadores preparados para comunicarse con servicios externos, pero estos no son necesarios para levantar y probar los recorridos internos principales.
+
+| Dependencia          | Uso                         | Estado en el corte actual                                                          |
+| -------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| **Gemini**           | Interpretación mediante LLM | Adaptador implementado; requiere configuración de credenciales para ejecución real |
+| **Telegram Bot API** | Envío de notificaciones     | Adaptador implementado; requiere token del bot y vinculación de Telegram           |
+| **PostgreSQL**       | Persistencia definitiva     | Previsto; no utilizado por el corte actual                                         |
+| **Flutter**          | Cliente móvil               | Previsto; el backend puede probarse actualmente mediante Swagger/HTTP              |
+
+La ausencia de Gemini o Telegram no impide iniciar el backend. Las funcionalidades que dependan directamente de estos servicios requieren su respectiva configuración.
+
+### 7.2.5. Corte vertical funcional actualmente demostrable
+
+El despliegue actual permite ejecutar y probar directamente mediante HTTP los siguientes recorridos:
+
+```text
+                         ┌──────────────┐
+                         │   Usuario    │
+                         │              │
+                         │ registro     │
+                         │ login        │
+                         │ JWT          │
+                         └──────┬───────┘
+                                │
+                         user_id autenticado
+                                │
+             ┌──────────────────┼──────────────────┐
+             │                  │                  │
+             ▼                  ▼                  ▼
+      ┌────────────┐     ┌────────────┐     ┌────────────┐
+      │ Academic   │     │     AI     │     │ Reminders  │
+      │            │     │            │     │            │
+      │ tareas     │◄────│ gateway    │     │ reminders  │
+      │            │     │            │────►│            │
+      └─────┬──────┘     └────────────┘     └─────┬──────┘
+            │                                     │
+            ▼                                     ▼
+     InMemoryTaskRepository             InMemoryReminderRepository
+                                                   │
+                                                   ▼
+                                         Telegram Adapter*
+```
+
+`*` El envío efectivo hacia Telegram requiere la configuración del bot.
+
+En consecuencia, el corte vertical actualmente ejecutable **ya no se limita al módulo Academic**. La infraestructura local permite levantar conjuntamente los cuatro módulos y probar sus interfaces HTTP y sus integraciones internas.
+
+### 7.2.6. Integración interna entre módulos
+
+La comunicación entre módulos ocurre dentro del mismo proceso y no mediante HTTP interno.
+
+Las principales relaciones son:
+
+```text
+Usuario
+   │
+   └──► autenticación / user_id
+          │
+          ├────────► Academic
+          │
+          ├────────► AI
+          │
+          └────────► Reminders
+
+
+AI
+ │
+ └──► AcademicGateway
+          │
+          └──► Academic
+
+
+Reminders
+ │
+ └──► AcademicTaskLookup
+          │
+          └──► Academic
+```
+
+Este diseño evita introducir complejidad de red innecesaria dentro del monolito.
+
+Los límites entre módulos se mantienen mediante **puertos, adaptadores y casos de uso**, mientras que el proceso de despliegue continúa siendo único.
+
+### 7.2.7. Pruebas del despliegue actual
+
+El corte vertical se valida mediante la suite automatizada del proyecto.
+
+El estado actual registrado para esta versión es:
+
+```text
+74 passed
+```
+
+Las pruebas cubren los principales recorridos implementados de:
+
+* autenticación;
+* gestión académica;
+* integración AI–Academic;
+* gestión de recordatorios;
+* aislamiento entre usuarios;
+* notificaciones y adaptadores de Telegram.
+
+La suite permite validar el comportamiento de los módulos sin requerir PostgreSQL, Gemini ni Telegram para los escenarios que no dependen directamente de estos servicios.
+
+### 7.2.8. Límites del despliegue actual
+
+El despliegue descrito no debe interpretarse como la arquitectura productiva definitiva.
+
+Actualmente quedan fuera de este corte:
+
+* persistencia permanente mediante PostgreSQL;
+* despliegue distribuido o mediante contenedores;
+* scheduler persistente para ejecutar automáticamente los recordatorios al llegar `scheduled_at`;
+* aplicación Flutter integrada como cliente;
+* configuración productiva de Gemini;
+* configuración productiva del bot de Telegram;
+* mecanismos de observabilidad y operación propios de producción.
+
+La infraestructura actual tiene como objetivo **permitir la ejecución, integración y validación del MVP en un entorno local**, manteniendo la estructura modular necesaria para evolucionar posteriormente hacia una infraestructura productiva.
+
+### 7.2.9. Evolución prevista del despliegue
+
+La evolución prevista conserva los módulos dentro de un único backend inicialmente:
+
+```text
+                    Producción futura
+                           │
+                 ┌─────────▼─────────┐
+                 │   TAIA Backend    │
+                 │   FastAPI         │
+                 │                   │
+                 │ Usuario           │
+                 │ Academic          │
+                 │ AI                │
+                 │ Reminders         │
+                 └───────┬───────────┘
+                         │
+             ┌───────────┼──────────────┐
+             │           │              │
+             ▼           ▼              ▼
+        PostgreSQL    Gemini       Telegram
+```
+
+La sustitución de los repositorios en memoria por PostgreSQL y la activación de los adaptadores externos permitirá evolucionar desde el corte local actual hacia un despliegue persistente.
+
+No se contempla como objetivo inmediato separar los cuatro módulos en microservicios. La decisión actual mantiene un **monolito modular** para reducir la complejidad operacional durante el desarrollo del MVP.
+
+
+## 7.3. Restricciones de despliegue
+
+El despliegue debe respetar las siguientes restricciones:
+
+* El backend debe poder ejecutarse con infraestructura gratuita durante el desarrollo académico.
+* Las credenciales y secretos de servicios externos no deben almacenarse en el repositorio.
+* La persistencia definitiva debe quedar aislada mediante `TaskRepository`, permitiendo reemplazar el repositorio en memoria por PostgreSQL.
+* El proveedor de LLM debe permanecer aislado mediante un adaptador para facilitar su sustitución.
+* La arquitectura debe considerar que una infraestructura gratuita puede suspender procesos por inactividad, especialmente para las funcionalidades de notificación programada.
+* El backend debe ser el punto de control de acceso a los datos académicos; los servicios externos no acceden directamente a la base de datos.
+>>>>>>> migrate_to_dockploy

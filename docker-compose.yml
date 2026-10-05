@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Validar las variables obligatorias; el resto se carga desde .env.
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Configura DATABASE_URL para PostgreSQL}
+      TAIA_JWT_SECRET: ${TAIA_JWT_SECRET:?Configura TAIA_JWT_SECRET}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
