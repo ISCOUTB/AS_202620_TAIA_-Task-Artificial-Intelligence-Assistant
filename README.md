@@ -83,22 +83,10 @@ Los módulos están en `backend/app/modules/`:
 
 Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters`. Decisiones:
 
-- [ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
-- [ADR-0002 — Integración HTTP síncrona con OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
-- [ADR-0003 — Plataforma de despliegue de la API](docs/adr/0003-plataforma-despliegue-api.md)
-- [ADR-0004 — Plataforma de la base de datos](docs/adr/0004-plataforma-base-de-datos.md)
+[ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
 
-## Ejecución local
+## Documentación
 
-Requisitos: Python 3.12 y PostgreSQL con el usuario `taia` (contraseña `taia`) y las bases `taia` y `taia_test`, igual que en el CI.
-
-```bash
-pip install -r backend/requirements-dev.txt
-```
-
-<<<<<<< HEAD
-Desde la raíz del repositorio, en Windows:
-=======
 - [Despliegue con Docker Compose y Dokploy](docs/despliegue-dokploy.md):
   configuración del servicio, variables, dominio HTTPS y CD mediante la API de Dokploy.
 - [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
@@ -156,8 +144,7 @@ pip install -r backend/requirements.txt
 
 El proyecto cuenta con un backend ejecutable del monolito modular.
 
-Desde la raíz del repositorio, ejecutar:
->>>>>>> migrate_to_dockploy
+Desde la raíz del repositorio, en Windows:
 
 ```bat
 .\run.bat
@@ -254,4 +241,4 @@ El despliegue cuesta **39,42 USD/mes**, todo por la VM `VM.Standard.E5.Flex`, qu
 - `docs/costo_mensual.md`: estimación de costo.
 - `docs/api/openapi.json`: contrato de la API.
 - `terraform/README.md`: infraestructura en OCI.
-- `docs/ia.md`: registro del uso de inteligencia artificial.
+- `docs/ia.md`: registro del uso de inteligencia artificial..
