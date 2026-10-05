@@ -193,7 +193,7 @@ agregar campos lo rompería. Se puede medir el costo sin tocar el contrato.
 Dos defectos, ambos corregidos en `8282044`:
 
 **La clave de secreto escrita en el propio programa.** `run.bat` traía
-`TAIA_JWT_SECRET=dev-local-jwt-secret`, lo que contradice RNF-02. Traducido: el código de
+`un secreto JWT de desarrollo`, lo que contradice RNF-02. Traducido: el código de
 la puerta estaba impreso en la fachada. Ahora el script exige una clave real y aborta con
 código 1 si falta.
 
@@ -339,7 +339,7 @@ Con la base de datos local levantada en `localhost:5433` y en PowerShell:
 $env:PYTHONUTF8 = '1'
 $env:TEST_DATABASE_URL = 'postgresql+psycopg://postgres@localhost:5433/taia_test'
 $env:DATABASE_URL = 'postgresql+psycopg://postgres@localhost:5433/taia'
-$env:GEMINI_API_KEY = 'placeholder-not-used-in-tests'
+$env:GEMINI_API_KEY = '<valor-no-secreto-para-pruebas>'
 
 # suite completa: debe dar 202 passed
 python -m pytest backend/tests -q
@@ -365,7 +365,7 @@ python tools/evidencia_s8.py post-fix
 ```
 
 La corrida con clave necesita `GEMINI_API_KEY` en `backend/.env` y **no** debe
-usar `GEMINI_API_KEY=placeholder-not-used-in-tests` como la de las pruebas: el
+usar `una GEMINI_API_KEY no secreta` como la de las pruebas: el
 arnés llama a la API de verdad. Los precios se pasan por argumento y hay que
 volver a consultarlos; los de arriba son los declarados el 2026-10-04 para
 `gemini-3.5-flash-lite`.

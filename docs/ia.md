@@ -543,7 +543,7 @@ Se pidió: eliminar los valores por defecto de credenciales en `run.bat`, hacer 
 
 ### Resultado generado
 
-`run.bat` definía dos valores por defecto. `TAIA_JWT_SECRET=dev-local-jwt-secret` contradecía directamente RNF-02, cuya razón de ser es que no exista valor por defecto y que la API no arranque sin secreto, y era además un secreto de firma publicado en el repositorio. El otro era peor en silencio: `load_dotenv` no sobrescribe variables ya definidas, así que el `DATABASE_URL` de `run.bat` tenía prioridad sobre `backend/.env` y el archivo del desarrollador se ignoraba sin aviso.
+`run.bat` definía dos valores por defecto. `un secreto JWT de desarrollo` contradecía directamente RNF-02, cuya razón de ser es que no exista valor por defecto y que la API no arranque sin secreto, y era además un secreto de firma publicado en el repositorio. El otro era peor en silencio: `load_dotenv` no sobrescribe variables ya definidas, así que el `DATABASE_URL` de `run.bat` tenía prioridad sobre `backend/.env` y el archivo del desarrollador se ignoraba sin aviso.
 
 `tools/audit_boundaries.py` encontró además que `.gitignore` ignoraba `.env.example`, de modo que el archivo al que apuntaban el README, `cd.yml` y `arc42/07` no existía y no podía crearse sin `-f`. La ignorar queda anulada y la plantilla se versiona: una plantilla sin secretos es precisamente lo que pertenece al repositorio.
 

@@ -2,8 +2,8 @@
 rem Arranque local de TAIA.
 rem
 rem Este script NO fija ninguna credencial. Antes definía dos valores por defecto:
-rem   DATABASE_URL=postgresql+psycopg://taia:taia@localhost:5432/taia
-rem   TAIA_JWT_SECRET=dev-local-jwt-secret
+rem   DATABASE_URL=<configuracion-local-en-backend.env>
+rem   un secreto JWT de desarrollo
 rem El segundo contradecía RNF-02, que exige que sin secreto la API no arranque,
 rem y era además un secreto publicado en el repositorio. El primero era peor:
 rem load_dotenv() no sobrescribe variables ya definidas, así que ese valor tenía

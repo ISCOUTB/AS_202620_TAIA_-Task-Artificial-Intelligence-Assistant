@@ -12,6 +12,7 @@ from app.main import app
 from app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
 from app.shared.adapters.inbound.observability import JsonFormatter, metrics
 from helpers import register_and_login
+from helpers import TEST_PASSWORD
 
 client = TestClient(app)
 
@@ -64,7 +65,7 @@ def test_log_never_contains_request_body_or_token(taia_logs):
     raw = [JsonFormatter().format(record) for record in taia_logs.records if record.name == "taia"]
     assert raw
     token = headers["Authorization"].removeprefix("Bearer ")
-    assert all("password123" not in line and token not in line for line in raw)
+    assert all(TEST_PASSWORD not in line and token not in line for line in raw)
 
 
 def test_metrics_reports_p95_against_scenario_targets():

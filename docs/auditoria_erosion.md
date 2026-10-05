@@ -138,7 +138,7 @@ inservible.
 
 Efecto secundario que hubo que aceptar: `app.main` ahora necesita
 `GEMINI_API_KEY` para importarse, así que la suite de pruebas la necesita. En CI
-se define `GEMINI_API_KEY: placeholder-not-used-in-tests`. No es una credencial:
+se define `una GEMINI_API_KEY de prueba no secreta`. No es una credencial:
 ninguna prueba sale a la red, porque el LLM se sustituye por `FakeLLM` o por
 `httpx.MockTransport`.
 

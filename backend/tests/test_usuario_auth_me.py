@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.helpers import TEST_PASSWORD
 
 
 client = TestClient(app)
@@ -15,13 +16,13 @@ def _base_de_datos_limpia(clean_db) -> None:
 def _register_and_login():
     register = client.post(
         "/users",
-        json={"full_name": "Ana", "email": "ana@example.com", "password": "password123"},
+        json={"full_name": "Ana", "email": "ana@example.com", "password": TEST_PASSWORD},
     )
     assert register.status_code == 201
 
     login = client.post(
         "/users/login",
-        json={"email": "ana@example.com", "password": "password123"},
+        json={"email": "ana@example.com", "password": TEST_PASSWORD},
     )
     assert login.status_code == 200
     return login.json()["access_token"]
@@ -59,4 +60,3 @@ def test_get_me_with_invalid_token_returns_401():
 
     assert response.status_code == 401
     assert response.headers["WWW-Authenticate"] == "Bearer"
-    
