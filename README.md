@@ -6,10 +6,10 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 
 | | |
 |---|---|
-| API | http://157.137.215.57:8000 |
-| Health check | http://157.137.215.57:8000/health → `200 {"status": "ok"}` |
-| Métrica de latencia | http://157.137.215.57:8000/metrics |
-| Documentación interactiva | http://157.137.215.57:8000/docs |
+| API | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io |
+| Health check | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health → `200 {"status": "ok"}` |
+| Métrica de latencia | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/metrics |
+| Documentación interactiva | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs |
 | Respaldo en Render (alternativa del taller) | https://taia-backend-latest.onrender.com/health |
 
 La API corre en una VM de Oracle Cloud con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa el CI se despliega automáticamente. El detalle está en [arc42 §7](docs/arc42/07-vista-de-despliegue.md).
@@ -17,7 +17,7 @@ La API corre en una VM de Oracle Cloud con Docker y usa Supabase PostgreSQL. Cad
 Comprobación desde cualquier red:
 
 ```bash
-curl -sS -o /dev/null -w 'http=%{http_code} tiempo=%{time_total}s\n' http://157.137.215.57:8000/health
+curl -sS -o /dev/null -w 'http=%{http_code} tiempo=%{time_total}s\n' http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health
 ```
 
 ## Integrantes
