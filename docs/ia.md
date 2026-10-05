@@ -705,3 +705,110 @@ secciones de los ADR del grupo, sin atribuir votos a los demás integrantes.
 100/100 comprobaciones HTTP correctas; 25 tareas sintéticas eliminadas
 lógicamente, dos cuentas y una materia sintéticas restantes.
 [Regresión reproducible del NULL](evaluacion_ia/diagnostico_conversations_null.md).
+
+## Entrada 017 — Revisión S9, decisión ante fallo del proveedor y medición sobre 100 casos
+
+Fecha: 2026-10-04 en Colombia (2026-10-05 UTC). Herramienta: Claude Code
+(Anthropic), con lectura del repositorio, ejecución local de comandos y
+consultas de solo lectura a GitHub, PyPI y GHCR. Base: `05b2bfd`. Regla
+fijada por el estudiante: el asistente no hace commits. El estudiante revisó
+y confirmó ADR-0007 y el cambio de C4-C2 en `4bfbadb`.
+
+Solicitud: verificar la entrega contra la matriz de la evidencia S9 y cerrar
+los criterios en «No cumple»: la medición contrastada con el umbral y el
+componente generativo.
+
+### Aceptado
+
+- **Revisión de la matriz con evidencia reproducida, no solo citada.**
+  - La prueba de D-S8-01 se volvió a poner en rojo restaurando
+    `handle_message.py` de `74a5126`: 7 fallos y 9 aciertos. Con el código
+    actual, 16 aciertos.
+  - Las corridas de CI `37153176450` (rojo) y `37153179644` (verde) se
+    comprobaron en la API de GitHub.
+  - Las 9 dependencias añadidas desde S5 existen en PyPI, y sus hashes del lock
+    coinciden con PyPI.
+- **ADR-0007**, con el comportamiento ante fallo o degradación del proveedor,
+  escrito a partir del código: respuesta fija, sin reintentos, sin escritura y
+  sin `503`, porque el contrato de `/ai/message` solo declara `200` y `422`.
+  Se dejó como «Propuesto» para que lo ratificara el equipo, que lo aceptó el
+  2026-10-05 junto con ADR-0006; en ese ADR se retiró la frase que atribuía
+  la ratificación al asistente.
+- **Ampliación del conjunto de evaluación a 100 casos** con 61 mensajes nuevos
+  y 110 campos etiquetados, siguiendo una convención explícita: fechas contra
+  `AHORA`, materia solo si está separada, y `null` deliberado para detectar
+  invenciones. Cada caso nuevo se marcó `"revision": "pendiente"`; el
+  estudiante revisó las etiquetas el 2026-10-05, sin cambios, y pasaron a
+  `"revisado"`.
+- **Corrida real** con `gemini-3.5-flash-lite`:
+  [resultado_s1_100.json](evaluacion_ia/resultado_s1_100.json).
+- **Contraste explícito con los umbrales** en
+  [contraste_umbrales.md](evaluacion_ia/contraste_umbrales.md), enlazado
+  desde A-03.
+
+### Corregido
+
+- **Hipótesis del asistente sobre el CI.** Atribuyó el fallo a finales de línea
+  CRLF por un conteo con `grep $'\r'` que en Git Bash no se interpretaba.
+  `cat -A` mostró que los archivos usan LF, y la hipótesis se descartó antes de
+  editar nada.
+- **C4-C2.** El asistente añadió al diagrama el modelo, una tabla de costo,
+  latencia y fallo, y una descripción larga. El estudiante señaló que
+  sobrecargaba el diagrama: quedó solo «≈ 0,0003 USD/op» en la relación con
+  Gemini y una línea de fuente debajo.
+- **Finales de línea del conjunto.** `write_text` en Windows escribió CRLF; se
+  normalizó a LF para que el diff solo contenga las líneas nuevas.
+- **El documento de contraste** se escribió primero con las mediciones
+  históricas (82,05 % de intención en 39 mensajes) y se reescribió con la corrida
+  sobre 100 casos, conservando la histórica como referencia.
+
+### Rechazado o limitado, con motivo
+
+- **No editar `ci.yml` sin ver el log.** El paso «Validate Compose and build
+  deployment image» falla en ≤ 1 s desde `447ca6f`, pero GitHub exige sesión
+  para ver el log. Un cambio por intuición podía ocultar la causa. El
+  estudiante lo dejó fuera de la prioridad de esta entrega.
+- **No marcar ADR-0007 como «Aceptado».** La decisión es del equipo; ADR-0006
+  ya muestra el problema de una ratificación hecha por el asistente.
+- **No medir sin clave.** Mientras `GEMINI_API_KEY` estuvo vacía no se escribió
+  ninguna cifra nueva. La corrida se hizo cuando el estudiante configuró la
+  clave y la autorizó.
+- **No sobrescribir el resultado histórico.** El nuevo se guardó en un archivo
+  aparte.
+- **No tratar el 91,8 % como S1 cumplido.** Mide extracción, no lo registrado en
+  PostgreSQL. La corrida se hizo antes de la revisión de las 61 etiquetas; como
+  la revisión no cambió ninguna, el resultado se mantiene.
+- **No corregir en esta entrada los defectos encontrados.** Quedan registrados
+  para que el equipo decida, cada uno con su prueba roja y verde:
+  - el vocabulario de estado («completadas» descarta el filtro en Academic);
+  - la referencia con artículo, que no coincide con `icontains`;
+  - `last_usage()`, que repite el consumo de la llamada anterior tras un
+    `LLMError`;
+  - el timeout de 20 s, por encima del umbral de 7 s de S3.
+
+### Verificación
+
+- `tools/eval_llm.py --dry-run`: 100 casos, «dataset valido».
+  `test_eval_llm_dataset.py` y `test_eval_llm_measurements.py`: 12 aprobadas.
+- **Corrida real** (2026-10-05 04:17 UTC, sobre `4bfbadb` con el árbol
+  modificado):
+  - Campos: **101 de 110 (91,8 %)**, frente a un umbral de 90 %.
+  - Intención: 88 de 99.
+  - Latencia del tramo del modelo: p95 de 2 191,0 ms y máximo de 20 209,5 ms.
+    `c008` agotó el timeout.
+  - Costo: 0,03378 USD, unos 0,000341 USD por operación.
+- **Por campo:**
+  - título, 37 de 38 (`c006` es probablemente una etiqueta errónea del conjunto
+    original);
+  - fecha, 37 de 37;
+  - materia, 14 de 14;
+  - referencia, 12 de 15;
+  - **estado, 1 de 6**.
+- **Defectos comprobados en el código:**
+  - `task_management.py:44` traduce solo `done`, `completed`, `pending` y
+    `overdue`;
+  - `sqlalchemy_task_repository.py:90` filtra con `icontains`.
+- **Barrido de credenciales** sobre el árbol y el historial: sin claves
+  reales. `resultado_s1_100.json` no contiene la clave.
+- La suite completa no se volvió a ejecutar: los cambios de esta entrada solo
+  tocan `docs/`.

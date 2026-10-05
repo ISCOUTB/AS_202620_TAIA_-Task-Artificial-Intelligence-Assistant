@@ -2,11 +2,10 @@
 
 ## Estado
 
-Aceptado.
-
-Ratificación técnica realizada por el asistente por delegación explícita de
-Deiner en esta sesión. Esta aceptación corresponde a la decisión descrita;
-no certifica mediciones pendientes ni implica que los cambios estén desplegados.
+Aceptado por el equipo el 2026-10-05, tras revisar la propuesta redactada con
+apoyo de IA (ver [ia.md, entradas 015 y 016](../ia.md)). La aceptación
+corresponde a la decisión descrita; no implica que los cambios estén
+desplegados.
 
 ## Contexto
 

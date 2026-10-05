@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto. Pendiente de ratificación por el equipo.
+Aceptado por el equipo el 2026-10-05, tras revisar la propuesta redactada con apoyo de IA (ver [ia.md, entrada 017](../ia.md)).
 
 ## Contexto
 
@@ -79,7 +79,7 @@ El comportamiento queda repartido así:
 
 ### Negativas
 
-- **El timeout de 20 s supera el umbral de S3 (7 s).** Si el proveedor se cuelga sin responder, el estudiante espera hasta 20 s antes de ver el mensaje de fallo. Sobre el tramo del modelo, el p95 medido es 1 618,8 ms ([resultado_s1_s3.json](../evaluacion_ia/resultado_s1_s3.json)), así que el timeout solo afecta a la cola. Aun así, ajustarlo por debajo de 7 s queda como revisión pendiente de esta decisión.
+- **El timeout de 20 s supera el umbral de S3 (7 s).** Si el proveedor se cuelga sin responder, el estudiante espera hasta 20 s antes de ver el mensaje de fallo. Sobre el tramo del modelo, el p95 medido es 1 618,8 ms ([resultado_s1_s3.json](../evaluacion_ia/resultado_s1_s3.json)), así que el timeout solo afecta a la cola. El equipo acepta ese riesgo con el valor actual; bajar el timeout por debajo de 7 s exigiría revisar esta decisión.
 - **El mensaje no distingue causas.** Un `429` (esperar unos segundos), un `404` (modelo retirado, requiere intervención) y una caída se ven igual para el estudiante.
 - **El fallo no queda registrado.** El caso de uso captura `LLMError` sin escribir en el log, y el adaptador solo conserva el tipo del error de transporte. Diagnosticar una degradación en el despliegue exige hoy reproducirla (arc42 §11.6).
 - **El registro de consumo puede repetirse tras un fallo.** `GeminiLLM.last_usage()` solo se actualiza cuando la llamada tiene éxito, así que tras un `LLMError` el adaptador HTTP vuelve a registrar el consumo de la llamada anterior como si fuera de esta petición. Eso distorsiona la estimación de costo por operación a partir de los logs.

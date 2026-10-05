@@ -51,10 +51,10 @@ La confirmación de una escritura llega como texto libre del estudiante y se com
 
 ## 9.8. ADR-0006 — Contratos de consulta y composición de casos de uso
 
-Aceptado por delegación explícita de Deiner al asistente. Academic traduce los
+Aceptado por el equipo. Academic traduce los
 filtros de su contrato público y los controladores reciben casos de uso
 compuestos en `main.py`. Ver [ADR-0006](../adr/0006-fronteras-y-evaluacion-verificable.md).
 
 ## 9.9. ADR-0007 — Comportamiento ante fallo o degradación del proveedor de lenguaje
 
-Propuesto. Ante un fallo de Gemini (red, timeout, `429`, `404`, `5xx` o respuesta malformada), el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo de reintento, sin reintentar y sin escribir nada. Se descartaron los reintentos, porque consumen la misma cuota que provoca el fallo más frecuente; un proveedor de respaldo, porque exige otro adaptador y otra evaluación; un intérprete por reglas, por S1; y un `503`, porque el contrato de `/ai/message` no lo declara. Ver [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md).
+Aceptado por el equipo. Ante un fallo de Gemini (red, timeout, `429`, `404`, `5xx` o respuesta malformada), el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo de reintento, sin reintentar y sin escribir nada. Se descartaron los reintentos, porque consumen la misma cuota que provoca el fallo más frecuente; un proveedor de respaldo, porque exige otro adaptador y otra evaluación; un intérprete por reglas, por S1; y un `503`, porque el contrato de `/ai/message` no lo declara. Ver [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md).
