@@ -33,7 +33,8 @@ iniciar Uvicorn. PostgreSQL debe estar disponible y la base de datos debe existi
 5. Desactivar **Auto Deploy** de Git si se usará el workflow CD descrito abajo,
    para que los pushes no generen despliegues duplicados antes de terminar CI.
 6. Pulsar **Deploy**. Revisar la ejecución de migraciones, los logs y el estado
-   healthy del servicio. Consultar `https://TU_DOMINIO/health` y `/docs`.
+   healthy del servicio. Consultar `http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health`
+   y `http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs`.
 
 El repositorio no requiere claves SSH, una IP fija de Oracle, un archivo
 `~/taia.env` ni una imagen TAIA publicada en GHCR para desplegar.
@@ -64,6 +65,10 @@ La API despliega la rama configurada en Dokploy; el SHA del título sirve para
 trazabilidad, no fija la revisión. Si `main` cambia entre la comprobación del
 workflow y el clone, Dokploy puede obtener el commit más reciente. Proteger
 `main` con CI obligatorio antes de integrar cambios.
+
+El servicio actualmente desplegado está disponible en
+`http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io`, con documentación
+interactiva en `/docs` y health check en `/health`.
 
 ## Ejecutar con Compose localmente
 

@@ -173,9 +173,18 @@ La documentación del proyecto se encuentra en la carpeta docs/.
 - docs/calidad/ — atributos y escenarios de calidad.
 - docs/adr/ — decisiones arquitectónicas.
 
+La API desplegada está disponible en:
+
+- API: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
+- Documentación interactiva: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs
+- Health check: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health
+
 ## Requisitos
 
 ### Docker Compose / Dokploy
+
+El despliegue actual de la API está publicado en
+`http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io`.
 
 El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
 `DATABASE_URL` (PostgreSQL) y `TAIA_JWT_SECRET` siguiendo `.env.example`.

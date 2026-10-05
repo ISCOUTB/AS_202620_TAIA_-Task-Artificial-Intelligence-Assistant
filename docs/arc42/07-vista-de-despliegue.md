@@ -47,11 +47,19 @@ TAIA está previsto como un sistema con un backend central desplegado como una �
 
 El backend concentra la lógica de aplicación y actúa como frontera entre los clientes, los servicios externos y la persistencia. Gemini se utiliza como proveedor externo de interpretación de lenguaje natural y PostgreSQL como mecanismo de persistencia.
 
-El despliegue se plantea inicialmente sobre una infraestructura gratuita, con Render o AWS como alternativas. La decisión definitiva del proveedor de infraestructura queda pendiente de documentarse mediante un ADR específico.
+El despliegue actual utiliza Docker Compose administrado por Dokploy. La API
+publicada está disponible en el dominio sslip.io documentado arriba.
 
 ## 7.2. Corte vertical actualmente ejecutable
 
-El corte vertical actualmente ejecutable corresponde al **backend de TAIA ejecutado como una única aplicación FastAPI**, desplegada localmente mediante Uvicorn.
+El despliegue remoto actual utiliza Docker Compose y Dokploy. La API publicada
+está disponible en:
+
+```text
+http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
+```
+
+El corte vertical actualmente ejecutable corresponde al **backend de TAIA ejecutado como una única aplicación FastAPI**. Puede ejecutarse localmente mediante Uvicorn y está desplegado para acceso remoto mediante Docker Compose y Dokploy.
 
 Este corte integra los cuatro módulos actualmente implementados:
 
