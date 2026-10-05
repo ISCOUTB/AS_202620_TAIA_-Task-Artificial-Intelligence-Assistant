@@ -44,3 +44,7 @@ La API se despliega en una VM `VM.Standard.E5.Flex` de Oracle Cloud con Docker, 
 ## 9.6. ADR-0004 — Plataforma de la base de datos
 
 La base de datos es Supabase PostgreSQL en el plan Free. Se descartaron PostgreSQL dentro de la VM (los datos quedarían atados a una sola VM, sin copias de seguridad) y Render Postgres Free (expira a los 30 días). Ver [ADR-0004](../adr/0004-plataforma-base-de-datos.md).
+
+## 9.7. ADR-0005 — Normalización de la confirmación escrita en español
+
+La confirmación de una escritura llega como texto libre del estudiante y se compara contra conjuntos cerrados. Se normalizan acentos, mayúsculas y signos antes de comparar, de modo que `Sí`, `SÍ`, `sí.` y `¡Sí!` equivalen a `si`. Se descartó enumerar variantes a mano y se descartó pedir al modelo de lenguaje que clasifique la respuesta, porque la confirmación es la última barrera antes de escribir y no debe depender de un componente no determinista. Ver [ADR-0005](../adr/0005-normalizacion-confirmacion-espanol.md).

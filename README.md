@@ -83,7 +83,11 @@ Los módulos están en `backend/app/modules/`:
 
 Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters`. Decisiones:
 
-[ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
+- [ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
+- [ADR-0002 — Integración HTTP síncrona con OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
+- [ADR-0003 — Plataforma de despliegue de la API](docs/adr/0003-plataforma-despliegue-api.md)
+- [ADR-0004 — Plataforma de la base de datos](docs/adr/0004-plataforma-base-de-datos.md)
+- [ADR-0005 — Normalización de la confirmación escrita en español](docs/adr/0005-normalizacion-confirmacion-espanol.md)
 
 ## Documentación
 
@@ -150,7 +154,15 @@ Desde la raíz del repositorio, en Windows:
 .\run.bat
 ```
 
-`run.bat` usa `postgresql+psycopg://taia:taia@localhost:5432/taia` y un secreto JWT de desarrollo si no hay `DATABASE_URL` ni `TAIA_JWT_SECRET`, aplica las migraciones y levanta Uvicorn en http://127.0.0.1:8000. Las variables disponibles están en [`.env.example`](.env.example); para desarrollo se copian a `backend/.env`.
+`run.bat` no fija ninguna credencial. Lee la configuración de `backend/.env`, comprueba que exista y que `GEMINI_API_KEY` tenga valor, aplica las migraciones y levanta Uvicorn en http://127.0.0.1:8000. Las variables y su significado están en [`.env.example`](.env.example), que sí se versiona porque no contiene secretos.
+
+La plantilla se copia una vez:
+
+```bat
+copy .env.example backend\.env
+```
+
+Si el arranque se rechaza con `GEMINI_API_KEY vacío`, la clave se obtiene en https://aistudio.google.com/apikey. Es obligatoria: la composición del adaptador de Gemini ocurre en `app/main.py`, así que sin ella el proceso no arranca en lugar de servir un servicio inservible.
 
 ## Pruebas
 
@@ -161,8 +173,10 @@ python -m pytest
 Las pruebas de integración con PostgreSQL se omiten si no está `TEST_DATABASE_URL`:
 
 ```bash
-TEST_DATABASE_URL=postgresql+psycopg://taia:taia@localhost:5432/taia_test python -m pytest
+TEST_DATABASE_URL=postgresql+psycopg://usuario@localhost:5432/taia_test python -m pytest
 ```
+
+`TEST_DATABASE_URL` debe apuntar a una base distinta de la de desarrollo: `backend/tests/conftest.py` ejecuta `alembic downgrade base` y `TRUNCATE` al iniciar la sesión.
 
 Contrato de la API (lo mismo que ejecuta el CI):
 

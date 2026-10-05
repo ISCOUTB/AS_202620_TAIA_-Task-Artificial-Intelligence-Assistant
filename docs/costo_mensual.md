@@ -27,11 +27,33 @@ Estimación del costo de operar TAIA tal como está desplegado (ver [arc42 §7](
 | Base de datos | Supabase PostgreSQL, plan Free | Tamaño: 100 × 1,5 MB = 150 MB por semestre. Salida hacia la API: 150 000 × 5 KB = 0,75 GB/mes | 500 MB de base de datos y 5 GB de salida por mes | 0 USD |
 | Registro de imágenes | GitHub Container Registry | Una imagen por despliegue | Gratis para paquetes públicos | 0 USD |
 | CI/CD | GitHub Actions | Un run de CI y uno de CD por push a `main` | Minutos gratuitos en repositorios públicos | 0 USD |
-| LLM | Gemini API (`gemini-2.5-flash`), cuando se configure `GEMINI_API_KEY` | 1 000 llamadas por día | Cuota gratuita por proyecto, visible en Google AI Studio | 0 USD dentro de la cuota |
+| LLM | Gemini API (`gemini-3.5-flash-lite`), cuando se configure `GEMINI_API_KEY` | 1 000 llamadas por día | Cuota gratuita por proyecto, visible en Google AI Studio | 0 USD dentro de la cuota |
 | Telegram Bot API | Servidores de Telegram | Mensajes del bot | Gratuita | 0 USD |
 | **Total** | | | | **39,42 USD/mes** |
 
 Precio de lista de la VM: 0,03 USD por OCPU-hora y 0,002 USD por GB-hora para la serie E5 (ver [Holori, E5.Flex](https://calculator.holori.com/oci/vm/VM.Standard.E5.Flex-4c32g): 4 OCPU y 32 GB = 0,184 USD/h). El valor real se confirma en *Billing & Cost Management > Cost Analysis* de la cuenta de OCI.
+
+### El costo del LLM ya no es una estimación
+
+La fila del LLM decía «cuando se configure `GEMINI_API_KEY`». La clave está
+configurada en local y la llamada se midió: el **2026-10-04**, 39 llamadas a
+`gemini-3.5-flash-lite` costaron **0,012178 USD** en total, es decir **0,000312
+USD por operación** —418 tokens de entrada y 75 de salida de media—, a los
+precios declarados de 0,30 USD y 2,50 USD por millón de tokens. La fuente y la
+fecha de consulta están en
+[`entrega_s8.md`](entrega_s8.md) y el detalle en
+[`evaluacion_ia/resultado_s1_s3.json`](evaluacion_ia/resultado_s1_s3.json).
+
+Los precios **no** están en el código: `tools/eval_llm.py` los recibe por
+argumento, porque cambian con frecuencia y una tabla desactualizada daría un
+costo falsamente preciso.
+
+Con el volumen supuesto de 1 000 llamadas al día, el costo del LLM seguiría
+dentro de la cuota gratuita: 1 000 × 0,000312 USD son 0,31 USD al día, y solo
+importa si la cuota del proyecto se agota. Aun así, **la cuota se mide por
+cadencia, no solo por volumen**: el nivel gratuito tiene un límite de llamadas
+por minuto que el producto todavía no maneja. Ver la sección 11.6 de
+[`arc42/11`](arc42/11-riesgos-y-deudas-tecnicas.md).
 
 ## 3. Punto de ruptura de cada capa gratuita
 
@@ -43,8 +65,14 @@ Precio de lista de la VM: 0,03 USD por OCPU-hora y 0,002 USD por GB-hora para la
 | Supabase: salida | 5 GB/mes | 0,75 GB/mes | Unos 660 estudiantes con el mismo uso |
 | Supabase: inactividad | Pausa tras 1 semana sin actividad | La API recibe peticiones a diario | Una semana sin uso (por ejemplo, vacaciones); se reactiva desde el panel |
 | Gemini | Peticiones por día del proyecto (según AI Studio) | 1 000 llamadas por día | Cuando las llamadas diarias superen la cuota del proyecto; es la primera cuota que se rompe al crecer, porque crece con cada mensaje |
+| Gemini | Peticiones por **minuto** del nivel gratuito | 1 000 al día, pero en ráfaga | Mucho antes que la cuota diaria: una ráfaga produce `LLMError` aunque el día entero lleve pocas llamadas. Es el límite que ya se rompió una vez al medir S1 |
 
 La pieza que se rompe primero por volumen es el tamaño de la base de datos en Supabase (500 MB), seguida de la cuota diaria de Gemini. La VM no depende del volumen: con 0,2 peticiones por segundo en hora pico, 1 OCPU no se satura.
+
+Lo que ya se rompió no fue por volumen, sino por **cadencia**: las diez llamadas
+consecutivas del arnés de evaluación superaron el límite por minuto. Ese es un
+límite que no aparece en la tabla de quotas por volumen, y por eso tiene su
+propio riesgo documentado.
 
 ## 4. Cómo bajar el costo
 

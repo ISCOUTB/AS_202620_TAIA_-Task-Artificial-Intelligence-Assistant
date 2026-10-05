@@ -5,6 +5,7 @@ TEST_DATABASE_URL. Sin esa variable, las pruebas que la solicitan se omiten.
 """
 
 import os
+import secrets
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,7 @@ TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 # RNF-02 exige el secreto JWT; las pruebas usan uno propio.
-os.environ.setdefault("TAIA_JWT_SECRET", "test-only-jwt-secret-with-enough-length")
+os.environ.setdefault("TAIA_JWT_SECRET", secrets.token_urlsafe(48))
 
 if TEST_DATABASE_URL:
     # Se ejecuta antes de que los módulos de prueba importen app.main.

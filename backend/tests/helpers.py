@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import uuid
+import os
+import secrets
 from datetime import timedelta
 
 from app.shared.clock import now_bogota
 
+TEST_PASSWORD = os.getenv("TAIA_TEST_PASSWORD") or secrets.token_urlsafe(32)
+
 
 def register_and_login(client, email: str | None = None) -> dict[str, str]:
     email = email or f"user-{uuid.uuid4().hex[:10]}@example.com"
-    created = client.post("/users", json={"full_name": "Estudiante", "email": email, "password": "password123"})
+    created = client.post("/users", json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD})
     assert created.status_code == 201, created.text
-    login = client.post("/users/login", json={"email": email, "password": "password123"})
+    login = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     assert login.status_code == 200, login.text
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 

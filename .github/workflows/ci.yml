@@ -13,7 +13,7 @@ jobs:
         image: postgres:18
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_INITDB_ARGS: --encoding=UTF8
         ports:
           - 5432:5432
@@ -24,7 +24,17 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/taia
+      DATABASE_URL: postgresql://postgres@localhost:5432/taia
+      # Sin esta variable, backend/tests/conftest.py omite en silencio toda
+      # prueba de integracion con PostgreSQL y el CI pasa sin ejercitar la
+      # capa de datos. Apunta a una base separada: conftest.py ejecuta
+      # "alembic downgrade base" al iniciar la sesion.
+      TEST_DATABASE_URL: postgresql://postgres@localhost:5432/taia_test
+      # Marcador de posicion. `app.main` compone el adaptador de Gemini al
+      # importar, asi que sin la variable el fallo aparece al importar y no
+      # como un 503 por peticion. Ninguna prueba llama a la API real: el LLM se
+      # sustituye por FakeLLM o por httpx.MockTransport.
+      GEMINI_API_KEY: ${{ github.run_id }}
 
     steps:
       - name: Checkout
@@ -50,13 +60,15 @@ jobs:
           python -m pip install pip==26.2.1
           pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
 
-      - name: Create database if needed
+      - name: Create databases if needed
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'taia'" | grep -q 1 || \
-          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE taia;"
+          for db in taia taia_test; do
+            psql -h localhost -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1 || \
+            psql -h localhost -U postgres -c "CREATE DATABASE $db;"
+          done
 
-      - name: Run real API contract/integration suite
-        run: python -m pytest backend/tests/test_api_contract.py -q
+      - name: Run full test suite
+        run: python -m pytest backend/tests -q
 
       - name: Regenerate API client from OpenAPI contract
         run: python tools/generate_api_client.py

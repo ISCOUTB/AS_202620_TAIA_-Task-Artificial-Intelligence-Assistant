@@ -2,13 +2,14 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.modules.usuario.adapters.inbound import api
+from tests.helpers import TEST_PASSWORD
 
 client = TestClient(app)
 
 
 def _register_and_login(email: str):
-    client.post("/users", json={"full_name": "Ana", "email": email, "password": "password123"})
-    response = client.post("/users/login", json={"email": email, "password": "password123"})
+    client.post("/users", json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD})
+    response = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     return response.json()["access_token"]
 
 

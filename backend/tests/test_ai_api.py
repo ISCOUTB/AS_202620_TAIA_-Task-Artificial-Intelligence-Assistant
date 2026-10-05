@@ -9,6 +9,7 @@ from app.modules.ai.adapters.outbound.in_memory_conversation_store import InMemo
 from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
 from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
 from app.modules.ai.domain.messages import ExtractedTaskData, Interpretation, Intent
+from tests.helpers import TEST_PASSWORD
 
 client = TestClient(app)
 TZ = timezone(timedelta(hours=-5))
@@ -17,12 +18,12 @@ TZ = timezone(timedelta(hours=-5))
 def register_and_login(email: str) -> dict[str, str]:
     created = client.post(
         "/users",
-        json={"full_name": "Estudiante", "email": email, "password": "password123"},
+        json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD},
     )
     assert created.status_code == 201
     login = client.post(
         "/users/login",
-        json={"email": email, "password": "password123"},
+        json={"email": email, "password": TEST_PASSWORD},
     )
     assert login.status_code == 200
     return {"Authorization": f"Bearer {login.json()['access_token']}"}

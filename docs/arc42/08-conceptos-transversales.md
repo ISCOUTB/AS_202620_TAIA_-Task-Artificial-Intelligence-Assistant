@@ -115,7 +115,7 @@ La auditoría S6 identificó cuatro situaciones de dependencia que fueron correg
 | **V-01** | Academic, AI y Reminders dependían de funciones del adaptador HTTP de Usuario. | Se creó `IdentityService` en la capa de aplicación de Usuario y los consumidores dejaron de importar el adaptador HTTP. | **Corregida** |
 | **V-02** | Reminders obtenía directamente el repositorio interno de Academic. | Se creó `AcademicTaskLookup` y su servicio de aplicación; Reminders consume ese contrato. | **Corregida** |
 | **V-03** | AI obtenía directamente el repositorio interno y la entidad de dominio de Academic. | Se creó `AcademicTaskManagement` y su servicio de aplicación; `AcademicGatewayAdapter` consume DTOs del contrato. | **Corregida** |
-| **V-04** | La composición de dependencias requería una revisión final. | `main.py` concentra la configuración de implementaciones concretas y la auditoría final no encontró accesos directos prohibidos entre contextos. | **Corregida** |
+| **V-04** | La composición de dependencias requería una revisión final. | `main.py` configura `IdentityService`, `AcademicTaskLookup`, `AcademicTaskManagement` y el caso de uso de IA. La comprobación es automática: `python tools/audit_boundaries.py`. Quedan abiertas E-02 (Reminders y `structure_api` aún componen en su adaptador HTTP) y E-05 (AI importa `TaskStatus` del dominio de Academic); ver [auditoria_erosion.md](../auditoria_erosion.md). | **Corregida** |
 
 La suite automatizada del backend queda en **74 pruebas aprobadas** después de las correcciones.
 

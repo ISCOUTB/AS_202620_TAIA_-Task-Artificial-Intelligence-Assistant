@@ -1,0 +1,24 @@
+{
+  "alcance": "confirmacion de escrituras, sin red y sin Gemini",
+  "no_mide": [
+    "S1 interpretacion de intencion del modelo de lenguaje",
+    "S3 latencia de extremo a extremo"
+  ],
+  "afirmativas": {
+    "total": 364,
+    "aceptadas": 364,
+    "exactitud": 1.0,
+    "rechazadas_indebidamente": []
+  },
+  "negativas": {
+    "total": 20,
+    "escrituras_indebidas": [],
+    "tasa_escritura_indebida": 0.0
+  },
+  "latencia_confirmacion_ms": {
+    "muestras": 384,
+    "p50": 0.0142,
+    "p95": 0.0338,
+    "maximo": 0.1686
+  }
+}

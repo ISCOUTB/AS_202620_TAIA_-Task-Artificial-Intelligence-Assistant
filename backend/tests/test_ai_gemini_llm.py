@@ -216,3 +216,127 @@ def test_from_env_reads_key_and_model(monkeypatch):
 
     assert "gemini-test:generateContent" in seen["url"]
     assert seen["key"] == "k"
+
+
+# -- S5: medicion del consumo por llamada -------------------------------
+
+
+def test_last_usage_is_none_before_any_call():
+    llm = _gemini(lambda request: _reply("hola"))
+
+    assert llm.last_usage() is None
+
+
+def test_usage_metadata_is_recorded_after_a_call():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"parts": [{"text": "respuesta"}]},
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {
+                    "promptTokenCount": 812,
+                    "candidatesTokenCount": 96,
+                    "totalTokenCount": 908,
+                },
+            },
+        )
+
+    llm = _gemini(handler)
+    llm.answer_system_help("que puedes hacer?")
+
+    usage = llm.last_usage()
+    assert usage is not None
+    assert usage.prompt_tokens == 812
+    assert usage.candidates_tokens == 96
+    assert usage.total_tokens == 908
+    assert usage.finish_reason == "STOP"
+    assert usage.truncated is False
+    assert usage.model
+
+
+def test_truncated_answer_is_flagged():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {"parts": [{"text": "respuesta"}]},
+                        "finishReason": "MAX_TOKENS",
+                    }
+                ],
+                "usageMetadata": {
+                    "promptTokenCount": 100,
+                    "candidatesTokenCount": 400,
+                    "totalTokenCount": 500,
+                },
+            },
+        )
+
+    llm = _gemini(handler)
+    llm.answer_system_help("que puedes hacer?")
+
+    usage = llm.last_usage()
+    assert usage is not None
+    assert usage.truncated is True
+
+
+def test_missing_usage_metadata_does_not_break_the_call():
+    """Un detalle de facturacion ausente no puede tumbar la conversacion."""
+
+    llm = _gemini(lambda request: _reply({"intent": "unknown", "confidence": 0.1}))
+    result = llm.interpret(REQUEST, NOW)
+
+    assert result.intent is Intent.UNKNOWN
+    usage = llm.last_usage()
+    assert usage is not None
+    assert usage.total_tokens == 0
+    assert usage.finish_reason is None
+
+
+def test_total_tokens_is_reconstructed_when_absent():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [{"content": {"parts": [{"text": "ok"}]}}],
+                "usageMetadata": {"promptTokenCount": 30, "candidatesTokenCount": 12},
+            },
+        )
+
+    llm = _gemini(handler)
+    llm.answer_system_help("hola")
+
+    usage = llm.last_usage()
+    assert usage is not None
+    assert usage.total_tokens == 42
+
+
+def test_boolean_in_usage_metadata_is_not_counted_as_a_token():
+    """`True` es un int en Python: contarlo como 1 token falsearia la medicion."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [{"content": {"parts": [{"text": "ok"}]}}],
+                "usageMetadata": {
+                    "promptTokenCount": True,
+                    "candidatesTokenCount": False,
+                    "totalTokenCount": 0,
+                },
+            },
+        )
+
+    llm = _gemini(handler)
+    llm.answer_system_help("hola")
+
+    usage = llm.last_usage()
+    assert usage is not None
+    assert usage.prompt_tokens == 0
+    assert usage.candidates_tokens == 0

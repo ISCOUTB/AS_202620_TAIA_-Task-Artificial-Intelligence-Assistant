@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
+import unicodedata
 
 from app.modules.ai.application import replies
 from app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters
@@ -16,7 +17,7 @@ from app.modules.ai.application.ports.academic_gateway import (
     TaskDataRejected,
 )
 from app.modules.ai.application.ports.conversation_store import ConversationStore
-from app.modules.ai.application.ports.llm import LLMError, LLMPort
+from app.modules.ai.application.ports.llm import LLMError, LLMUsage, LLMPort
 from app.modules.ai.domain.conversation import Conversation
 from app.modules.ai.domain.messages import (
     COLOMBIA_TZ,
@@ -34,6 +35,21 @@ from app.modules.ai.domain.messages import (
 _YES = {"si", "s", "dale", "ok", "confirmo", "yes", "listo", "hazlo"}
 _NO = {"no", "n", "cancela", "cancelar"}
 
+#_Un estudiante escribe "Sí", "SÍ", "¡Sí!" o "sí." tan seguido como "si".
+_MARCAS = " \t\n\r.,;:!?¿¡\"'«»()…[]{}–—"
+
+
+def _normalizar_respuesta(text: str) -> str:
+    """Reduce la respuesta a una forma comparable: sin tildes, sin signos, en minusculas.
+
+    Sin esto, "Sí" se convierte en "sí" con `.lower()` y no coincide con _YES,
+    que solo contiene "si" sin tilde: la tarea nunca se creaba.
+    """
+
+    descompuesto = unicodedata.normalize("NFKD", text)
+    sin_acentos = "".join(c for c in descompuesto if not unicodedata.combining(c))
+    return sin_acentos.casefold().strip(_MARCAS)
+
 
 class HandleUserMessageUseCase:
     """Punto de entrada del asistente para un mensaje de un estudiante."""
@@ -49,6 +65,11 @@ class HandleUserMessageUseCase:
         self._academic = academic
         self._conversations = conversations
         self._now = now or (lambda: datetime.now(COLOMBIA_TZ))
+
+    def last_usage(self) -> LLMUsage | None:
+        """Consumo de la ultima llamada al modelo, para medir el costo (S5)."""
+
+        return self._llm.last_usage()
 
     def execute(self, request: IncomingRequest) -> AssistantReply:
         text = request.text.strip()
@@ -170,7 +191,7 @@ class HandleUserMessageUseCase:
     def _resolve_pending(
         self, user_id: str, text: str, conversation: Conversation
     ) -> AssistantReply:
-        answer = text.lower().strip(" .!?")
+        answer = _normalizar_respuesta(text)
         action = conversation.pending
         conversation.clear_pending()
 
