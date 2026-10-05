@@ -10,12 +10,13 @@ from app.modules.academic.application.ports.inbound.task_management import (
     AcademicTaskData,
     AcademicTaskManagement,
     AcademicTaskPage,
+    AcademicTaskQuery,
 )
 from app.modules.academic.application.ports.outbound.subject_repository import SubjectRepository
 from app.modules.academic.application.ports.outbound.task_repository import TaskQuery, TaskRepository
 from app.modules.academic.application.use_cases.manage_tasks import ManageTasksUseCase
 from app.modules.academic.domain.entities.subject import normalize_text
-from app.modules.academic.domain.entities.task import Task, TaskType
+from app.modules.academic.domain.entities.task import Task, TaskType, TaskStatus
 from app.shared.clock import Clock
 
 
@@ -38,7 +39,16 @@ class AcademicTaskManagementService(AcademicTaskManagement):
         task = self._use_case.create(user_id, subject_id, title, due_at, TaskType(type), description)
         return self._to_data(task, user_id)
 
-    def list_tasks(self, user_id: UUID, query: TaskQuery) -> AcademicTaskPage:
+    def list_tasks(self, user_id: UUID, query: AcademicTaskQuery | TaskQuery) -> AcademicTaskPage:
+        if isinstance(query, AcademicTaskQuery):
+            aliases = {"done": TaskStatus.COMPLETED, "completed": TaskStatus.COMPLETED,
+                       "pending": TaskStatus.PENDING, "overdue": TaskStatus.OVERDUE}
+            query = TaskQuery(
+                subject_id=query.subject_id,
+                status=aliases.get((query.status or "").lower()),
+                due_from=query.due_from, due_to=query.due_to,
+                text=query.text, limit=query.limit, offset=query.offset,
+            )
         tasks, total = self._use_case.list(user_id, query)
         names = self._subject_names(user_id)
         now = self._use_case.now()

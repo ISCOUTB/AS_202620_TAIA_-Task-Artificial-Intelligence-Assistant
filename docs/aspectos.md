@@ -1,5 +1,17 @@
 # Aspectos del sistema
 
+Evidencia adicional de A-03 y A-05:
+[cierre local de E-02/E-05, regresiones y límites de las mediciones](cierre_matriz_local.md),
+[ADR-0006](adr/0006-fronteras-y-evaluacion-verificable.md) y
+[pruebas de frontera y propiedad](../backend/tests/test_s8_closure.py).
+
+Actualización verificable de A-03/A-05:
+[regresión del 500 de conversaciones y corrección local](evaluacion_ia/diagnostico_conversations_null.md),
+[aislamiento HTTP: 100/100 comprobaciones](evaluacion_ia/aislamiento_c9dae4fb4f.json).
+Este último resultado no cubre consultas con LLM. El resultado histórico del
+modelo mide intención en 39 mensajes y latencia del adaptador, no S1/S3 completos;
+el costo por operación no corresponde al escenario S5 (sustitución de proveedor).
+
 | ID   | Aspecto                                               | Requisito                                | C4                                         | ADR                                           | Código                                                                                                                                     | Pruebas                                                                                                                                                                                                                                   | Evidencia                                                                                       |
 | ---- | ----------------------------------------------------- | ---------------------------------------- | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | A-01 | Captura inteligente de información académica          | RF-01, RF-02                             | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/)                                                                        | [`test_academic_task_domain.py`](../backend/tests/test_academic_task_domain.py), [`test_academic_tasks_api.py`](../backend/tests/test_academic_tasks_api.py)                                                                      | [Prueba del corte vertical](../backend/tests/test_academic_tasks_api.py)                    |

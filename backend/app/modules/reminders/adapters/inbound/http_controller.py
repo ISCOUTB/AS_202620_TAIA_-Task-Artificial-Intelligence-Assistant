@@ -1,26 +1,15 @@
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from app.modules.academic.application.ports.inbound.task_lookup import get_academic_task_lookup
 from app.shared.adapters.inbound.auth import CurrentUserId
-from app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
-from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
 from app.modules.reminders.application.errors import ReminderNotFoundError
 from app.modules.reminders.application.ports.inbound.reminder_ports import (
     CreateReminderPort, DeleteReminderPort, EditReminderPort, GetReminderPort,
     ListRemindersPort, MarkReminderCompletedPort, ScheduleNotificationPort, SendNotificationPort,
 )
-from app.modules.reminders.application.use_cases.create_reminder import CreateReminderUseCase
-from app.modules.reminders.application.use_cases.delete_reminder import DeleteReminderUseCase
-from app.modules.reminders.application.use_cases.edit_reminder import EditReminderUseCase
-from app.modules.reminders.application.use_cases.get_reminder import GetReminderUseCase
-from app.modules.reminders.application.use_cases.list_reminders import ListRemindersUseCase
-from app.modules.reminders.application.use_cases.mark_reminder_completed import MarkReminderCompletedUseCase
-from app.modules.reminders.application.use_cases.schedule_notification import ScheduleNotificationUseCase
-from app.modules.reminders.application.use_cases.send_notification import SendNotificationUseCase
-from app.modules.reminders.adapters.outbound.notification_provider import get_notification_sender
 from app.modules.reminders.domain.entities import Reminder
 
 router = APIRouter(prefix='/reminders', tags=['reminders'])
@@ -42,30 +31,63 @@ class ReminderResponse(BaseModel):
     def from_domain(cls, reminder: Reminder) -> 'ReminderResponse':
         return cls.model_validate(reminder.model_dump())
 
-def _task_lookup() -> AcademicTaskLookupAdapter:
-    academic_lookup = get_academic_task_lookup()
-    return AcademicTaskLookupAdapter(academic_lookup.get_summary)
+@dataclass(frozen=True)
+class ReminderUseCases:
+    create: CreateReminderPort
+    list: ListRemindersPort
+    get: GetReminderPort
+    edit: EditReminderPort
+    delete: DeleteReminderPort
+    complete: MarkReminderCompletedPort
+    schedule_notification: ScheduleNotificationPort
+    send_notification: SendNotificationPort
+
+
+_use_cases: ReminderUseCases | None = None
+
+
+def configure_reminder_use_cases(use_cases: ReminderUseCases) -> None:
+    global _use_cases
+    _use_cases = use_cases
+
+
+def _configured() -> ReminderUseCases:
+    if _use_cases is None:
+        raise RuntimeError("Los casos de uso de Reminders no están configurados.")
+    return _use_cases
+
 
 def get_create_use_case() -> CreateReminderPort:
-    return CreateReminderUseCase(get_reminder_repository(), _task_lookup())
+    return _configured().create
+
+
 def get_list_use_case() -> ListRemindersPort:
-    return ListRemindersUseCase(get_reminder_repository())
+    return _configured().list
+
+
 def get_get_use_case() -> GetReminderPort:
-    return GetReminderUseCase(get_reminder_repository())
+    return _configured().get
+
+
 def get_edit_use_case() -> EditReminderPort:
-    return EditReminderUseCase(get_reminder_repository())
+    return _configured().edit
+
+
 def get_delete_use_case() -> DeleteReminderPort:
-    return DeleteReminderUseCase(get_reminder_repository())
+    return _configured().delete
+
+
 def get_complete_use_case() -> MarkReminderCompletedPort:
-    return MarkReminderCompletedUseCase(get_reminder_repository())
+    return _configured().complete
 
 
 def get_schedule_notification_use_case() -> ScheduleNotificationPort:
-    return ScheduleNotificationUseCase(get_reminder_repository())
+    return _configured().schedule_notification
 
 
 def get_send_notification_use_case() -> SendNotificationPort:
-    return SendNotificationUseCase(get_notification_sender(), get_reminder_repository())
+    return _configured().send_notification
+
 
 class ErrorResponse(BaseModel):
     '''Cuerpo devuelto por el adaptador cuando la petición falla.'''
@@ -155,12 +177,13 @@ class NotificationResponse(BaseModel):
 def notify_reminder(
     reminder_id: UUID,
     user_id: CurrentUserId,
+    read_use_case: Annotated[GetReminderPort, Depends(get_get_use_case)],
     schedule_use_case: Annotated[ScheduleNotificationPort, Depends(get_schedule_notification_use_case)],
     send_use_case: Annotated[SendNotificationPort, Depends(get_send_notification_use_case)],
 ) -> NotificationResponse:
     # First enforce ownership using the same application use case as the CRUD read path.
     try:
-        reminder = GetReminderUseCase(get_reminder_repository()).execute(reminder_id, user_id)
+        reminder = read_use_case.execute(reminder_id, user_id)
         notification = schedule_use_case.execute(reminder.id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error

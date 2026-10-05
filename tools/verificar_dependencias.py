@@ -45,6 +45,9 @@ _PAT_GEMINI = "AI" + "za" + r"[0-9A-Za-z_\-]{35}"
 _PAT_POOLER = r"pooler" + r"\." + "supabase" + r"\." + "com"
 
 PATRONES_CREDENCIAL = {
+    "URL PostgreSQL con contraseña literal": re.compile(
+        r"postgres(?:ql)?(?:\+[a-z0-9]+)?://[^\s:/@]+:[^\s@<>{}$%]+@"
+    ),
     "api key de Gemini": re.compile(_PAT_GEMINI),
     "URL de pooler de Supabase": re.compile(_PAT_POOLER),
     "credencial de OCI": re.compile(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----"),
@@ -118,8 +121,9 @@ def buscar_credenciales() -> list[dict]:
     """Escanea los archivos versionados buscando credenciales de produccion."""
 
     salida = subprocess.run(
-        ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT
-    ).stdout.splitlines()
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        capture_output=True, text=True, encoding="utf-8", cwd=ROOT, check=True
+    ).stdout.split("\0")
     hallazgos: list[dict] = []
     for relativo in salida:
         if not relativo or not _versionada(relativo):

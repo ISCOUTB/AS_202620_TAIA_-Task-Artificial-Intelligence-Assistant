@@ -48,3 +48,9 @@ La base de datos es Supabase PostgreSQL en el plan Free. Se descartaron PostgreS
 ## 9.7. ADR-0005 — Normalización de la confirmación escrita en español
 
 La confirmación de una escritura llega como texto libre del estudiante y se compara contra conjuntos cerrados. Se normalizan acentos, mayúsculas y signos antes de comparar, de modo que `Sí`, `SÍ`, `sí.` y `¡Sí!` equivalen a `si`. Se descartó enumerar variantes a mano y se descartó pedir al modelo de lenguaje que clasifique la respuesta, porque la confirmación es la última barrera antes de escribir y no debe depender de un componente no determinista. Ver [ADR-0005](../adr/0005-normalizacion-confirmacion-espanol.md).
+
+## 9.8. ADR-0006 — Contratos de consulta y composición de casos de uso
+
+Aceptado por delegación explícita de Deiner al asistente. Academic traduce los
+filtros de su contrato público y los controladores reciben casos de uso
+compuestos en `main.py`. Ver [ADR-0006](../adr/0006-fronteras-y-evaluacion-verificable.md).

@@ -9,12 +9,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.modules.academic.adapters.outbound.repository_provider import (
-    get_academic_period_repository,
-    get_schedule_block_repository,
-    get_subject_repository,
-    get_task_repository,
-)
 from app.modules.academic.application.errors import (
     AcademicPeriodNotFoundError,
     AliasNotFoundError,
@@ -39,16 +33,34 @@ schedule_router = APIRouter(prefix="/academic/schedule-blocks", tags=["academic"
 period_router = APIRouter(prefix="/academic/period", tags=["academic"])
 
 
+_subjects: ManageSubjectsUseCase | None = None
+_schedule: ManageScheduleUseCase | None = None
+_period: ManageAcademicPeriodUseCase | None = None
+
+
+def configure_structure_use_cases(subjects: ManageSubjectsUseCase,
+                                  schedule: ManageScheduleUseCase,
+                                  period: ManageAcademicPeriodUseCase) -> None:
+    global _subjects, _schedule, _period
+    _subjects, _schedule, _period = subjects, schedule, period
+
+
 def get_subjects_use_case() -> ManageSubjectsUseCase:
-    return ManageSubjectsUseCase(get_subject_repository(), get_schedule_block_repository(), get_task_repository())
+    if _subjects is None:
+        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+    return _subjects
 
 
 def get_schedule_use_case() -> ManageScheduleUseCase:
-    return ManageScheduleUseCase(get_subject_repository(), get_schedule_block_repository())
+    if _schedule is None:
+        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+    return _schedule
 
 
 def get_period_use_case() -> ManageAcademicPeriodUseCase:
-    return ManageAcademicPeriodUseCase(get_academic_period_repository())
+    if _period is None:
+        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+    return _period
 
 
 SubjectsUseCase = Annotated[ManageSubjectsUseCase, Depends(get_subjects_use_case)]

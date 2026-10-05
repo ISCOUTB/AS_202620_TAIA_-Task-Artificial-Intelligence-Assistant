@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 
 from app.modules.usuario.adapters.outbound.provider import repository as usuario_repository, token_service as usuario_token_service
 from app.modules.usuario.application.ports.inbound.identity import configure_identity_service
@@ -53,6 +53,47 @@ from app.modules.academic.adapters.inbound.structure_api import (
 from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from app.modules.usuario.adapters.inbound.api import router as usuario_router
 from app.shared.adapters.inbound.observability import install_observability
+from app.shared.adapters.inbound.readiness import require_database
+
+from app.modules.academic.adapters.inbound.structure_api import configure_structure_use_cases
+from app.modules.academic.adapters.outbound.repository_provider import (
+    get_academic_period_repository, get_schedule_block_repository,
+)
+from app.modules.academic.application.use_cases.manage_subjects import ManageSubjectsUseCase
+from app.modules.academic.application.use_cases.manage_schedule import ManageScheduleUseCase
+from app.modules.academic.application.use_cases.manage_academic_period import ManageAcademicPeriodUseCase
+from app.modules.reminders.adapters.inbound.http_controller import (
+    ReminderUseCases, configure_reminder_use_cases,
+)
+from app.modules.reminders.adapters.outbound.academic_task_lookup_adapter import AcademicTaskLookupAdapter
+from app.modules.reminders.adapters.outbound.repository_provider import get_reminder_repository
+from app.modules.reminders.adapters.outbound.notification_provider import get_notification_sender
+from app.modules.academic.application.ports.inbound.task_lookup import get_academic_task_lookup
+from app.modules.reminders.application.use_cases.create_reminder import CreateReminderUseCase
+from app.modules.reminders.application.use_cases.list_reminders import ListRemindersUseCase
+from app.modules.reminders.application.use_cases.get_reminder import GetReminderUseCase
+from app.modules.reminders.application.use_cases.edit_reminder import EditReminderUseCase
+from app.modules.reminders.application.use_cases.delete_reminder import DeleteReminderUseCase
+from app.modules.reminders.application.use_cases.mark_reminder_completed import MarkReminderCompletedUseCase
+from app.modules.reminders.application.use_cases.schedule_notification import ScheduleNotificationUseCase
+from app.modules.reminders.application.use_cases.send_notification import SendNotificationUseCase
+
+configure_structure_use_cases(
+    ManageSubjectsUseCase(get_subject_repository(), get_schedule_block_repository(), academic_repository),
+    ManageScheduleUseCase(get_subject_repository(), get_schedule_block_repository()),
+    ManageAcademicPeriodUseCase(get_academic_period_repository()),
+)
+reminder_repository = get_reminder_repository()
+configure_reminder_use_cases(ReminderUseCases(
+    create=CreateReminderUseCase(reminder_repository, AcademicTaskLookupAdapter(get_academic_task_lookup().get_summary)),
+    list=ListRemindersUseCase(reminder_repository),
+    get=GetReminderUseCase(reminder_repository),
+    edit=EditReminderUseCase(reminder_repository),
+    delete=DeleteReminderUseCase(reminder_repository),
+    complete=MarkReminderCompletedUseCase(reminder_repository),
+    schedule_notification=ScheduleNotificationUseCase(reminder_repository),
+    send_notification=SendNotificationUseCase(get_notification_sender(), reminder_repository),
+))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -85,7 +126,7 @@ app.include_router(reminders_router)
 
 
 @app.get("/health")
-def health():
+def health(database_ready: None = Depends(require_database)):
     return {"status": "ok"}
 
 

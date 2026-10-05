@@ -11,9 +11,10 @@ iniciar Uvicorn. PostgreSQL debe estar disponible y la base de datos debe existi
    el repositorio Git y la rama `main`, con Compose Path `./docker-compose.yml`.
    Usar modo Compose: el modo Stack no admite `build`.
 2. Copiar `.env.example` en **Environment** y completar `DATABASE_URL` y
-   `TAIA_JWT_SECRET`. Usar `postgresql+psycopg://usuario:password@host:5432/taia`,
-   con usuario/password codificados para URL cuando tengan caracteres especiales.
-   Las variables de Gemini y Telegram son opcionales; habilitan esas integraciones.
+   `TAIA_JWT_SECRET` y `GEMINI_API_KEY`. Obtener la conexión de PostgreSQL del
+   proveedor y guardarla únicamente en Environment; codificar sus credenciales
+   para URL cuando tengan caracteres especiales.
+   Gemini es obligatorio al arrancar; Telegram es opcional.
    Dokploy guarda Environment en `.env`, junto a `docker-compose.yml`.
    Compose carga ese archivo mediante `env_file: .env` y pasa sus variables
    al entorno del contenedor; el backend las lee con `os.getenv`.

@@ -1,5 +1,17 @@
 # Auditoría de erosión de contexto y propiedad de datos — S8
 
+## Actualización local 2026-10-04
+
+E-02 y E-05 están corregidos en el árbol de trabajo: la composición de estructura
+académica y recordatorios pasa a `main.py`; AI usa `AcademicTaskQuery` y
+Academic traduce los estados. La línea base ahora está vacía y el auditor
+reporta 0 infracciones. E-06 incorpora una comprobación de PostgreSQL en
+`/health`, verificada con un driver simulado; no comprueba proveedores externos.
+
+[Correcciones, pruebas rojas/verdes y limitaciones](cierre_matriz_local.md).
+Las secciones siguientes conservan el diagnóstico histórico de S8; sus estados
+“abierta” y “parcial” describen la situación anterior a este incremento.
+
 Esta auditoría complementa [`auditoria_violaciones_s6.md`](auditoria_violaciones_s6.md).
 Aquel documento cerró V-01 a V-04 sobre la lectura del código. Este comprueba
 que ese cierre **sigue siendo cierto** y que la composición de dependencias no

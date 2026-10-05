@@ -13,10 +13,9 @@ import uuid
 from app.modules.academic.application.ports.inbound.task_management import (
     AcademicTaskData,
     AcademicTaskManagement,
+    AcademicTaskQuery,
     get_academic_task_management,
 )
-from app.modules.academic.application.ports.outbound.task_repository import TaskQuery
-from app.modules.academic.domain.entities.task import TaskStatus
 from app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters, TaskView
 from app.modules.ai.application.ports.academic_gateway import (
     AcademicGateway,
@@ -26,15 +25,6 @@ from app.modules.ai.application.ports.academic_gateway import (
 
 # Tope de tareas que el agente consulta de una vez.
 _MAX_TASKS = 100
-
-# El LLM puede describir el estado con otras palabras.
-_STATUS_ALIASES = {
-    "done": TaskStatus.COMPLETED,
-    "completed": TaskStatus.COMPLETED,
-    "pending": TaskStatus.PENDING,
-    "overdue": TaskStatus.OVERDUE,
-}
-
 
 class AcademicGatewayAdapter(AcademicGateway):
     """Implementación real de AcademicGateway sobre los casos de uso de Academic."""
@@ -67,9 +57,9 @@ class AcademicGatewayAdapter(AcademicGateway):
             if subject is None:
                 return []
             subject_id = subject.subject_id
-        query = TaskQuery(
+        query = AcademicTaskQuery(
             subject_id=subject_id,
-            status=_STATUS_ALIASES.get((filters.status or "").lower()),
+            status=filters.status,
             due_from=filters.due_from,
             due_to=filters.due_to,
             text=filters.text,

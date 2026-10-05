@@ -42,12 +42,11 @@ jobs:
 
       - name: Validate Compose and build deployment image
         env:
-          DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/taia
-          TAIA_JWT_SECRET: ci-only-compose-validation-secret
+          DATABASE_URL: postgresql+psycopg://postgres@postgres:5432/taia
         run: |
           cp .env.example .env
+          export TAIA_JWT_SECRET="$(openssl rand -hex 32)"
           docker compose config --quiet
-          docker compose -f docker-compose.yml -f docker-compose.local.yml config --quiet
           docker compose build backend
 
       - name: Set up Python
@@ -69,6 +68,11 @@ jobs:
 
       - name: Run full test suite
         run: python -m pytest backend/tests -q
+
+      - name: Verify boundaries and credentials
+        run: |
+          python tools/audit_boundaries.py
+          python tools/verificar_dependencias.py
 
       - name: Regenerate API client from OpenAPI contract
         run: python tools/generate_api_client.py

@@ -34,7 +34,7 @@ MODULES = ROOT / "backend" / "app" / "modules"
 PERSISTENCIA = ("Repository", "repository", "Store", "store", "Session", "session")
 
 # Contextos whose concrete composition must live in main.py.
-CONTEXTOS = sorted(p.name for p in MODULES.iterdir() if p.is_dir())
+CONTEXTOS = sorted(p.name for p in MODULES.iterdir() if p.is_dir() and not p.name.startswith("_"))
 
 # Objetos de FastAPI que viven a nivel de modulo sin ser dependencias: son
 # declaraciones de ruta o de seguridad, no colaboradores del caso de uso.

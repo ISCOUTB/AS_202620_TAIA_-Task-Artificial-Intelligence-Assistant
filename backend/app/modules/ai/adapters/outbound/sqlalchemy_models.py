@@ -29,7 +29,8 @@ class ConversationModel(Base):
     # Referencia lógica a users.id (otro módulo): sin FOREIGN KEY.
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     # Objeto de valor PendingAction serializado; la base de datos no lo consulta por dentro.
-    pending_action: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # La ausencia debe ser SQL NULL para coincidir con expires_at y su CHECK.
+    pending_action: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     pending_action_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

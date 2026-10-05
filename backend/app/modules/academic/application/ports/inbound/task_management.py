@@ -9,6 +9,19 @@ from app.modules.academic.application.ports.outbound.task_repository import Task
 
 
 @dataclass(frozen=True)
+class AcademicTaskQuery:
+    """Filtros públicos; los consumidores no conocen enums ni repositorios."""
+
+    subject_id: UUID | None = None
+    status: str | None = None
+    due_from: datetime | None = None
+    due_to: datetime | None = None
+    text: str | None = None
+    limit: int = 20
+    offset: int = 0
+
+
+@dataclass(frozen=True)
 class AcademicTaskData:
     """Datos académicos publicados sin exponer la entidad de dominio."""
 
@@ -54,7 +67,7 @@ class AcademicTaskManagement(Protocol):
     ) -> AcademicTaskData:
         ...
 
-    def list_tasks(self, user_id: UUID, query: TaskQuery) -> AcademicTaskPage:
+    def list_tasks(self, user_id: UUID, query: AcademicTaskQuery | TaskQuery) -> AcademicTaskPage:
         ...
 
     def get_task(self, task_id: UUID, user_id: UUID) -> AcademicTaskData:

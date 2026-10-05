@@ -616,3 +616,92 @@ Hallazgos de la revisión:
 * **Llamada única de comprobación**, ejecutada por el estudiante: intención `create_task`, título `taller`, fecha 2026-10-09 (UTC-5), correcta para «el viernes» siendo domingo 2026-10-04.
 * **Limitaciones que se declaran en `entrega_s8.md`:** S1 mide intención sobre 39 mensajes mientras el escenario habla de campos en 100; S3 mide el tramo del modelo desde el equipo del estudiante, no de extremo a extremo; y el arnés no aplica el descarte previo que el propio dataset declara para el caso vacío `x002`.
 * **Pendiente:** el arnés no registra en el JSON qué modelo produjo el resultado. El modelo, la fecha y los precios están declarados en el documento maestro, no en el artefacto. Cerrarlo es trabajo futuro del arnés.
+
+## Entrada 015 — Cierre local de pendientes de la matriz
+
+Fecha: 2026-10-04. Herramienta: asistente de programación con lectura del
+repositorio, edición local y ejecución de pruebas. Rama base main,
+`a3e5679`. No se crearon commits ni se desplegó.
+
+Solicitud: cerrar lo posible con evidencia real, respetando la matriz;
+pedir autorización antes de instalar. El usuario autorizó las dependencias
+Python en un entorno virtual y rechazó instalar un servidor PostgreSQL.
+
+### Aceptado
+
+- Inyectar los casos de uso de Academic y Reminders desde `main.py`, manteniendo
+  el contrato HTTP y las funciones de dependencia usadas por las pruebas.
+- Publicar `AcademicTaskQuery`: Academic es propietario de la traducción de
+  estados y AI consume el contrato público.
+- Comprobar PostgreSQL en `/health`, sin llamadas a proveedores pagados.
+- Comparar los campos etiquetados en el evaluador y registrar procedencia.
+
+### Corregido
+
+- El evaluador anterior solo contaba intención; ahora cuenta títulos, fechas,
+  materias, referencias y filtros cuando están etiquetados, también ante errores.
+- El mensaje vacío se excluye antes de llamar al modelo. Los fallos se incluyen
+  en el número de intentos y en su latencia; precios omitidos no significan costo cero.
+- Se retiraron credenciales de ejemplo reaparecidas en CI y documentación.
+  El escáner incluye archivos nuevos no ignorados y URLs con contraseña.
+- S4 corresponde a aislamiento y S5 a sustitución del proveedor. Las etiquetas
+  históricas de costo y disponibilidad no equivalen a esos escenarios.
+
+### Rechazado o limitado, con motivo
+
+- No instalar PostgreSQL: decisión explícita del usuario. No se ejecutaron
+  migraciones ni pruebas sobre la base de aplicación.
+- No declarar S1 aprobado: faltan 100 mensajes de referencia revisados,
+  comprobación de campos persistidos y una ejecución con Gemini real.
+- No declarar S3 aprobado con tiempos del adaptador: falta el recorrido al canal.
+- No fabricar una evaluación generativa ni retocar el JSON histórico:
+  `GEMINI_API_KEY` no está configurada para esta sesión.
+
+### Verificación
+
+[Informe reproducible](cierre_matriz_local.md):
+105 pruebas sin base de datos aprobadas, incluidas cuatro del contrato HTTP.
+Tres regresiones de frontera fallan sobre los archivos originales de HEAD y
+pasan con la corrección. Auditoría actual sin excepciones aceptadas.
+La suite completa con PostgreSQL queda pendiente; no se presenta como ejecutada.
+
+## Entrada 016 — Ratificación delegada y diagnóstico con API real
+
+Fecha: 2026-10-05 UTC (2026-10-04 en Colombia). Sin commits ni despliegue.
+El usuario autorizó completar lo posible mediante la API y delegó expresamente
+la ratificación técnica del ADR-0006. Se registró como Aceptado, siguiendo las
+secciones de los ADR del grupo, sin atribuir votos a los demás integrantes.
+
+### Aceptado
+
+- Medir aislamiento con cuentas y tareas sintéticas: 100 accesos HTTP,
+  50 propios y 50 ajenos, con umbral de rechazo ajeno del 100 %.
+- Usar los logs proporcionados por el operador para explicar el 500 de
+  `/ai/message`; no solicitar claves ni copiar identificadores de usuarios.
+- Serializar la ausencia de acción como SQL NULL con `JSONB(none_as_null=True)`.
+
+### Corregido
+
+- `ConversationModel.pending_action` enviaba `Jsonb(None)`, incompatible con
+  el CHECK cuando el vencimiento era SQL NULL. Se corrigió el binding sin
+  debilitar la integridad de la base.
+- La prueba inicial empleaba el dialecto genérico; se ajustó al dialecto
+  psycopg efectivo antes de tomar evidencia. El rojo válido fue
+  `assert Jsonb(None) is None`: 1 fallo y 1 acierto; tras corregir, 2 aciertos.
+
+### Rechazado o limitado, con motivo
+
+- No quitar el CHECK ni aplicar reparaciones SQL sobre datos de aplicación:
+  el defecto observado está en la serialización del adaptador.
+- No equiparar 100 accesos HTTP con 100 mensajes académicos: esa medición
+  aporta evidencia parcial de S4, no cumple S1 ni el aislamiento con LLM.
+- No dar por desplegado el árbol local ni considerar el 500 una evaluación
+  válida del modelo. Falta desplegar y repetir el recorrido conversacional.
+- No crear un ADR de no incorporar IA: el sistema sí incorpora Gemini.
+
+### Verificación
+
+[Resultados y límites](cierre_matriz_local.md#actualización-tras-acceso-a-la-api-y-logs-del-operador):
+100/100 comprobaciones HTTP correctas; 25 tareas sintéticas eliminadas
+lógicamente, dos cuentas y una materia sintéticas restantes.
+[Regresión reproducible del NULL](evaluacion_ia/diagnostico_conversations_null.md).

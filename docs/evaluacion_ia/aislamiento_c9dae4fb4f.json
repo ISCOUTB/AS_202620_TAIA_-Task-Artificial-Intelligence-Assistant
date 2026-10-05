@@ -1,0 +1,917 @@
+{
+  "fecha_utc": "2026-10-05T03:21:50.318070+00:00",
+  "base_url": "http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io",
+  "escenario": "S4 - API HTTP, lectura y edición entre dos usuarios",
+  "alcance": "25 tareas; 50 accesos propios y 50 ajenos; sin consulta conversacional LLM",
+  "casos": [
+    {
+      "caso": 0,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 818.6
+    },
+    {
+      "caso": 0,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 1023.7
+    },
+    {
+      "caso": 0,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 857.7
+    },
+    {
+      "caso": 0,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 678.1
+    },
+    {
+      "caso": 1,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 716.4
+    },
+    {
+      "caso": 1,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 512.7
+    },
+    {
+      "caso": 1,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1016.7
+    },
+    {
+      "caso": 1,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 452.8
+    },
+    {
+      "caso": 2,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 751.9
+    },
+    {
+      "caso": 2,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 433.8
+    },
+    {
+      "caso": 2,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 998.4
+    },
+    {
+      "caso": 2,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 433.7
+    },
+    {
+      "caso": 3,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 649.8
+    },
+    {
+      "caso": 3,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 436.5
+    },
+    {
+      "caso": 3,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 894.0
+    },
+    {
+      "caso": 3,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 439.4
+    },
+    {
+      "caso": 4,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 697.5
+    },
+    {
+      "caso": 4,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 436.8
+    },
+    {
+      "caso": 4,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1113.3
+    },
+    {
+      "caso": 4,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 523.4
+    },
+    {
+      "caso": 5,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 671.3
+    },
+    {
+      "caso": 5,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 524.9
+    },
+    {
+      "caso": 5,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 987.2
+    },
+    {
+      "caso": 5,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 435.2
+    },
+    {
+      "caso": 6,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 692.0
+    },
+    {
+      "caso": 6,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 716.9
+    },
+    {
+      "caso": 6,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1131.9
+    },
+    {
+      "caso": 6,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 717.2
+    },
+    {
+      "caso": 7,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 701.9
+    },
+    {
+      "caso": 7,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 434.2
+    },
+    {
+      "caso": 7,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 848.8
+    },
+    {
+      "caso": 7,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 454.7
+    },
+    {
+      "caso": 8,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 818.9
+    },
+    {
+      "caso": 8,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 522.6
+    },
+    {
+      "caso": 8,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1014.5
+    },
+    {
+      "caso": 8,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 435.4
+    },
+    {
+      "caso": 9,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 715.8
+    },
+    {
+      "caso": 9,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 519.7
+    },
+    {
+      "caso": 9,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 994.8
+    },
+    {
+      "caso": 9,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 503.1
+    },
+    {
+      "caso": 10,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 753.8
+    },
+    {
+      "caso": 10,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 481.8
+    },
+    {
+      "caso": 10,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 922.8
+    },
+    {
+      "caso": 10,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 589.5
+    },
+    {
+      "caso": 11,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 831.6
+    },
+    {
+      "caso": 11,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 703.0
+    },
+    {
+      "caso": 11,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 929.6
+    },
+    {
+      "caso": 11,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 433.6
+    },
+    {
+      "caso": 12,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 819.0
+    },
+    {
+      "caso": 12,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 519.8
+    },
+    {
+      "caso": 12,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 930.3
+    },
+    {
+      "caso": 12,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 700.6
+    },
+    {
+      "caso": 13,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 698.1
+    },
+    {
+      "caso": 13,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 510.9
+    },
+    {
+      "caso": 13,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1118.9
+    },
+    {
+      "caso": 13,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 519.5
+    },
+    {
+      "caso": 14,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 716.5
+    },
+    {
+      "caso": 14,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 718.2
+    },
+    {
+      "caso": 14,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 889.4
+    },
+    {
+      "caso": 14,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 645.9
+    },
+    {
+      "caso": 15,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 797.2
+    },
+    {
+      "caso": 15,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 659.1
+    },
+    {
+      "caso": 15,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1001.6
+    },
+    {
+      "caso": 15,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 616.4
+    },
+    {
+      "caso": 16,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 821.8
+    },
+    {
+      "caso": 16,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 714.1
+    },
+    {
+      "caso": 16,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1126.6
+    },
+    {
+      "caso": 16,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 615.7
+    },
+    {
+      "caso": 17,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 819.8
+    },
+    {
+      "caso": 17,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 519.2
+    },
+    {
+      "caso": 17,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1016.6
+    },
+    {
+      "caso": 17,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 495.4
+    },
+    {
+      "caso": 18,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 760.9
+    },
+    {
+      "caso": 18,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 476.3
+    },
+    {
+      "caso": 18,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1013.1
+    },
+    {
+      "caso": 18,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 514.7
+    },
+    {
+      "caso": 19,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1136.3
+    },
+    {
+      "caso": 19,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 607.3
+    },
+    {
+      "caso": 19,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1125.2
+    },
+    {
+      "caso": 19,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 715.6
+    },
+    {
+      "caso": 20,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 804.0
+    },
+    {
+      "caso": 20,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 439.2
+    },
+    {
+      "caso": 20,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1007.3
+    },
+    {
+      "caso": 20,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 520.0
+    },
+    {
+      "caso": 21,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 816.0
+    },
+    {
+      "caso": 21,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 518.8
+    },
+    {
+      "caso": 21,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 1120.6
+    },
+    {
+      "caso": 21,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 546.2
+    },
+    {
+      "caso": 22,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 819.9
+    },
+    {
+      "caso": 22,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 451.6
+    },
+    {
+      "caso": 22,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 984.2
+    },
+    {
+      "caso": 22,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 507.5
+    },
+    {
+      "caso": 23,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 788.9
+    },
+    {
+      "caso": 23,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 643.3
+    },
+    {
+      "caso": 23,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 999.3
+    },
+    {
+      "caso": 23,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 740.3
+    },
+    {
+      "caso": 24,
+      "actor": "autorizado",
+      "metodo": "GET",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 723.7
+    },
+    {
+      "caso": 24,
+      "actor": "ajeno",
+      "metodo": "GET",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 512.1
+    },
+    {
+      "caso": 24,
+      "actor": "autorizado",
+      "metodo": "PATCH",
+      "status": 200,
+      "correcto": true,
+      "latencia_ms": 978.8
+    },
+    {
+      "caso": 24,
+      "actor": "ajeno",
+      "metodo": "PATCH",
+      "status": 404,
+      "correcto": true,
+      "latencia_ms": 456.0
+    }
+  ],
+  "total": 100,
+  "correctos": 100,
+  "umbral_rechazo_ajenos": 1.0,
+  "cumple_corte_http": true,
+  "cumple_escenario_con_llm": null,
+  "limpieza_tareas": [
+    {
+      "id": "b979f89d-6eec-4f15-a458-8bb461ee1262",
+      "status": 204
+    },
+    {
+      "id": "ef9e8290-a2f6-4312-8e28-46d6019d6b64",
+      "status": 204
+    },
+    {
+      "id": "b6ab081b-af5d-4cf4-88b6-9439a3032b74",
+      "status": 204
+    },
+    {
+      "id": "00a8bae9-3511-4ffc-a87d-9175b891744e",
+      "status": 204
+    },
+    {
+      "id": "efb34a77-bb0f-4317-be0e-f1143bd119d6",
+      "status": 204
+    },
+    {
+      "id": "dcf5faec-fc41-42d5-9c18-4888ca7a32f2",
+      "status": 204
+    },
+    {
+      "id": "f2a3ab08-2b00-4ecc-9f4b-9533466f087c",
+      "status": 204
+    },
+    {
+      "id": "b6f7990c-abac-46d6-a850-a4ebfd417af8",
+      "status": 204
+    },
+    {
+      "id": "68f835b8-2042-46dd-9933-85d0d204444c",
+      "status": 204
+    },
+    {
+      "id": "1aad50bf-475f-432d-8fcc-83f875a57421",
+      "status": 204
+    },
+    {
+      "id": "143be8d6-eece-4634-9d5a-74c896b53961",
+      "status": 204
+    },
+    {
+      "id": "8c7900e5-4941-40c9-980e-456ba064adc6",
+      "status": 204
+    },
+    {
+      "id": "d2cc6ce3-2728-4417-84a6-a30b16751909",
+      "status": 204
+    },
+    {
+      "id": "aeaf8351-7e2d-4651-a370-e08e2b338471",
+      "status": 204
+    },
+    {
+      "id": "1844237b-2579-4b70-94b8-2075dbe6e175",
+      "status": 204
+    },
+    {
+      "id": "437e310f-f2d5-41bd-bd43-8aba1d909ee0",
+      "status": 204
+    },
+    {
+      "id": "7c5834fd-6949-4c65-862e-545be32e5da0",
+      "status": 204
+    },
+    {
+      "id": "1da06903-a450-4831-92bc-c16fff278b1c",
+      "status": 204
+    },
+    {
+      "id": "70e88d16-17d6-41fd-aea9-f489e2c4c53c",
+      "status": 204
+    },
+    {
+      "id": "9edd6d6b-0031-4156-8601-0f32b6268e36",
+      "status": 204
+    },
+    {
+      "id": "111b4a6b-0e8a-41ed-be4c-456fa2b180cb",
+      "status": 204
+    },
+    {
+      "id": "7c73f422-64d2-4b14-ac1a-f21c96bcdfc0",
+      "status": 204
+    },
+    {
+      "id": "d11e510f-9f66-45c8-8ac7-e168c019b173",
+      "status": 204
+    },
+    {
+      "id": "f7493699-4772-4656-a991-66cc7e527845",
+      "status": 204
+    },
+    {
+      "id": "061703ae-0e03-469d-8b2f-206473f4506c",
+      "status": 204
+    }
+  ],
+  "cuentas_sinteticas_restantes": 2,
+  "nota_limpieza": "La API no ofrece eliminación de cuentas; las tareas se eliminan lógicamente."
+}
