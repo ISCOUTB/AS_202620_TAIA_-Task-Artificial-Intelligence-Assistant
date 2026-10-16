@@ -2,6 +2,9 @@ name: CI
 
 on:
   push:
+    # Solo ramas: los tags deploy-* que crea este mismo workflow no deben
+    # volver a dispararlo.
+    branches: ["**"]
   pull_request:
 
 jobs:
@@ -10,7 +13,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18
+        image: postgres:17   # igualar a la versión de tu proyecto Supabase
         env:
           POSTGRES_USER: postgres
           POSTGRES_HOST_AUTH_METHOD: trust
@@ -25,29 +28,32 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres@localhost:5432/taia
-      # Sin esta variable, backend/tests/conftest.py omite en silencio toda
-      # prueba de integracion con PostgreSQL y el CI pasa sin ejercitar la
-      # capa de datos. Apunta a una base separada: conftest.py ejecuta
-      # "alembic downgrade base" al iniciar la sesion.
+      # Base efímera del runner. NUNCA apuntar a Supabase: conftest.py
+      # ejecuta "alembic downgrade base" al iniciar la sesión.
       TEST_DATABASE_URL: postgresql://postgres@localhost:5432/taia_test
-      # Marcador de posicion. `app.main` compone el adaptador de Gemini al
-      # importar, asi que sin la variable el fallo aparece al importar y no
-      # como un 503 por peticion. Ninguna prueba llama a la API real: el LLM se
-      # sustituye por FakeLLM o por httpx.MockTransport.
+      # Marcador de posición. `app.main` compone el adaptador de Gemini al
+      # importar, así que sin la variable el fallo aparece al importar.
+      # Ninguna prueba llama a la API real: el LLM se sustituye por FakeLLM
+      # o por httpx.MockTransport.
       GEMINI_API_KEY: ${{ github.run_id }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Compose and build deployment image
-        env:
-          DATABASE_URL: postgresql+psycopg://postgres@postgres:5432/taia
-        run: |
-          cp .env.example .env
-          export TAIA_JWT_SECRET="$(openssl rand -hex 32)"
-          docker compose config --quiet
-          docker compose build backend
+      # Valida el Dockerfile antes de tocar Supabase. Dokploy volverá a
+      # construir la imagen, pero así un Dockerfile roto falla aquí y no
+      # después de migrar la base.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate backend image build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend   # ajusta si tu Dockerfile usa otro contexto
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -79,3 +85,45 @@ jobs:
 
       - name: Verify generated client is synchronized
         run: git diff --exit-code -- backend/generated/taia_api_client.py
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production   # permite exigir aprobación manual
+    permissions:
+      contents: write         # necesario para crear el tag
+    # Un solo despliegue a la vez; no cancela uno en curso a mitad de migración.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install pip==26.2.1
+          pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
+
+      - name: Run migrations on Supabase
+        working-directory: backend   # ajusta a donde esté tu alembic.ini
+        env:
+          # Session pooler (5432) o conexión directa; evitar el transaction
+          # pooler (6543) para DDL. Usar el mismo esquema que espera env.py.
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: alembic upgrade head
+
+      # Dokploy está en "On Tag": este tag, creado solo tras tests, build
+      # validado y migraciones exitosas, es lo que dispara el despliegue.
+      - name: Tag release (triggers Dokploy)
+        run: |
+          TAG="deploy-${{ github.run_number }}"
+          git tag "$TAG"
+          git push origin "$TAG"
