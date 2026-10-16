@@ -47,7 +47,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - cname: Validate backend image build (no push)
+      - name: Validate backend image build (no push)
         uses: docker/build-push-action@v6
         with:
           context: .
