@@ -1,4 +1,5 @@
-﻿name: CD
+﻿```yaml
+name: CD
 
 on:
   workflow_run:
@@ -21,6 +22,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
+
     steps:
       - name: Comprobar que CI corresponde al último commit de main
         id: revision
@@ -29,35 +31,41 @@ jobs:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+
           current_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+
           if [ "$current_sha" = "$TESTED_SHA" ]; then
             echo "current=true" >> "$GITHUB_OUTPUT"
           else
             echo "Se omite este CI antiguo; main ya cambió."
           fi
 
-      - name: Desplegar Docker Compose mediante la API de Dokploy
+      - name: Desplegar Docker Compose mediante webhook de Dokploy
         if: steps.revision.outputs.current == 'true'
         env:
-          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
-          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
-          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
         run: |
           set -euo pipefail
-          : "${DOKPLOY_URL:?Configura el secret DOKPLOY_URL}"
-          : "${DOKPLOY_API_KEY:?Configura el secret DOKPLOY_API_KEY}"
-          : "${DOKPLOY_COMPOSE_ID:?Configura el secret DOKPLOY_COMPOSE_ID}"
-          case "$DOKPLOY_URL" in
+
+          : "${DOKPLOY_WEBHOOK_URL:?Configura el secret DOKPLOY_WEBHOOK_URL}"
+
+          case "$DOKPLOY_WEBHOOK_URL" in
             https://*) ;;
-            *) echo "DOKPLOY_URL debe usar HTTPS"; exit 1 ;;
+            http://*)
+              echo "::warning::El webhook usa HTTP; los datos enviados no están cifrados. Se recomienda HTTPS."
+              ;;
+            *)
+              echo "DOKPLOY_WEBHOOK_URL debe empezar por http:// o https://"
+              exit 1
+              ;;
           esac
-          payload=$(jq -n --arg id "$DOKPLOY_COMPOSE_ID" --arg sha "$TESTED_SHA" \
-            '{composeId: $id, title: ("CI main " + $sha)}')
+
           curl --fail --silent --show-error --output /dev/null \
-            --connect-timeout 10 --max-time 60 \
-            --request POST "${DOKPLOY_URL%/}/api/compose.deploy" \
-            --header "Content-Type: application/json" \
-            --header "x-api-key: $DOKPLOY_API_KEY" \
-            --data "$payload"
-          echo "Solicitud aceptada. Consulta el resultado y el health check en Dokploy."
+            --connect-timeout 10 \
+            --max-time 60 \
+            --request POST \
+            "$DOKPLOY_WEBHOOK_URL"
+
+          echo "Solicitud de despliegue enviada a Dokploy."
+          echo "Verifica el resultado y el health check en Dokploy."
+```
