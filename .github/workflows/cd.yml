@@ -1,4 +1,4 @@
-﻿```yaml
+﻿
 name: CD
 
 on:
@@ -68,4 +68,3 @@ jobs:
 
           echo "Solicitud de despliegue enviada a Dokploy."
           echo "Verifica el resultado y el health check en Dokploy."
-```
