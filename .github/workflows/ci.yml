@@ -2,9 +2,6 @@ name: CI
 
 on:
   push:
-    # Solo ramas: los tags deploy-* que crea este mismo workflow no deben
-    # volver a dispararlo.
-    branches: ["**"]
   pull_request:
 
 jobs:
@@ -47,12 +44,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Validate backend image build (no push)
+      - name: Build backend image (no push)
         uses: docker/build-push-action@v6
         with:
+          # El Dockerfile hace COPY backend/..., así que el contexto es la raíz
+          # del repo y el Dockerfile se indica aparte.
           context: .
           file: backend/Dockerfile
           push: false
+          load: true
+          tags: taia-backend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -74,7 +75,35 @@ jobs:
           done
 
       - name: Run full test suite
-        run: python -m pytest backend/tests -q
+        run: python -m pytest backend/tests -q -rs
+
+      # Ejercita lo que el build no cubre: el CMD de la imagen (alembic upgrade
+      # head && uvicorn) contra un Postgres vacío, igual que en Dokploy.
+      - name: Smoke test image (migrations + startup)
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -c "CREATE DATABASE taia_boot;"
+          docker run -d --name taia-smoke --network host \
+            -e DATABASE_URL=postgresql+psycopg://postgres@localhost:5432/taia_boot \
+            -e GEMINI_API_KEY=ci-placeholder \
+            -e TAIA_JWT_SECRET="$(openssl rand -hex 32)" \
+            taia-backend:ci
+          ok=""
+          for _ in $(seq 1 30); do
+            if curl -s -o /dev/null http://localhost:8000/; then ok=1; break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' taia-smoke)" != "true" ]; then break; fi
+            sleep 2
+          done
+          if [ -z "$ok" ]; then
+            echo "La imagen no arrancó o no migró:"
+            docker logs taia-smoke
+            exit 1
+          fi
+          psql -h localhost -U postgres -d taia_boot -tc "SELECT 1 FROM alembic_version" | grep -q 1
+
+      - name: Stop smoke container
+        if: always()
+        run: docker rm -f taia-smoke || true
 
       - name: Verify boundaries and credentials
         run: |
@@ -86,45 +115,3 @@ jobs:
 
       - name: Verify generated client is synchronized
         run: git diff --exit-code -- backend/generated/taia_api_client.py
-
-  deploy:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production   # permite exigir aprobación manual
-    permissions:
-      contents: write         # necesario para crear el tag
-    # Un solo despliegue a la vez; no cancela uno en curso a mitad de migración.
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install pip==26.2.1
-          pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
-
-      - name: Run migrations on Supabase
-        working-directory: backend   # ajusta a donde esté tu alembic.ini
-        env:
-          # Session pooler (5432) o conexión directa; evitar el transaction
-          # pooler (6543) para DDL. Usar el mismo esquema que espera env.py.
-          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-        run: alembic upgrade head
-
-      # Dokploy está en "On Tag": este tag, creado solo tras tests, build
-      # validado y migraciones exitosas, es lo que dispara el despliegue.
-      - name: Tag release (triggers Dokploy)
-        run: |
-          TAG="deploy-${{ github.run_number }}"
-          git tag "$TAG"
-          git push origin "$TAG"
