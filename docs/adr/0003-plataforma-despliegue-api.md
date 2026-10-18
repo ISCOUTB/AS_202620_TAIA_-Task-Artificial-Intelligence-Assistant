@@ -1,52 +1,111 @@
-# ADR-0003 — Plataforma de despliegue de la API: VM de OCI con Docker
+# ADR-0003 — Plataforma de despliegue de la API: Dokploy con Docker Compose
 
 ## Estado
 
-Aceptado.
+Aceptado. Actualizado el 2026-10-18 para reflejar el uso actual de Dokploy,
+confirmado por el responsable del proyecto y recogido en la configuración
+versionada. Sustituye la operación anterior mediante Docker directo y SSH;
+la comparación original se conserva como antecedente de esta decisión.
 
 ## Contexto
 
-La API de TAIA (FastAPI, un solo proceso, ver ADR-0001) tiene que estar accesible desde Internet para el cliente y el evaluador. Se despliega como una imagen Docker construida desde `backend/Dockerfile`. La restricción de costo de [arc42 §2](../arc42/02-restricciones-de-arquitectura.md) pide operar dentro de capas gratuitas.
+La API de TAIA es una única aplicación FastAPI que debe estar accesible para
+sus clientes y el evaluador. Mantiene el monolito modular de
+[ADR-0001](0001-estilo-arquitectonico.md) y
+[ADR-0008](0008-mantener-monolito-sin-extraer-modulos.md).
 
-En el taller de despliegue ([comparación de alternativas](../taller_despliegue/)) se probaron dos plataformas con la misma imagen y la misma base de datos en Supabase (ver ADR-0004).
+El despliegue anterior construía imágenes TAIA, las publicaba en GHCR y
+reemplazaba un contenedor por SSH en una VM de OCI. Actualmente el repositorio
+utiliza [Docker Compose](../../docker-compose.yml) y Dokploy para construir y
+administrar el servicio. GitHub Actions ejecuta CI y solicita el despliegue
+mediante un webhook.
 
-## Escenario de calidad relacionado
+Dokploy administra la aplicación sobre un servidor; puede utilizarse sobre
+infraestructura OCI. Esta decisión no determina el tipo de VM ni sustituye
+la decisión de base de datos de [ADR-0004](0004-plataforma-base-de-datos.md).
+El destino PostgreSQL se configura mediante `DATABASE_URL`.
 
-**S3 — Respuesta del asistente ante un mensaje** (p95 ≤ 7 s) y RNF-08 (CRUD con p95 < 500 ms). La restricción del escenario es el hosting gratuito sin recursos dedicados: un arranque en frío de un minuto rompe la medida por sí solo. La latencia se consulta en `GET /metrics`.
+## Escenarios de calidad relacionados
+
+- **S3 — Respuesta del asistente:** p95 ≤ 7 s.
+- **RNF-08:** operaciones CRUD con p95 < 500 ms.
+- **RNF-04:** comunicación cifrada en el despliegue.
+- **RNF-06:** persistencia de los datos entre reinicios y despliegues.
+
+La plataforma permite operar y observar el servicio; su adopción no demuestra
+por sí sola el cumplimiento de estos requisitos. Los umbrales deben verificarse
+en el entorno desplegado.
 
 ## Opciones consideradas
 
-### Opción A — VM de Oracle Cloud Infrastructure con Docker
+| Opción | Antecedente o motivo de elección |
+|---|---|
+| Docker directo en una VM de OCI | Alternativa inicial del taller. Requería publicar la imagen en GHCR, administrar secretos en `~/taia.env` y reemplazar el contenedor por SSH. |
+| Render Web Service Free | Alternativa evaluada en el taller. El arranque tras inactividad observado el 27/09/2026 tardó unos 53 s y motivó descartarla como entorno principal. La evidencia histórica no acredita un respaldo activo actualmente. |
+| Dokploy con Docker Compose | Plataforma utilizada actualmente. Reúne la construcción desde Git, el entorno de ejecución, los despliegues, logs y dominios del servicio, conservando Compose y Dockerfile en el repositorio. |
 
-Una VM propia en OCI ejecuta el contenedor con `docker run --restart unless-stopped`. El workflow `cd.yml` publica la imagen en GitHub Container Registry y la despliega por SSH cuando el CI termina en verde sobre `main`. La VM se describe en Terraform (`terraform/`).
-
-Capa gratuita verificada ([Always Free Resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)): solo `VM.Standard.E2.1.Micro` (1/8 OCPU, 1 GB, hasta 2) y `VM.Standard.A1.Flex` (ARM, 2 OCPU y 12 GB en total). Al crear la VM, la A1.Flex no tenía capacidad disponible y la consola no ofrece cambiar a la E2.1.Micro, así que la VM quedó en `VM.Standard.E5.Flex` (1 OCPU, 12 GB), que **no es Always Free**. OCI exige tarjeta para crear la cuenta.
-
-### Opción B — Render Web Service Free
-
-Servicio administrado que toma la misma imagen de GHCR, con HTTPS incluido y sin tarjeta.
-
-Capa gratuita verificada ([Render Free](https://render.com/docs/free)): 750 horas de instancia por mes y workspace, y el servicio se suspende tras 15 minutos sin tráfico. En el taller, la primera petición después de la inactividad tardó cerca de un minuto (53 s medidos el 27/09/2026).
+La [comparación del taller](../taller_despliegue/) conserva las mediciones y
+condiciones de septiembre de 2026. Los precios y cuotas allí registrados
+corresponden a esa evaluación.
 
 ## Decisión
 
-La API se despliega en una **VM de OCI (`VM.Standard.E5.Flex`, 1 OCPU, 12 GB) con Docker**, con la imagen publicada en **GitHub Container Registry** y desplegada automáticamente por `cd.yml`.
+Desplegar la API como el servicio **`backend` de Docker Compose administrado
+por Dokploy**, con el repositorio Git, rama `main` y Compose Path
+`./docker-compose.yml`.
 
-URL pública: `http://157.137.215.57:8000` (health check en `/health`).
+1. Construir la imagen desde la raíz con
+   [`backend/Dockerfile`](../../backend/Dockerfile). El arranque aplica
+   `alembic upgrade head` antes de iniciar Uvicorn en el puerto interno 8000.
+2. Guardar las variables de aplicación en **Environment** de Dokploy.
+   `env_file: .env` las carga en el contenedor. `DATABASE_URL`,
+   `TAIA_JWT_SECRET` y `GEMINI_API_KEY` son necesarias para ejecutar el servicio;
+   PostgreSQL debe existir y ser accesible antes del arranque.
+3. Administrar el dominio y TLS en **Domains** de Dokploy para `backend:8000`.
+   El Compose versionado expone el puerto interno sin publicarlo en el host.
+4. Ejecutar [CI](../../.github/workflows/ci.yml) y solicitar el despliegue con
+   [CD](../../.github/workflows/cd.yml) mediante `DOKPLOY_WEBHOOK_URL` cuando
+   finaliza correctamente el CI de un push a `main` del propio repositorio y
+   el SHA probado sigue siendo el último de la rama.
+5. Verificar el resultado en **Deployments**, los logs y `/health`. El CD
+   actual solo envía la solicitud; no espera la construcción ni comprueba
+   que la nueva versión esté disponible.
 
-Se descarta **Render Free** como entorno principal: la suspensión por inactividad hace que la primera petición tarde cerca de un minuto, lo cual incumple S3 y RNF-08 cada vez que el servicio lleva 15 minutos sin tráfico. Además, no permite SSH ni controlar el contenedor. Sigue desplegado en `https://taia-backend-latest.onrender.com` como alternativa de respaldo sin costo.
+La configuración de Environment y el modo Compose corresponden al mecanismo
+[documentado por Dokploy](https://docs.dokploy.com/docs/core/docker-compose).
+Terraform permanece como herramienta opcional para administrar la
+[infraestructura OCI](../../terraform/README.md), independiente del despliegue
+de la aplicación.
 
 ## Consecuencias
 
 ### Positivas
 
-- El proceso no se suspende: no hay arranques en frío y la latencia medida en `/metrics` refleja la operación real.
-- El despliegue es automático y trazable: cada imagen lleva el SHA del commit como etiqueta, y el rollback consiste en volver a ejecutar el contenedor con una etiqueta anterior.
-- Los secretos llegan desde GitHub Actions a `~/taia.env` en la VM y no quedan en el repositorio ni en la imagen.
+- Compose y Dockerfile mantienen versionados la construcción, el arranque,
+  la política de reinicio y el health check del servicio.
+- Dokploy centraliza la configuración y operación de la aplicación.
+- Los secretos de aplicación se administran en Environment y no se transfieren
+  por el workflow CD. GitHub Actions utiliza `DOKPLOY_WEBHOOK_URL` para el disparo.
+- Se conserva una única unidad desplegable con persistencia PostgreSQL y las
+  fronteras del monolito modular.
 
-### Negativas
+### Límites y obligaciones operativas
 
-- **Costo: 39,42 USD/mes** a precio de lista (ver [costo_mensual.md](../costo_mensual.md)). Rompe la restricción de costo cero y está registrado como riesgo en arc42 §11.
-- No hay HTTPS: la API se expone por HTTP en el puerto 8000, lo cual incumple RNF-04 hasta que se configure un dominio y un proxy con TLS.
-- El equipo administra el sistema operativo, Docker y la red. Terraform todavía no describe la VCN ni las reglas de seguridad.
-- Pasar a A1.Flex (Always Free) cuando haya capacidad exige construir la imagen también para ARM64.
+- El webhook y su configuración deben verificarse en la instancia instalada.
+  El POST actual no transmite cuerpo, datos de rama ni SHA; un CD verde no
+  demuestra que Dokploy haya iniciado o terminado el despliegue. La
+  [documentación de webhooks](https://docs.dokploy.com/docs/core/auto-deploy)
+  requiere Auto Deploy y coincidencia de rama para fuentes Git.
+- CI construye una imagen de prueba sin publicarla; Dokploy vuelve a construir
+  desde Git. Si la rama avanza entre la comprobación de CD y la descarga, puede
+  obtener una revisión distinta de la probada.
+- Para recuperar una versión anterior se puede revertir el cambio en Git,
+  validarlo mediante CI y desplegar la reversión. Antes debe comprobarse su
+  compatibilidad con las migraciones aplicadas: revertir código no restaura datos.
+- La URL registrada en el repositorio utiliza HTTP. Configurar y comprobar
+  HTTPS sigue siendo necesario para RNF-04; este documento no acredita su activación.
+- El servidor de Dokploy, PostgreSQL, respaldos y proveedores externos requieren
+  operación y presupuesto. Los **39,42 USD/mes** de
+  [la estimación anterior](../costo_mensual.md) corresponden a la VM E5.Flex
+  evaluada; usar Dokploy no confirma ni elimina ese costo. La facturación
+  actual y el cumplimiento de la restricción de costo cero deben verificarse.

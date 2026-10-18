@@ -960,3 +960,36 @@ peticiones simultáneas, cree una sola tarea (`RF-AGT-04`).
 - Suite completa con las variables del CI y `TEST_DATABASE_URL` sobre
   `taia_test`: **226 aprobadas**.
 - Enlaces de `modos_fallo_s11.md` y arc42 §11: 66 comprobados, 0 rotos.
+
+## Entrada 020 — Actualización de la decisión de despliegue con Dokploy
+
+Fecha: 2026-10-18. Herramienta: Codex (OpenAI). Base revisada: `bfe61f5`.
+
+Solicitud: aplicar los cambios de la decisión de despliegue, con autorización
+expresa del responsable del proyecto después de actualizar el repositorio.
+
+### Aplicado
+
+- ADR-0003 registra Dokploy con Docker Compose como plataforma actual y
+  conserva Docker directo en OCI y Render como antecedentes evaluados.
+- El flujo documentado se contrastó con Compose, Dockerfile y CI/CD: construcción
+  desde Git, variables de aplicación en Environment, solicitud por
+  `DOKPLOY_WEBHOOK_URL` y verificación posterior en Dokploy.
+- Se sincronizó el resumen de ADR-0003 en arc42 §9.5.
+
+### Límites
+
+- Adoptar Dokploy no determina un cambio de servidor ni de proveedor de
+  PostgreSQL y no acredita un costo nuevo; la cifra del taller se identifica
+  como antecedente.
+- CD no transmite la revisión ni verifica que el despliegue termine. Se
+  registró la necesidad de comprobar la compatibilidad del webhook y HTTPS
+  en el entorno real, sin declarar esas verificaciones realizadas.
+- El alcance es la decisión y su resumen. No se modificaron código, workflows
+  ni configuración del servidor; no se ejecutaron despliegues ni commits.
+
+### Verificación
+
+- 18 enlaces locales comprobados en los dos documentos de decisión: 0 rotos.
+- Revisión de formato Markdown y `git diff --check`: sin errores.
+- No se ejecutaron pruebas de aplicación porque los cambios son documentales.
