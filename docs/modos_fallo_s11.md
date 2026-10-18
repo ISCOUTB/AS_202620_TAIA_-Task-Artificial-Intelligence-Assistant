@@ -85,4 +85,123 @@ El envío de una notificación llama a `sendMessage` de la API de Telegram.
 
 ## Idempotencia y transacciones
 
-Pendiente de redactar.
+Una operación es idempotente si repetirla produce el mismo efecto que ejecutarla una vez. En TAIA
+hay dos operaciones de escritura que pueden llegar repetidas: la confirmación de una acción
+pendiente y el envío de una notificación.
+
+### Confirmación de una acción pendiente
+
+**Problema.** El caso de uso lee la conversación al empezar
+([`handle_message.py:81`](../backend/app/modules/ai/application/use_cases/handle_message.py)),
+borra la acción pendiente en memoria y la ejecuta
+([`handle_message.py:196-199`](../backend/app/modules/ai/application/use_cases/handle_message.py)),
+y guarda la conversación al final
+([`handle_message.py:87`](../backend/app/modules/ai/application/use_cases/handle_message.py)). La
+lectura y el guardado usan sesiones distintas
+([`sqlalchemy_conversation_store.py:26`](../backend/app/modules/ai/adapters/outbound/sqlalchemy_conversation_store.py)
+y [`:58`](../backend/app/modules/ai/adapters/outbound/sqlalchemy_conversation_store.py)), y la
+tarea se crea en una tercera sesión del módulo `academic`
+([`sqlalchemy_task_repository.py:21-22`](../backend/app/modules/academic/adapters/outbound/sqlalchemy_task_repository.py)).
+Si dos «sí» llegan a la vez, ambos leen la acción antes de que alguno guarde, y ambos crean la tarea.
+
+**Diseño elegido: reclamar la acción de forma atómica antes de ejecutarla.** El puerto
+`ConversationStore` publica una operación que toma la acción pendiente y la borra en una sola
+sentencia:
+
+```sql
+UPDATE conversations
+SET pending_action = NULL, pending_action_expires_at = NULL
+WHERE user_id = :user_id
+  AND pending_action IS NOT NULL
+  AND pending_action_expires_at > now()
+RETURNING pending_action;
+```
+
+`_resolve_pending` ejecuta la acción solo si la sentencia devolvió una fila. La petición que no
+recibe fila responde como si no hubiera acción pendiente.
+
+**Por qué funciona.** En el nivel de aislamiento por defecto de PostgreSQL (Read Committed), si un
+`UPDATE` encuentra una fila que otra transacción está modificando, espera a que esa transacción
+termine y vuelve a evaluar el `WHERE` sobre la versión nueva de la fila
+([documentación de PostgreSQL, §13.2.1](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)).
+La segunda petición encuentra `pending_action IS NULL`, la condición deja de cumplirse y no se
+actualiza ni se devuelve ninguna fila. Solo una de las dos peticiones obtiene la acción.
+
+Es el mismo patrón que el diccionario ya fija para tomar recordatorios
+([`diccionario_datos.md`, §7.1, reglas](diccionario_datos.md)): `UPDATE ... WHERE status = 'pending'`,
+donde una actualización que no afecta filas significa que otro proceso ya lo tomó.
+
+**Alternativas descartadas.**
+
+| Alternativa | Por qué no |
+|---|---|
+| Bloqueo de fila (`SELECT ... FOR UPDATE`) al leer la conversación | El bloqueo solo dura lo que dura la transacción, y `get()` cierra la suya al terminar de leer. Mantenerlo durante toda la petición exigiría una transacción que abarque la escritura en `academic`, lo que cruza la frontera entre módulos ([ADR-0001](adr/0001-estilo-arquitectonico.md)). |
+| Número de versión en `conversations` (bloqueo optimista) | El conflicto se detectaría en `save()`, al final de la petición, cuando la tarea duplicada ya se creó en `academic`. |
+
+**Costo aceptado.** Si la escritura en `academic` falla después de reclamar la acción, la acción ya
+no existe y el estudiante tiene que repetir su mensaje. Es fallar cerrado, coherente con S1 y con
+[ADR-0007](adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md): ante la duda, no se escribe.
+
+**Cambios que implica.** Un método nuevo en el puerto `ConversationStore`, implementado en
+`SqlAlchemyConversationStore` y en `InMemoryConversationStore`, y su uso en `_resolve_pending`. No
+cambia el esquema ni requiere migración: las columnas `pending_action` y `pending_action_expires_at`
+ya existen ([`diccionario_datos.md`, §8.1](diccionario_datos.md)).
+
+**Estado.** Diseñado, pendiente de implementar. Mientras tanto, la repetición **secuencial** ya no
+duplica, porque el segundo «sí» no encuentra la acción.
+
+### Envío de una notificación
+
+**Problema.** Crear la notificación ya es idempotente: `create_notification` bloquea el recordatorio
+y, si la notificación existe, devuelve la existente en lugar de crear otra
+([`sqlalchemy_reminder_repository.py:63-85`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py)),
+y la tabla tiene `UNIQUE (reminder_id)` ([`diccionario_datos.md`, §7.2](diccionario_datos.md)).
+Pero **enviarla no lo es**: `SendNotificationUseCase` llama a Telegram cada vez
+([`send_notification.py`](../backend/app/modules/reminders/application/use_cases/send_notification.py)).
+El código escribe `push_sent_at` tras un envío exitoso
+([`sqlalchemy_reminder_repository.py:101-102`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py)),
+pero no lo lee antes de enviar. Un segundo `POST /reminders/{id}/notify` reenvía el mensaje.
+
+**Diseño: aplicar lo que ya fijan el diccionario y `RF-NOT-02`.** `RF-NOT-02` exige que cada
+recordatorio genere como máximo una notificación aunque el proceso se ejecute dos veces, y el
+diccionario fija que solo se reintentan las notificaciones con `push_sent_at IS NULL` y entre 1 y 3
+intentos ([`diccionario_datos.md`, §7.2](diccionario_datos.md)). En el código:
+
+1. Si la notificación ya tiene `push_sent_at`, no se vuelve a enviar y se responde como enviada.
+2. Si no lo tiene y `push_attempts` es menor que 4, se envía y se registra el intento.
+
+**Límite declarado: al menos una vez.** Si Telegram entrega el mensaje pero la respuesta se pierde
+(por ejemplo, por el timeout de 5 s), TAIA no puede saber que se entregó, y el reintento lo duplica.
+`sendMessage` no tiene ningún parámetro de idempotencia o deduplicación
+([API de bots de Telegram, `sendMessage`](https://core.telegram.org/bots/api#sendmessage)). Se
+acepta: un recordatorio duplicado molesta, pero no corrompe datos, y los intentos están acotados a 4.
+
+**Estado.** Pendiente de implementar.
+
+### Operaciones que ya son idempotentes
+
+| Operación | Mecanismo | Prueba |
+|---|---|---|
+| Completar una tarea | Conserva el primer `completed_at` (`RF-TAR-07`). | [`test_complete_is_idempotent_and_keeps_first_completed_at_rf_tar_07`](../backend/tests/test_academic_task_domain.py) |
+| Crear la notificación de un recordatorio | Bloqueo del recordatorio y `UNIQUE (reminder_id)`. | Sin prueba específica de repetición. |
+| Consultas (tareas, recordatorios, historial) | Son lecturas: repetirlas no cambia nada. | |
+
+### Por qué no aplica una saga
+
+Una saga coordina una transacción repartida entre servicios con bases de datos propias: cada paso es
+una transacción local y, si uno falla, se compensan los anteriores. En TAIA no existe esa situación:
+
+- **Un proceso y una base de datos.** Todos los módulos corren en el mismo proceso y escriben en la
+  misma base PostgreSQL ([ADR-0001](adr/0001-estilo-arquitectonico.md),
+  [ADR-0004](adr/0004-plataforma-base-de-datos.md)).
+- **La llamada externa es de solo lectura y ocurre antes de escribir.** Gemini solo interpreta el
+  mensaje; la escritura ocurre después, en `_execute`, tras la confirmación, y no vuelve a llamar al
+  modelo ([`handle_message.py:204-217`](../backend/app/modules/ai/application/use_cases/handle_message.py)).
+  Si Gemini falla, no hay nada escrito que compensar.
+- **Cada escritura es una transacción local** de un solo módulo, como crear una tarea en `academic`.
+
+Una saga sí haría falta si el módulo `ai` se extrajera a un servicio propio: confirmar y crear la
+tarea pasaría a ser una llamada por red del servicio de IA a `academic`, con la posibilidad de que la
+tarea se cree y la respuesta se pierda. En ese caso se necesitaría, como mínimo, una clave de
+idempotencia en la creación de tareas o un outbox. La mensajería y el outbox se tratan en la
+semana 12.
