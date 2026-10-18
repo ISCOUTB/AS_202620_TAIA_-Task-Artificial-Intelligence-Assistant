@@ -812,3 +812,72 @@ componente generativo.
   reales. `resultado_s1_100.json` no contiene la clave.
 - La suite completa no se volvió a ejecutar: los cambios de esta entrada solo
   tocan `docs/`.
+
+## Entrada 018 — S11, pruebas de los modos de fallo de Gemini
+
+Fecha: 2026-10-18 en Colombia. Herramienta: Claude Code (Anthropic), con
+lectura del repositorio y ejecución local de comandos. Base: `fd34dc7`. Regla
+fijada por el estudiante: el asistente no hace commits. Esta entrada registra
+solo el código que escribió el asistente; las decisiones de diseño de S11
+(tabla de modos de fallo, diseño de idempotencia, ADR-0008) las registra el
+equipo.
+
+Solicitud: cubrir con pruebas los modos de fallo «responde tarde» y «llega dos
+veces» de la integración con Gemini, que en
+[modos_fallo_s11.md](modos_fallo_s11.md) figuraban como solo descritos.
+
+### Aceptado
+
+- **Cuatro pruebas nuevas**, en el commit `a6af5f8`. Ninguna sale a la red:
+  usan `httpx.MockTransport` y los repositorios en memoria.
+  - `test_timeout_raises_llm_error_rf_agt_20`
+    ([test_ai_gemini_llm.py](../backend/tests/test_ai_gemini_llm.py)): un
+    `httpx.ReadTimeout` del transporte termina en `LLMError`.
+  - `test_default_client_timeout_is_twenty_seconds_rf_agt_20` (mismo archivo):
+    el cliente que `GeminiLLM` crea por defecto tiene un timeout de 20 s, el
+    valor que declaran ADR-0007 y la tabla de modos de fallo.
+  - `test_gemini_timeout_returns_friendly_message_without_writing_rf_agt_20`
+    ([test_ai_handle_message.py](../backend/tests/test_ai_handle_message.py)):
+    de punta a punta, el caso de uso con el adaptador real de Gemini colgado
+    responde el mensaje de reintento y no crea ninguna tarea.
+  - `test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04`
+    ([test_ai_create_task_confirmation.py](../backend/tests/test_ai_create_task_confirmation.py)):
+    dos «sí» seguidos crean una sola tarea.
+- **Columnas de pruebas de la tabla de modos de fallo** actualizadas con estas
+  pruebas, y la confirmación repetida separada en secuencial (probada) y
+  concurrente (solo descrita).
+
+### Corregido
+
+- **Afirmación del asistente sobre `RF-AGT-04`.** Durante el análisis dijo que
+  la expiración de 10 minutos de la acción pendiente no estaba implementada,
+  tras buscar solo en `domain/`. Está en
+  `sqlalchemy_conversation_store.py:17` (`PENDING_TTL`). Se retractó antes de
+  escribir nada sobre ello.
+
+### Rechazado o limitado, con motivo
+
+- **Sin prueba de la confirmación concurrente.** Exige PostgreSQL y dos
+  peticiones simultáneas; con los repositorios en memoria no se reproduce la
+  carrera. Queda declarada como solo descrita en la tabla.
+- **La prueba del timeout por defecto lee un atributo privado**
+  (`llm._client.timeout`). Es la única forma de observar el cliente que el
+  adaptador crea por su cuenta; si se pasa un cliente propio, el valor por
+  defecto no interviene.
+- **No se implementó el reclamo atómico de la confirmación** ni la
+  comprobación de `push_sent_at` antes de enviar una notificación. Están
+  diseñados en [modos_fallo_s11.md](modos_fallo_s11.md) y pendientes.
+- **No se cambió `conftest.py`.** `python -m pytest` sin variables falla al
+  recolectar porque `main.py` exige `DATABASE_URL` y `GEMINI_API_KEY`, y
+  `conftest.py:19-21` solo define la primera si existe `TEST_DATABASE_URL`.
+  Ocurre igual sin los cambios de esta entrada, de modo que no es una
+  regresión y no se tocó.
+
+### Verificación
+
+- Los tres archivos de prueba: 58 aprobadas.
+- Suite completa con las mismas variables que el CI (`ci.yml:25-34`),
+  `GEMINI_API_KEY` de marcador y `TEST_DATABASE_URL` sobre la base local
+  `taia_test`: **223 aprobadas**.
+- Sin variables, la recolección falla con 15 errores tanto con los cambios
+  como sin ellos (comprobado con `git stash`).
