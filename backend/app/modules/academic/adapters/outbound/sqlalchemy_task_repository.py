@@ -56,7 +56,7 @@ class SqlAlchemyTaskRepository(TaskRepository):
             .group_by(TaskModel.subject_id)
         )
         with self._session_factory() as session:
-            return {subject_id: count for subject_id, count in session.execute(query)}
+            return dict(session.execute(query).all())
 
 
 def _owned_by(user_id: uuid.UUID) -> Select:

@@ -114,6 +114,7 @@ def test_subject_with_tasks_cannot_be_deleted_in_database(repos):
     tasks, physics, _, _, session_factory = repos
     tasks.add(_task(physics, "Ancla", 1))
 
-    with pytest.raises(IntegrityError):
-        with session_factory.begin() as session:
-            session.execute(delete(SubjectModel).where(SubjectModel.id == physics.id))
+    statement = delete(SubjectModel).where(SubjectModel.id == physics.id)
+
+    with pytest.raises(IntegrityError), session_factory.begin() as session:
+        session.execute(statement)

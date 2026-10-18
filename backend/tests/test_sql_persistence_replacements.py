@@ -33,7 +33,9 @@ def test_telegram_link_token_round_trip_uses_hash(clean_db):
     repository.save(TelegramLinkToken(token="secret-code", user_id=user_id, expires_at=expires_at))
 
     stored = repository.get("secret-code")
-    assert stored is not None and stored.user_id == user_id and stored.used is False
+    assert stored is not None
+    assert stored.user_id == user_id
+    assert stored.used is False
     with clean_db() as session:
         code_hash = session.scalar(text("SELECT code_hash FROM telegram_link_codes"))
     assert code_hash == hashlib.sha256(b"secret-code").hexdigest()

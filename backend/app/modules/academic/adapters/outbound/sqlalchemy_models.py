@@ -12,6 +12,9 @@ from app.modules.academic.domain.entities.schedule_block import Weekday
 from app.modules.academic.domain.entities.task import TaskType
 from app.shared.adapters.outbound.database import Base
 
+_SUBJECTS_ID = "subjects.id"
+_STUDY_PLANS_ID = "study_plans.id"
+
 weekday_enum = Enum(
     Weekday,
     name="weekday",
@@ -58,7 +61,7 @@ class SubjectAliasModel(Base):
     __table_args__ = (UniqueConstraint("subject_id", "normalized_alias"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"))
+    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="CASCADE"))
     alias: Mapped[str] = mapped_column(String(50))
     normalized_alias: Mapped[str] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -69,7 +72,7 @@ class ScheduleBlockModel(Base):
     __table_args__ = (CheckConstraint("end_time > start_time", name="end_after_start"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"), index=True)
+    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="CASCADE"), index=True)
     weekday: Mapped[Weekday] = mapped_column(weekday_enum)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
@@ -108,7 +111,7 @@ class TaskModel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     # RESTRICT: una asignatura con tareas no se puede borrar, solo archivar (RF-ASG-04).
-    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subjects.id", ondelete="RESTRICT"))
+    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="RESTRICT"))
     type: Mapped[TaskType] = mapped_column(task_type_enum, server_default=TaskType.TASK.value)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(String(2000))
@@ -161,7 +164,7 @@ class StudyPlanDayModel(Base):
     __tablename__ = "study_plan_days"
 
     study_plan_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("study_plans.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey(_STUDY_PLANS_ID, ondelete="CASCADE"), primary_key=True
     )
     weekday: Mapped[Weekday] = mapped_column(weekday_enum, primary_key=True)
 
@@ -172,9 +175,9 @@ class StudyPlanSubjectModel(Base):
     __tablename__ = "study_plan_subjects"
 
     study_plan_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("study_plans.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey(_STUDY_PLANS_ID, ondelete="CASCADE"), primary_key=True
     )
-    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"), primary_key=True)
+    subject_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="CASCADE"), primary_key=True)
 
 
 class StudySessionModel(Base):
@@ -188,8 +191,8 @@ class StudySessionModel(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    study_plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("study_plans.id", ondelete="CASCADE"))
+    study_plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_STUDY_PLANS_ID, ondelete="CASCADE"))
     task_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("tasks.id"))
-    subject_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"))
+    subject_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="CASCADE"))
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

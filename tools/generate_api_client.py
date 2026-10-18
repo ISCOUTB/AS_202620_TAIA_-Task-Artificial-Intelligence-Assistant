@@ -10,6 +10,7 @@ HTTP declarada en docs/api/openapi.json.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from pathlib import Path
 import re
 
@@ -19,10 +20,14 @@ OUTPUT = ROOT / "backend/generated/taia_api_client.py"
 
 
 def method_name(operation_id: str) -> str:
-    name = re.sub(r"[^0-9a-zA-Z_]+", "_", operation_id).strip("_")
+    name = re.sub(r"\W+", "_", operation_id, flags=re.ASCII).strip("_")
     if name and name[0].isdigit():
         name = f"operation_{name}"
     return name or "operation"
+
+
+def path_constant(path: str) -> str:
+    return "PATH_" + re.sub(r"\W+", "_", path, flags=re.ASCII).strip("_").upper()
 
 
 def generate() -> None:
@@ -33,6 +38,9 @@ def generate() -> None:
             if http_method.lower() not in {"get", "post", "patch", "put", "delete"}:
                 continue
             methods.append((http_method.upper(), path, method_name(operation["operationId"])))
+
+    # Las rutas que usan varias operaciones se emiten como constantes para no repetir el literal.
+    repeated_paths = [path for path, uses in Counter(path for _, path, _ in methods).items() if uses > 1]
 
     lines = [
         '"""Cliente HTTP generado desde docs/api/openapi.json. NO EDITAR A MANO.',
@@ -45,6 +53,8 @@ def generate() -> None:
         "import json",
         "from urllib import error, request",
         "",
+        *(f'{path_constant(path)} = "{path}"' for path in repeated_paths),
+        *([""] if repeated_paths else []),
         "",
         "class TaiaApiError(RuntimeError):",
         "    \"\"\"Error HTTP devuelto por la API TAIA.\"\"\"",
@@ -90,11 +100,12 @@ def generate() -> None:
     ]
 
     for http_method, path, name in methods:
-        params = [p for p in re.findall(r"{([^}]+)}", path)]
-        signature = [f"self", "body: object | None = None"] + [f"{p}: object | None = None" for p in params]
+        params = re.findall(r"{([^}]+)}", path)
+        signature = ["self", "body: object | None = None"] + [f"{p}: object | None = None" for p in params]
+        path_argument = path_constant(path) if path in repeated_paths else f'"{path}"'
         lines += [
             f"    def {name}({', '.join(signature)}) -> object:",
-            f'        return self._request("{http_method}", "{path}", body, **{{{", ".join(f"{p!r}: {p}" for p in params)}}})',
+            f'        return self._request("{http_method}", {path_argument}, body, **{{{", ".join(f"{p!r}: {p}" for p in params)}}})',
             "",
         ]
 

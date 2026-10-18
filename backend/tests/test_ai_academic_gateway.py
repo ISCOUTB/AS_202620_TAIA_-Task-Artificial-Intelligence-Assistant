@@ -51,10 +51,14 @@ def test_ai_gateway_rejects_unknown_or_missing_subject():
     user_id = _user_with_subject()
     gateway = AcademicGatewayAdapter()
 
+    owner = str(user_id)
+    unknown_subject = NewTask(title="Tarea", due_at=DUE, subject="Química")
+    missing_subject = NewTask(title="Tarea", due_at=DUE)
+
     with pytest.raises(TaskDataRejected, match="No encontré la asignatura"):
-        gateway.create_task(str(user_id), NewTask(title="Tarea", due_at=DUE, subject="Química"))
+        gateway.create_task(owner, unknown_subject)
     with pytest.raises(TaskDataRejected, match="Indica la asignatura"):
-        gateway.create_task(str(user_id), NewTask(title="Tarea", due_at=DUE))
+        gateway.create_task(owner, missing_subject)
 
 
 def test_ai_gateway_keeps_users_isolated():

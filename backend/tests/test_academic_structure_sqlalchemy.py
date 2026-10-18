@@ -63,8 +63,9 @@ def test_normalized_name_is_unique_per_user(subjects):
     subjects.add(Subject.create(USER, "Física"))
     subjects.add(Subject.create(OTHER_USER, "Física"))
 
+    duplicate = Subject.create(USER, "FÍSICA")
     with pytest.raises(IntegrityError):
-        subjects.add(Subject.create(USER, "FÍSICA"))
+        subjects.add(duplicate)
 
 
 def test_list_excludes_archived_and_orders_by_name(subjects):

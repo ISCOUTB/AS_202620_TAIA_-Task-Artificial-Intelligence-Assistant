@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Annotated
 
 from fastapi import FastAPI, Depends
 
@@ -126,7 +127,7 @@ app.include_router(reminders_router)
 
 
 @app.get("/health")
-def health(database_ready: None = Depends(require_database)):
+def health(database_ready: Annotated[None, Depends(require_database)]):
     return {"status": "ok"}
 
 

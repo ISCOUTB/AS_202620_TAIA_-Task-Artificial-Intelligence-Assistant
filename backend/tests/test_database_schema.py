@@ -51,6 +51,11 @@ def _insert(session_factory, *models):
         session.add_all(models)
 
 
+def _execute(session_factory, statement):
+    with session_factory.begin() as session:
+        session.execute(statement)
+
+
 def _user(session_factory) -> uuid.UUID:
     user_id = uuid.uuid4()
     _insert(session_factory, UserModel(id=user_id, full_name="Ana", email=f"{user_id.hex}@example.com", password_hash="h"))
@@ -83,8 +88,9 @@ def test_fcm_token_belongs_to_a_single_session(clean_db):
     user_id = _user(clean_db)
     _insert(clean_db, SessionModel(id=uuid.uuid4(), user_id=user_id, fcm_token="same"))
 
+    duplicate = SessionModel(id=uuid.uuid4(), user_id=user_id, fcm_token="same")
     with pytest.raises(IntegrityError):
-        _insert(clean_db, SessionModel(id=uuid.uuid4(), user_id=user_id, fcm_token="same"))
+        _insert(clean_db, duplicate)
 
 
 def test_refresh_token_must_expire_after_creation(clean_db):
@@ -92,9 +98,10 @@ def test_refresh_token_must_expire_after_creation(clean_db):
     session_id = uuid.uuid4()
     _insert(clean_db, SessionModel(id=session_id, user_id=user_id))
 
+    expired = RefreshTokenModel(id=uuid.uuid4(), session_id=session_id, token_hash="b" * 64,
+                                expires_at=datetime(2000, 1, 1, tzinfo=BOGOTA_TZ))
     with pytest.raises(IntegrityError):
-        _insert(clean_db, RefreshTokenModel(id=uuid.uuid4(), session_id=session_id, token_hash="b" * 64,
-                                            expires_at=datetime(2000, 1, 1, tzinfo=BOGOTA_TZ)))
+        _insert(clean_db, expired)
 
 
 def test_failed_login_attempts_do_not_require_existing_user(clean_db):
@@ -110,13 +117,15 @@ def test_only_one_accepted_study_plan_per_user(clean_db):
     user_id = uuid.uuid4()
     _insert(clean_db, _plan(user_id, "accepted"), _plan(user_id, "discarded"), _plan(user_id))
 
+    second_accepted = _plan(user_id, "accepted")
     with pytest.raises(IntegrityError):
-        _insert(clean_db, _plan(user_id, "accepted"))
+        _insert(clean_db, second_accepted)
 
 
 def test_study_plan_window_limits(clean_db):
+    too_early = _plan(uuid.uuid4(), window_start=time(3, 0))
     with pytest.raises(IntegrityError):
-        _insert(clean_db, _plan(uuid.uuid4(), window_start=time(3, 0)))
+        _insert(clean_db, too_early)
 
 
 def test_study_plan_defaults_and_children(clean_db):
@@ -148,9 +157,10 @@ def test_study_session_targets_exactly_one_of_task_or_subject(clean_db):
     plan = _plan(user_id)
     _insert(clean_db, plan)
 
+    without_target = StudySessionModel(id=uuid.uuid4(), study_plan_id=plan.id,
+                                       starts_at=NOW, ends_at=NOW + timedelta(hours=1))
     with pytest.raises(IntegrityError):
-        _insert(clean_db, StudySessionModel(id=uuid.uuid4(), study_plan_id=plan.id,
-                                            starts_at=NOW, ends_at=NOW + timedelta(hours=1)))
+        _insert(clean_db, without_target)
 
 
 def _reminder() -> ReminderModel:
@@ -165,19 +175,21 @@ def test_one_notification_per_reminder_and_sent_reminders_are_kept(clean_db):
 
     with clean_db() as session:
         assert session.get(ReminderModel, reminder.id).status == "pending"
+    second_notification = NotificationModel(id=uuid.uuid4(), reminder_id=reminder.id, message="Otra")
     with pytest.raises(IntegrityError):
-        _insert(clean_db, NotificationModel(id=uuid.uuid4(), reminder_id=reminder.id, message="Otra"))
+        _insert(clean_db, second_notification)
+    delete_reminder = delete(ReminderModel).where(ReminderModel.id == reminder.id)
     with pytest.raises(IntegrityError):
-        with clean_db.begin() as session:
-            session.execute(delete(ReminderModel).where(ReminderModel.id == reminder.id))
+        _execute(clean_db, delete_reminder)
 
 
 def test_push_attempts_range(clean_db):
     reminder = _reminder()
     _insert(clean_db, reminder)
 
+    too_many_attempts = NotificationModel(id=uuid.uuid4(), reminder_id=reminder.id, message="x", push_attempts=5)
     with pytest.raises(IntegrityError):
-        _insert(clean_db, NotificationModel(id=uuid.uuid4(), reminder_id=reminder.id, message="x", push_attempts=5))
+        _insert(clean_db, too_many_attempts)
 
 
 def test_conversation_pending_action_and_messages(clean_db):
@@ -186,8 +198,9 @@ def test_conversation_pending_action_and_messages(clean_db):
                                         pending_action_expires_at=NOW))
     _insert(clean_db, ConversationMessageModel(user_id=user_id, role="user", content="Hola"))
 
+    without_expiration = ConversationModel(user_id=uuid.uuid4(), pending_action={"kind": "x"})
     with pytest.raises(IntegrityError):
-        _insert(clean_db, ConversationModel(user_id=uuid.uuid4(), pending_action={"kind": "x"}))
+        _insert(clean_db, without_expiration)
     with clean_db.begin() as session:
         session.execute(delete(ConversationModel).where(ConversationModel.user_id == user_id))
     with clean_db() as session:

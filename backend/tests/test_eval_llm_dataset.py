@@ -12,8 +12,6 @@ import json
 from collections import Counter
 from pathlib import Path
 
-import pytest
-
 from app.modules.ai.domain.messages import Intent
 
 DATASET = Path(__file__).resolve().parents[2] / "docs" / "evaluacion_ia" / "dataset.jsonl"
@@ -34,13 +32,10 @@ def test_dataset_existe_y_no_esta_vacio():
 
 
 def test_todas_las_lineas_son_json_valido():
-    for numero, linea in enumerate(DATASET.read_text(encoding="utf-8").splitlines(), 1):
+    for linea in DATASET.read_text(encoding="utf-8").splitlines():
         if not linea.strip():
             continue
-        try:
-            json.loads(linea)
-        except ValueError as error:
-            pytest.fail("dataset linea {}: JSON invalido: {}".format(numero, error))
+        json.loads(linea)
 
 
 def test_cada_caso_tiene_los_campos_obligatorios():

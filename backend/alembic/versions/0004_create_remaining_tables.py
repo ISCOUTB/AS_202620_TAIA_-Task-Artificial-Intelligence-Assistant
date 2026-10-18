@@ -5,7 +5,7 @@ Revises: 0003
 Create Date: 2026-09-25 23:52:12.165673
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -13,9 +13,14 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '0004'
-down_revision: Union[str, Sequence[str], None] = '0003'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '0003'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+NOW = 'now()'
+EXPIRES_AFTER_CREATED = 'expires_at > created_at'
+USERS_ID = 'users.id'
+STUDY_PLANS_ID = 'study_plans.id'
 
 
 def upgrade() -> None:
@@ -25,14 +30,14 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('pending_action', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('pending_action_expires_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.CheckConstraint('(pending_action IS NULL) = (pending_action_expires_at IS NULL)', name=op.f('ck_conversations_pending_action_consistent')),
     sa.PrimaryKeyConstraint('user_id', name=op.f('pk_conversations'))
     )
     op.create_table('failed_login_attempts',
     sa.Column('id', sa.BigInteger(), sa.Identity(always=True), nullable=False),
     sa.Column('email', sa.String(length=254), nullable=False),
-    sa.Column('attempted_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('attempted_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_failed_login_attempts'))
     )
     op.create_index('ix_failed_login_attempts_email_attempted_at', 'failed_login_attempts', ['email', 'attempted_at'], unique=False)
@@ -44,8 +49,8 @@ def upgrade() -> None:
     sa.Column('custom_message', sa.String(length=500), nullable=True),
     sa.Column('origin', sa.Enum('automatic', 'custom', name='reminder_origin'), nullable=False),
     sa.Column('status', sa.Enum('pending', 'sent', 'cancelled', name='reminder_status'), server_default='pending', nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_reminders'))
     )
     op.create_index('ix_reminders_scheduled_at_pending', 'reminders', ['scheduled_at'], unique=False, postgresql_where=sa.text("status = 'pending'"))
@@ -60,8 +65,8 @@ def upgrade() -> None:
     sa.Column('window_end', sa.Time(), server_default=sa.text("'22:00'"), nullable=False),
     sa.Column('session_minutes', sa.SmallInteger(), server_default=sa.text('60'), nullable=False),
     sa.Column('start_date', sa.Date(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.CheckConstraint("window_start >= '05:00' AND window_end <= '23:00' AND window_end > window_start", name=op.f('ck_study_plans_window_within_limits')),
     sa.CheckConstraint('session_minutes > 0', name=op.f('ck_study_plans_session_minutes_positive')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_study_plans'))
@@ -72,7 +77,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('role', sa.Enum('user', 'assistant', name='message_role'), nullable=False),
     sa.Column('content', sa.String(length=4000), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['conversations.user_id'], name=op.f('fk_conversation_messages_user_id_conversations'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_conversation_messages'))
     )
@@ -81,7 +86,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('reminder_id', sa.Uuid(), nullable=False),
     sa.Column('message', sa.String(length=500), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.Column('push_attempts', sa.SmallInteger(), server_default=sa.text('0'), nullable=False),
     sa.Column('push_sent_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
@@ -94,11 +99,11 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('token_hash', sa.CHAR(length=64), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('expires_at > created_at', name=op.f('ck_password_reset_tokens_expires_after_created')),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_password_reset_tokens_user_id_users')),
+    sa.CheckConstraint(EXPIRES_AFTER_CREATED, name=op.f('ck_password_reset_tokens_expires_after_created')),
+    sa.ForeignKeyConstraint(['user_id'], [USERS_ID], name=op.f('fk_password_reset_tokens_user_id_users')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_password_reset_tokens')),
     sa.UniqueConstraint('token_hash', name=op.f('uq_password_reset_tokens_token_hash'))
     )
@@ -107,9 +112,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('fcm_token', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.Column('revoked_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_sessions_user_id_users')),
+    sa.ForeignKeyConstraint(['user_id'], [USERS_ID], name=op.f('fk_sessions_user_id_users')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_sessions')),
     sa.UniqueConstraint('fcm_token', name=op.f('uq_sessions_fcm_token'))
     )
@@ -118,13 +123,13 @@ def upgrade() -> None:
     sa.Column('study_plan_id', sa.Uuid(), nullable=False),
     # El ENUM weekday ya existe desde la migración 0002.
     sa.Column('weekday', postgresql.ENUM(name='weekday', create_type=False), nullable=False),
-    sa.ForeignKeyConstraint(['study_plan_id'], ['study_plans.id'], name=op.f('fk_study_plan_days_study_plan_id_study_plans'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['study_plan_id'], [STUDY_PLANS_ID], name=op.f('fk_study_plan_days_study_plan_id_study_plans'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('study_plan_id', 'weekday', name=op.f('pk_study_plan_days'))
     )
     op.create_table('study_plan_subjects',
     sa.Column('study_plan_id', sa.Uuid(), nullable=False),
     sa.Column('subject_id', sa.Uuid(), nullable=False),
-    sa.ForeignKeyConstraint(['study_plan_id'], ['study_plans.id'], name=op.f('fk_study_plan_subjects_study_plan_id_study_plans'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['study_plan_id'], [STUDY_PLANS_ID], name=op.f('fk_study_plan_subjects_study_plan_id_study_plans'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], name=op.f('fk_study_plan_subjects_subject_id_subjects'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('study_plan_id', 'subject_id', name=op.f('pk_study_plan_subjects'))
     )
@@ -132,11 +137,11 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('code_hash', sa.CHAR(length=64), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('expires_at > created_at', name=op.f('ck_telegram_link_codes_expires_after_created')),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_telegram_link_codes_user_id_users')),
+    sa.CheckConstraint(EXPIRES_AFTER_CREATED, name=op.f('ck_telegram_link_codes_expires_after_created')),
+    sa.ForeignKeyConstraint(['user_id'], [USERS_ID], name=op.f('fk_telegram_link_codes_user_id_users')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_telegram_link_codes')),
     sa.UniqueConstraint('code_hash', name=op.f('uq_telegram_link_codes_code_hash'))
     )
@@ -144,10 +149,10 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('session_id', sa.Uuid(), nullable=False),
     sa.Column('token_hash', sa.CHAR(length=64), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.CheckConstraint('expires_at > created_at', name=op.f('ck_refresh_tokens_expires_after_created')),
+    sa.CheckConstraint(EXPIRES_AFTER_CREATED, name=op.f('ck_refresh_tokens_expires_after_created')),
     sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], name=op.f('fk_refresh_tokens_session_id_sessions'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_refresh_tokens')),
     sa.UniqueConstraint('token_hash', name=op.f('uq_refresh_tokens_token_hash'))
@@ -161,7 +166,7 @@ def upgrade() -> None:
     sa.Column('ends_at', sa.DateTime(timezone=True), nullable=False),
     sa.CheckConstraint('(task_id IS NULL) <> (subject_id IS NULL)', name=op.f('ck_study_sessions_task_xor_subject')),
     sa.CheckConstraint('ends_at > starts_at', name=op.f('ck_study_sessions_ends_after_starts')),
-    sa.ForeignKeyConstraint(['study_plan_id'], ['study_plans.id'], name=op.f('fk_study_sessions_study_plan_id_study_plans'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['study_plan_id'], [STUDY_PLANS_ID], name=op.f('fk_study_sessions_study_plan_id_study_plans'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], name=op.f('fk_study_sessions_subject_id_subjects'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], name=op.f('fk_study_sessions_task_id_tasks')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_study_sessions'))

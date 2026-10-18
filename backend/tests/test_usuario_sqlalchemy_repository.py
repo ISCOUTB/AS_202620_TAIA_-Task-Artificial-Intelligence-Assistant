@@ -75,6 +75,7 @@ def test_get_missing_user_returns_none(repository):
 
 def test_email_is_unique(repository):
     repository.add(_new_user())
+    duplicate = _new_user()
 
     with pytest.raises(IntegrityError):
-        repository.add(_new_user())
+        repository.add(duplicate)

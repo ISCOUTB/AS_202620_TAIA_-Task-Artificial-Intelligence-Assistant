@@ -115,6 +115,17 @@ def campos_esperados(fila: dict) -> dict:
     return expected
 
 
+def _valores_iguales(path: str, actual, expected) -> bool:
+    if path.endswith(("due_at", "due_from", "due_to")) and expected is not None:
+        try:
+            return datetime.fromisoformat(actual) == datetime.fromisoformat(expected)
+        except (ValueError, TypeError):
+            return False
+    # Tildes y palabras no se eliminan para no ocultar errores.
+    normalize = lambda v: " ".join(v.casefold().split()) if isinstance(v, str) else v
+    return normalize(actual) == normalize(expected)
+
+
 def comparar_campos(fila: dict, resultado) -> list[dict]:
     comparisons = []
     for path, expected in campos_esperados(fila).items():
@@ -123,18 +134,28 @@ def comparar_campos(fila: dict, resultado) -> list[dict]:
             actual = getattr(actual, part, None)
         if isinstance(actual, datetime):
             actual = actual.isoformat()
-        if path.endswith(("due_at", "due_from", "due_to")) and expected is not None:
-            try:
-                equal = datetime.fromisoformat(actual) == datetime.fromisoformat(expected)
-            except (ValueError, TypeError):
-                equal = False
-        else:
-            # Tildes y palabras no se eliminan para no ocultar errores.
-            normalize = lambda v: " ".join(v.casefold().split()) if isinstance(v, str) else v
-            equal = normalize(actual) == normalize(expected)
+        equal = _valores_iguales(path, actual, expected)
         comparisons.append({"campo": path, "esperado": expected,
                             "obtenido": actual, "correcto": resultado is not None and equal})
     return comparisons
+
+
+def _fallo_de_intencion(fila: dict, resultado) -> dict:
+    entrada = {"id": fila["id"], "esperado": fila["intent"], "obtenido": resultado.intent.value}
+    if fila.get("title") and resultado.task:
+        entrada["titulo_esperado"] = fila["title"]
+        entrada["titulo_obtenido"] = resultado.task.title
+    if fila.get("task_hint"):
+        entrada["referencia_esperada"] = fila["task_hint"]
+        entrada["referencia_obtenida"] = resultado.task_hint
+    return entrada
+
+
+def _costo(tokens_entrada: int, tokens_salida: int,
+           precio_input: float | None, precio_output: float | None) -> float | None:
+    if precio_input is None or precio_output is None:
+        return None
+    return (tokens_entrada / 1e6 * precio_input) + (tokens_salida / 1e6 * precio_output)
 
 
 def evaluar(filas: list[dict], precio_input: float | None, precio_output: float | None) -> dict:
@@ -191,21 +212,12 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
             if obtenido == fila["intent"]:
                 aciertos += 1
             else:
-                entrada = {"id": fila["id"], "esperado": fila["intent"], "obtenido": obtenido}
-                if fila.get("title") and resultado.task:
-                    entrada["titulo_esperado"] = fila["title"]
-                    entrada["titulo_obtenido"] = resultado.task.title
-                if fila.get("task_hint"):
-                    entrada["referencia_esperada"] = fila["task_hint"]
-                    entrada["referencia_obtenida"] = resultado.task_hint
-                fallos.append(entrada)
+                fallos.append(_fallo_de_intencion(fila, resultado))
 
     finally:
         llm.close()
     p95 = sorted(tiempos_intentos)[math.ceil(len(tiempos_intentos) * 0.95) - 1]
-    costo = None
-    if precio_input is not None and precio_output is not None:
-        costo = (tokens_entrada / 1e6 * precio_input) + (tokens_salida / 1e6 * precio_output)
+    costo = _costo(tokens_entrada, tokens_salida, precio_input, precio_output)
     campos = [campo for caso in casos for campo in caso["campos"]]
     correctos = sum(c["correcto"] for c in campos)
     exactitud_campos = correctos / len(campos) if campos else None
@@ -227,7 +239,7 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
         "S1_matriz_de_confusion": {
             "{}->{}".format(a, b): n for (a, b), n in sorted(matriz.items())
         },
-        "S1_por_intencion": _por_intencion(matriz, len(validas)),
+        "S1_por_intencion": _por_intencion(matriz),
         "S1_fallos": fallos,
         "S3_latencia_ms": {
             "muestras": len(tiempos_intentos),
@@ -254,7 +266,7 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
     }
 
 
-def _por_intencion(matriz: Counter, total: int) -> dict:
+def _por_intencion(matriz: Counter) -> dict:
     detalle: dict[str, dict] = {}
     for (esperado, _), n in matriz.items():
         fila = detalle.setdefault(esperado, {"casos": 0, "aciertos": 0})
@@ -265,6 +277,15 @@ def _por_intencion(matriz: Counter, total: int) -> dict:
     for fila in detalle.values():
         fila["exactitud"] = round(fila["aciertos"] / fila["casos"], 4)
     return dict(sorted(detalle.items()))
+
+
+def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
+    """Acepta solo rutas dentro del repositorio para leer o escribir evidencia."""
+
+    ruta = Path(valor).resolve()
+    if not ruta.is_relative_to(ROOT):
+        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
+    return ruta
 
 
 def main() -> int:
@@ -279,7 +300,7 @@ def main() -> int:
         parser.error("Los precios deben ser finitos y no negativos.")
     if (args.precio_input is None) != (args.precio_output is None):
         parser.error("Indique ambos precios o ninguno; omitirlos significa costo desconocido.")
-    if args.json and Path(args.json).exists():
+    if args.json and _ruta_en_repositorio(parser, args.json).exists():
         parser.error("La salida ya existe. Use otra ruta para preservar la evidencia anterior.")
 
     filas = cargar_dataset()
@@ -314,7 +335,7 @@ def main() -> int:
     resultado.update(evaluar(filas, args.precio_input, args.precio_output))
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
-        Path(args.json).write_text(
+        _ruta_en_repositorio(parser, args.json).write_text(
             json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print("escrito: {}".format(args.json))

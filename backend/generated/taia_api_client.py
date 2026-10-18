@@ -8,6 +8,16 @@ from __future__ import annotations
 import json
 from urllib import error, request
 
+PATH_ACADEMIC_TASKS = "/academic/tasks"
+PATH_ACADEMIC_TASKS_TASK_ID = "/academic/tasks/{task_id}"
+PATH_ACADEMIC_SUBJECTS = "/academic/subjects"
+PATH_ACADEMIC_SUBJECTS_SUBJECT_ID = "/academic/subjects/{subject_id}"
+PATH_ACADEMIC_SCHEDULE_BLOCKS = "/academic/schedule-blocks"
+PATH_ACADEMIC_SCHEDULE_BLOCKS_BLOCK_ID = "/academic/schedule-blocks/{block_id}"
+PATH_ACADEMIC_PERIOD = "/academic/period"
+PATH_REMINDERS = "/reminders"
+PATH_REMINDERS_REMINDER_ID = "/reminders/{reminder_id}"
+
 
 class TaiaApiError(RuntimeError):
     """Error HTTP devuelto por la API TAIA."""
@@ -51,19 +61,19 @@ class TaiaApiClient:
             raise TaiaApiError(exc.code, body) from exc
 
     def register_task_academic_tasks_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/academic/tasks", body, **{})
+        return self._request("POST", PATH_ACADEMIC_TASKS, body, **{})
 
     def list_tasks_academic_tasks_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/academic/tasks", body, **{})
+        return self._request("GET", PATH_ACADEMIC_TASKS, body, **{})
 
     def get_task_academic_tasks__task_id__get(self, body: object | None = None, task_id: object | None = None) -> object:
-        return self._request("GET", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+        return self._request("GET", PATH_ACADEMIC_TASKS_TASK_ID, body, **{'task_id': task_id})
 
     def update_task_academic_tasks__task_id__patch(self, body: object | None = None, task_id: object | None = None) -> object:
-        return self._request("PATCH", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+        return self._request("PATCH", PATH_ACADEMIC_TASKS_TASK_ID, body, **{'task_id': task_id})
 
     def delete_task_academic_tasks__task_id__delete(self, body: object | None = None, task_id: object | None = None) -> object:
-        return self._request("DELETE", "/academic/tasks/{task_id}", body, **{'task_id': task_id})
+        return self._request("DELETE", PATH_ACADEMIC_TASKS_TASK_ID, body, **{'task_id': task_id})
 
     def complete_task_academic_tasks__task_id__complete_patch(self, body: object | None = None, task_id: object | None = None) -> object:
         return self._request("PATCH", "/academic/tasks/{task_id}/complete", body, **{'task_id': task_id})
@@ -72,19 +82,19 @@ class TaiaApiClient:
         return self._request("PATCH", "/academic/tasks/{task_id}/reopen", body, **{'task_id': task_id})
 
     def create_subject_academic_subjects_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/academic/subjects", body, **{})
+        return self._request("POST", PATH_ACADEMIC_SUBJECTS, body, **{})
 
     def list_subjects_academic_subjects_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/academic/subjects", body, **{})
+        return self._request("GET", PATH_ACADEMIC_SUBJECTS, body, **{})
 
     def get_subject_academic_subjects__subject_id__get(self, body: object | None = None, subject_id: object | None = None) -> object:
-        return self._request("GET", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+        return self._request("GET", PATH_ACADEMIC_SUBJECTS_SUBJECT_ID, body, **{'subject_id': subject_id})
 
     def update_subject_academic_subjects__subject_id__patch(self, body: object | None = None, subject_id: object | None = None) -> object:
-        return self._request("PATCH", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+        return self._request("PATCH", PATH_ACADEMIC_SUBJECTS_SUBJECT_ID, body, **{'subject_id': subject_id})
 
     def delete_subject_academic_subjects__subject_id__delete(self, body: object | None = None, subject_id: object | None = None) -> object:
-        return self._request("DELETE", "/academic/subjects/{subject_id}", body, **{'subject_id': subject_id})
+        return self._request("DELETE", PATH_ACADEMIC_SUBJECTS_SUBJECT_ID, body, **{'subject_id': subject_id})
 
     def archive_subject_academic_subjects__subject_id__archive_post(self, body: object | None = None, subject_id: object | None = None) -> object:
         return self._request("POST", "/academic/subjects/{subject_id}/archive", body, **{'subject_id': subject_id})
@@ -99,22 +109,22 @@ class TaiaApiClient:
         return self._request("DELETE", "/academic/subjects/{subject_id}/aliases/{alias_id}", body, **{'subject_id': subject_id, 'alias_id': alias_id})
 
     def create_schedule_block_academic_schedule_blocks_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/academic/schedule-blocks", body, **{})
+        return self._request("POST", PATH_ACADEMIC_SCHEDULE_BLOCKS, body, **{})
 
     def list_schedule_blocks_academic_schedule_blocks_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/academic/schedule-blocks", body, **{})
+        return self._request("GET", PATH_ACADEMIC_SCHEDULE_BLOCKS, body, **{})
 
     def update_schedule_block_academic_schedule_blocks__block_id__patch(self, body: object | None = None, block_id: object | None = None) -> object:
-        return self._request("PATCH", "/academic/schedule-blocks/{block_id}", body, **{'block_id': block_id})
+        return self._request("PATCH", PATH_ACADEMIC_SCHEDULE_BLOCKS_BLOCK_ID, body, **{'block_id': block_id})
 
     def delete_schedule_block_academic_schedule_blocks__block_id__delete(self, body: object | None = None, block_id: object | None = None) -> object:
-        return self._request("DELETE", "/academic/schedule-blocks/{block_id}", body, **{'block_id': block_id})
+        return self._request("DELETE", PATH_ACADEMIC_SCHEDULE_BLOCKS_BLOCK_ID, body, **{'block_id': block_id})
 
     def get_academic_period_academic_period_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/academic/period", body, **{})
+        return self._request("GET", PATH_ACADEMIC_PERIOD, body, **{})
 
     def set_academic_period_academic_period_put(self, body: object | None = None) -> object:
-        return self._request("PUT", "/academic/period", body, **{})
+        return self._request("PUT", PATH_ACADEMIC_PERIOD, body, **{})
 
     def register_user_users_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users", body, **{})
@@ -135,19 +145,19 @@ class TaiaApiClient:
         return self._request("POST", "/ai/message", body, **{})
 
     def list_reminders_reminders_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/reminders", body, **{})
+        return self._request("GET", PATH_REMINDERS, body, **{})
 
     def create_reminder_reminders_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/reminders", body, **{})
+        return self._request("POST", PATH_REMINDERS, body, **{})
 
     def get_reminder_reminders__reminder_id__get(self, body: object | None = None, reminder_id: object | None = None) -> object:
-        return self._request("GET", "/reminders/{reminder_id}", body, **{'reminder_id': reminder_id})
+        return self._request("GET", PATH_REMINDERS_REMINDER_ID, body, **{'reminder_id': reminder_id})
 
     def edit_reminder_reminders__reminder_id__patch(self, body: object | None = None, reminder_id: object | None = None) -> object:
-        return self._request("PATCH", "/reminders/{reminder_id}", body, **{'reminder_id': reminder_id})
+        return self._request("PATCH", PATH_REMINDERS_REMINDER_ID, body, **{'reminder_id': reminder_id})
 
     def delete_reminder_reminders__reminder_id__delete(self, body: object | None = None, reminder_id: object | None = None) -> object:
-        return self._request("DELETE", "/reminders/{reminder_id}", body, **{'reminder_id': reminder_id})
+        return self._request("DELETE", PATH_REMINDERS_REMINDER_ID, body, **{'reminder_id': reminder_id})
 
     def mark_reminder_completed_reminders__reminder_id__complete_post(self, body: object | None = None, reminder_id: object | None = None) -> object:
         return self._request("POST", "/reminders/{reminder_id}/complete", body, **{'reminder_id': reminder_id})

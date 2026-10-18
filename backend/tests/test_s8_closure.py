@@ -26,8 +26,8 @@ def test_structure_dependencies_are_injected(monkeypatch):
     with pytest.raises(RuntimeError):
         api.get_subjects_use_case()
     api.configure_structure_use_cases(*services)
-    assert [api.get_subjects_use_case(), api.get_schedule_use_case(),
-            api.get_period_use_case()] == services
+    configured = [api.get_subjects_use_case(), api.get_schedule_use_case(), api.get_period_use_case()]
+    assert configured == services
 
 
 def test_reminder_dependencies_are_injected(monkeypatch):

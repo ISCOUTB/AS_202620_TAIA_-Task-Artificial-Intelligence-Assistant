@@ -11,6 +11,14 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _respuesta_correcta(kind: str, response: httpx.Response, task_id: str) -> bool:
+    if kind == "autorizado":
+        return response.status_code == 200
+    # El acceso ajeno debe responder 404 sin filtrar datos de la tarea.
+    return (response.status_code == 404 and task_id not in response.text
+            and "Evaluación de propiedad" not in response.text)
+
+
 def main():
     session = json.loads((ROOT / ".venv/api_eval_session.json").read_text(encoding="utf-8"))
     started = datetime.now(timezone.utc)
@@ -49,9 +57,7 @@ def main():
                     before = time.perf_counter()
                     kwargs = {"json": {"description": kind}} if method == "PATCH" else {}
                     response = client.request(method, path, **kwargs)
-                    valid = response.status_code == (200 if kind == "autorizado" else 404)
-                    if kind == "ajeno":
-                        valid = valid and task_id not in response.text and "Evaluación de propiedad" not in response.text
+                    valid = _respuesta_correcta(kind, response, task_id)
                     records.append({"caso": index, "actor": kind, "metodo": method,
                                     "status": response.status_code, "correcto": valid,
                                     "latencia_ms": round((time.perf_counter() - before) * 1000, 1)})

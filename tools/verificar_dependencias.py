@@ -71,11 +71,9 @@ def _versionada(relativo: str) -> bool:
     return not any(parte in RUTAS_EXCLUIDAS for parte in Path(relativo).parts)
 
 
-def analizar_lock(ruta: Path) -> dict:
-    """Extrae los paquetes declarados y sus hashes."""
+def _lineas_logicas(texto: str) -> list[str]:
+    """Une las lineas logicas para capturar los paquetes con continuacion "\"."""
 
-    texto = ruta.read_text(encoding="utf-8")
-    # Une las lineas_logica para capturar los paquetes con continuacion "\".
     logicas: list[str] = []
     buffer = ""
     for linea in texto.splitlines():
@@ -86,13 +84,18 @@ def analizar_lock(ruta: Path) -> dict:
         buffer = ""
     if buffer:
         logicas.append(buffer)
+    return logicas
+
+
+def analizar_lock(ruta: Path) -> dict:
+    """Extrae los paquetes declarados y sus hashes."""
 
     paquetes: dict[str, dict] = {}
-    for logica in logicas:
+    for logica in _lineas_logicas(ruta.read_text(encoding="utf-8")):
         limpia = logica.strip()
         if not limpia or limpia.startswith("#"):
             continue
-        if limpia.startswith("-r ") or limpia.startswith("--"):
+        if limpia.startswith(("-r ", "--")):
             continue
         empareja = re.match(r"^([A-Za-z0-9._\-]+)\s*==\s*([^\s;\\]+)", limpia)
         nombre = empareja.group(1) if empareja else limpia.split()[0]
@@ -113,7 +116,7 @@ def analizar_lock(ruta: Path) -> dict:
         "paquetes": len(paquetes),
         "sin_version_fijada": sin_version,
         "sin_hash": sin_hash,
-        "detalle": {n: p for n, p in sorted(paquetes.items())},
+        "detalle": dict(sorted(paquetes.items())),
     }
 
 
@@ -149,6 +152,15 @@ def buscar_credenciales() -> list[dict]:
     return hallazgos
 
 
+def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
+    """Acepta solo rutas dentro del repositorio para leer o escribir evidencia."""
+
+    ruta = Path(valor).resolve()
+    if not ruta.is_relative_to(ROOT):
+        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
+    return ruta
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
@@ -179,7 +191,7 @@ def main() -> int:
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
-        Path(args.json).write_text(
+        _ruta_en_repositorio(parser, args.json).write_text(
             json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print("escrito: {}".format(args.json))

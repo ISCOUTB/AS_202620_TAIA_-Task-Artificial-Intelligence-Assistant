@@ -51,7 +51,8 @@ def test_evaluation_excludes_empty_and_counts_provider_failure(monkeypatch):
             {"id": "one", "text": "crear", "intent": "create_task", "title": "Ensayo"},
             {"id": "two", "text": "error", "intent": "create_task", "title": "Taller"}]
     result = evaluator.evaluar(rows, None, None)
-    assert provider.calls == 2 and provider.closed
+    assert provider.calls == 2
+    assert provider.closed
     assert result["S1_exactitud_intencion"] == 0.5
     assert result["S1_campos"]["esperados"] == 2
     assert result["S1_campos"]["correctos"] == 0

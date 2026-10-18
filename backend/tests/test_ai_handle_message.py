@@ -76,7 +76,8 @@ def test_create_task_executes_after_yes():
 
     tasks = academic.list_tasks("u1", TaskFilters())
     assert "cree la tarea" in reply.text.lower()
-    assert len(tasks) == 1 and tasks[0].title == "Taller"
+    assert len(tasks) == 1
+    assert tasks[0].title == "Taller"
 
 
 def test_create_task_not_executed_after_no():

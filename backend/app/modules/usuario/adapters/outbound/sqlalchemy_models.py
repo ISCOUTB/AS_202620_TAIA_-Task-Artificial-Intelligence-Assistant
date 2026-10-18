@@ -15,6 +15,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.adapters.outbound.database import Base
 
+_USERS_ID = "users.id"
+_EXPIRES_AFTER_CREATED = "expires_at > created_at"
+
 
 class SessionModel(Base):
     """Sesión iniciada en un dispositivo; el JWT lleva su id como `sid` (RF-USR-03, 04, RF-NOT-01)."""
@@ -25,7 +28,7 @@ class SessionModel(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USERS_ID))
     fcm_token: Mapped[str | None] = mapped_column(Text, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -35,7 +38,7 @@ class RefreshTokenModel(Base):
     """Tokens de renovación con rotación de un solo uso (RF-USR-03)."""
 
     __tablename__ = "refresh_tokens"
-    __table_args__ = (CheckConstraint("expires_at > created_at", name="expires_after_created"),)
+    __table_args__ = (CheckConstraint(_EXPIRES_AFTER_CREATED, name="expires_after_created"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"))
@@ -50,12 +53,12 @@ class PasswordResetTokenModel(Base):
 
     __tablename__ = "password_reset_tokens"
     __table_args__ = (
-        CheckConstraint("expires_at > created_at", name="expires_after_created"),
+        CheckConstraint(_EXPIRES_AFTER_CREATED, name="expires_after_created"),
         Index("ix_password_reset_tokens_user_id_created_at", "user_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USERS_ID))
     token_hash: Mapped[str] = mapped_column(CHAR(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -66,10 +69,10 @@ class TelegramLinkCodeModel(Base):
     """Códigos de un solo uso para vincular Telegram (RF-TEL-01)."""
 
     __tablename__ = "telegram_link_codes"
-    __table_args__ = (CheckConstraint("expires_at > created_at", name="expires_after_created"),)
+    __table_args__ = (CheckConstraint(_EXPIRES_AFTER_CREATED, name="expires_after_created"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USERS_ID))
     code_hash: Mapped[str] = mapped_column(CHAR(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

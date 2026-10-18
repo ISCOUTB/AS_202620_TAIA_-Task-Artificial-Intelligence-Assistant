@@ -37,6 +37,8 @@ _subjects: ManageSubjectsUseCase | None = None
 _schedule: ManageScheduleUseCase | None = None
 _period: ManageAcademicPeriodUseCase | None = None
 
+_NOT_CONFIGURED = "Los casos de uso de Academic no están configurados."
+
 
 def configure_structure_use_cases(subjects: ManageSubjectsUseCase,
                                   schedule: ManageScheduleUseCase,
@@ -47,19 +49,19 @@ def configure_structure_use_cases(subjects: ManageSubjectsUseCase,
 
 def get_subjects_use_case() -> ManageSubjectsUseCase:
     if _subjects is None:
-        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+        raise RuntimeError(_NOT_CONFIGURED)
     return _subjects
 
 
 def get_schedule_use_case() -> ManageScheduleUseCase:
     if _schedule is None:
-        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+        raise RuntimeError(_NOT_CONFIGURED)
     return _schedule
 
 
 def get_period_use_case() -> ManageAcademicPeriodUseCase:
     if _period is None:
-        raise RuntimeError("Los casos de uso de Academic no están configurados.")
+        raise RuntimeError(_NOT_CONFIGURED)
     return _period
 
 

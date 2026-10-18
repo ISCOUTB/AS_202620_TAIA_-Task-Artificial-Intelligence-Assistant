@@ -5,7 +5,7 @@ Revises: 0001
 Create Date: 2026-09-25 23:27:56.788836
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa
@@ -13,9 +13,11 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0002'
-down_revision: Union[str, Sequence[str], None] = '0001'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '0001'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+NOW = 'now()'
 
 
 def upgrade() -> None:
@@ -25,7 +27,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('start_date', sa.Date(), nullable=False),
     sa.Column('end_date', sa.Date(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.CheckConstraint('end_date > start_date', name=op.f('ck_academic_periods_end_after_start')),
     sa.PrimaryKeyConstraint('user_id', name=op.f('pk_academic_periods'))
     )
@@ -36,8 +38,8 @@ def upgrade() -> None:
     sa.Column('normalized_name', sa.String(length=100), nullable=False),
     sa.Column('teacher', sa.String(length=100), nullable=True),
     sa.Column('archived_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.CheckConstraint('char_length(trim(name)) > 0', name=op.f('ck_subjects_name_not_blank')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_subjects')),
     sa.UniqueConstraint('user_id', 'normalized_name', name=op.f('uq_subjects_user_id_normalized_name'))
@@ -49,8 +51,8 @@ def upgrade() -> None:
     sa.Column('start_time', sa.Time(), nullable=False),
     sa.Column('end_time', sa.Time(), nullable=False),
     sa.Column('room', sa.String(length=50), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.CheckConstraint('end_time > start_time', name=op.f('ck_schedule_blocks_end_after_start')),
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], name=op.f('fk_schedule_blocks_subject_id_subjects'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_schedule_blocks'))
@@ -61,7 +63,7 @@ def upgrade() -> None:
     sa.Column('subject_id', sa.Uuid(), nullable=False),
     sa.Column('alias', sa.String(length=50), nullable=False),
     sa.Column('normalized_alias', sa.String(length=50), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text(NOW), nullable=False),
     sa.ForeignKeyConstraint(['subject_id'], ['subjects.id'], name=op.f('fk_subject_aliases_subject_id_subjects'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_subject_aliases')),
     sa.UniqueConstraint('subject_id', 'normalized_alias', name=op.f('uq_subject_aliases_subject_id_normalized_alias'))

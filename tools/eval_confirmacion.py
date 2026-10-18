@@ -148,6 +148,15 @@ def _confirmar(respuesta: str) -> tuple[bool, float]:
     return creada, transcurrido
 
 
+def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
+    """Acepta solo rutas dentro del repositorio para leer o escribir evidencia."""
+
+    ruta = Path(valor).resolve()
+    if not ruta.is_relative_to(ROOT):
+        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
+    return ruta
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
@@ -199,7 +208,7 @@ def main() -> int:
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
-        Path(args.json).write_text(
+        _ruta_en_repositorio(parser, args.json).write_text(
             json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print("escrito: {}".format(args.json))

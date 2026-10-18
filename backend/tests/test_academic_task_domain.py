@@ -40,8 +40,9 @@ def test_create_task_rejects_description_too_long():
 
 
 def test_due_at_must_be_in_the_future():
+    past = timedelta(minutes=-1)
     with pytest.raises(InvalidTaskError):
-        _task(due_in=timedelta(minutes=-1))
+        _task(due_in=past)
 
 
 def test_naive_due_at_is_interpreted_as_bogota_time():
@@ -99,6 +100,7 @@ def test_reopen_clears_completed_at_rf_tar_08():
 
 def test_update_validates_new_due_at():
     task = _task()
+    yesterday = NOW - timedelta(days=1)
 
     with pytest.raises(InvalidTaskError):
-        task.update(due_at=NOW - timedelta(days=1), now=NOW)
+        task.update(due_at=yesterday, now=NOW)
