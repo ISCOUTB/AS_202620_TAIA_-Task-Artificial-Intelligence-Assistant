@@ -93,7 +93,12 @@ class HandleUserMessageUseCase:
         self, request: IncomingRequest, text: str, conversation: Conversation
     ) -> AssistantReply:
         if conversation.pending is not None:
-            return self._resolve_pending(request.user_id, text, conversation)
+            action = self._conversations.take_pending(request.user_id)
+            conversation.clear_pending()
+            if action is not None:
+                return self._resolve_pending(request.user_id, text, action)
+            # Otra peticion ya la reclamo: se atiende como un mensaje sin
+            # accion pendiente, igual que una confirmacion repetida.
 
         try:
             interpretation = self._llm.interpret(request, self._now())
@@ -189,11 +194,9 @@ class HandleUserMessageUseCase:
     # -- confirmacion ----------------------------------------------------
 
     def _resolve_pending(
-        self, user_id: str, text: str, conversation: Conversation
+        self, user_id: str, text: str, action: PendingAction
     ) -> AssistantReply:
         answer = _normalizar_respuesta(text)
-        action = conversation.pending
-        conversation.clear_pending()
 
         if answer in _YES:
             return self._execute(user_id, action)

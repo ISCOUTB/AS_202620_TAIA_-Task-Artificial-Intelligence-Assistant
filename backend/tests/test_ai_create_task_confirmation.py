@@ -9,6 +9,7 @@ Cada caso ejecuta el flujo real: una primera mensaje que deja la accion
 pendiente y un segundo mensaje de respuesta.
 """
 
+import copy
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -58,9 +59,9 @@ NO_CONFIRMAN = [
 ]
 
 
-def _montar():
+def _montar(store=None):
     academic = InMemoryAcademicGateway()
-    store = InMemoryConversationStore()
+    store = store or InMemoryConversationStore()
     caso = HandleUserMessageUseCase(
         llm=FakeLLM(
             [
@@ -100,6 +101,20 @@ def test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04():
     # ya no la encuentra. El caso concurrente no se cubre aqui (ver
     # docs/modos_fallo_s11.md, confirmacion de una accion pendiente).
     caso, academic = _montar()
+
+    for _ in range(2):
+        caso.execute(IncomingRequest(user_id="u1", text="sí", channel=Channel.TELEGRAM))
+
+    assert len(academic.list_tasks("u1", TaskFilters())) == 1
+
+
+def test_confirmaciones_simultaneas_crean_una_sola_tarea_rf_agt_04():
+    # Las dos peticiones leen la conversacion antes de que alguna la guarde,
+    # asi que ambas ven la accion pendiente. Solo una puede reclamarla.
+    store = InMemoryConversationStore()
+    caso, academic = _montar(store)
+    leida = copy.deepcopy(store.get("u1"))
+    store.get = lambda user_id: copy.deepcopy(leida)
 
     for _ in range(2):
         caso.execute(IncomingRequest(user_id="u1", text="sí", channel=Channel.TELEGRAM))

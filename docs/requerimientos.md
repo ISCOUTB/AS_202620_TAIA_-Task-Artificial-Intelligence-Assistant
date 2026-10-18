@@ -674,10 +674,12 @@ Toda acción de escritura se propone primero con un resumen ("Voy a crear la tar
 - La respuesta del usuario se evalúa **sin llamar al LLM**, contra una lista cerrada de afirmaciones (sí, si, dale, ok, confirmo…) y de negaciones.
 - Cualquier otra respuesta, incluido un texto largo, **cancela** la acción y se informa al usuario, con un costo de 0 tokens.
 - La acción propuesta expira a los 10 minutos.
+- Una acción propuesta se ejecuta como máximo una vez, aunque la confirmación llegue repetida o en dos peticiones simultáneas.
 
 **Criterios de aceptación**
 - Responder "si" ejecuta la acción.
 - Responder "pues la verdad hice la mitad y…" cancela la acción sin invocar al LLM.
+- Dos confirmaciones de la misma acción, seguidas o simultáneas, crean una sola tarea.
 
 ### RF-AGT-05 · Crear actividad por lenguaje natural
 **Prioridad:** MVP · **Estado:** Parcial

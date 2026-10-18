@@ -881,3 +881,82 @@ veces» de la integración con Gemini, que en
   `taia_test`: **223 aprobadas**.
 - Sin variables, la recolección falla con 15 errores tanto con los cambios
   como sin ellos (comprobado con `git stash`).
+
+## Entrada 019 — S11, confirmación idempotente con reclamo atómico
+
+Fecha: 2026-10-18 en Colombia. Herramienta: Claude Code (Anthropic), con
+lectura del repositorio, ejecución local de comandos y consulta de la
+documentación de PostgreSQL. Base: `354fd0e`. Regla fijada por el estudiante:
+el asistente no hace commits. El equipo eligió el diseño (reclamar la acción
+pendiente de forma atómica) en el análisis de S11; esta entrada registra el
+código que lo implementa.
+
+Solicitud: que una acción pendiente confirmada dos veces, seguidas o en dos
+peticiones simultáneas, cree una sola tarea (`RF-AGT-04`).
+
+### Aceptado
+
+- **Regla y criterio nuevos en `RF-AGT-04`**
+  ([requerimientos.md](requerimientos.md)), antes de tocar el código.
+- **Puerto `ConversationStore.take_pending`**, que retira y devuelve la acción
+  pendiente vigente, o `None`.
+  - `SqlAlchemyConversationStore`: `SELECT ... FOR UPDATE` filtrado por acción
+    presente y no vencida, y vaciado de las dos columnas en la misma
+    transacción corta.
+  - `InMemoryConversationStore`: retira la acción del objeto guardado.
+- **`HandleUserMessageUseCase`** ejecuta solo la acción que obtuvo de
+  `take_pending`. Si recibe `None`, otra petición ya la reclamó, y el mensaje
+  se atiende como uno sin acción pendiente, igual que un segundo «sí» que llega
+  después del primero.
+- **Tres pruebas nuevas:**
+  - `test_confirmaciones_simultaneas_crean_una_sola_tarea_rf_agt_04`
+    ([test_ai_create_task_confirmation.py](../backend/tests/test_ai_create_task_confirmation.py)):
+    dos peticiones que leyeron la conversación con la acción pendiente.
+  - `test_take_pending_hands_the_action_to_a_single_caller_rf_agt_04`
+    ([test_sql_persistence_replacements.py](../backend/tests/test_sql_persistence_replacements.py)):
+    ocho hilos reclaman la misma acción en PostgreSQL.
+  - `test_take_pending_ignores_an_expired_action_rf_agt_04` (mismo archivo).
+- **Documentación** del cambio en [modos_fallo_s11.md](modos_fallo_s11.md),
+  [arc42 §11.12](arc42/11-riesgos-y-deudas-tecnicas.md) y la fila A-03 de
+  [aspectos.md](aspectos.md).
+
+### Corregido
+
+- **`UPDATE ... RETURNING` del diseño original.** La documentación de
+  PostgreSQL dice que en un `UPDATE` `RETURNING` devuelve el contenido nuevo
+  de la fila, que aquí sería `NULL`; el valor anterior con `old.` solo existe
+  desde PostgreSQL 18. Como la versión de la base desplegada no está
+  verificada, se implementó con `SELECT ... FOR UPDATE`, que la misma sección
+  §13.2.1 describe con la misma reevaluación del `WHERE`.
+- **Orden del reclamo en el caso de uso.** La primera versión vaciaba la
+  acción de la conversación leída antes de llamar a `take_pending`. Como el
+  almacén en memoria devuelve el mismo objeto que guarda, `take_pending` ya no
+  la encontraba y fallaron 14 pruebas. Se reclama primero y se vacía después.
+- **Prueba de concurrencia sin poder de detección.** La primera versión de la
+  prueba con ocho hilos pasaba también **sin** `FOR UPDATE` (5 de 5 corridas),
+  porque la ventana entre leer y vaciar es demasiado corta para que los hilos
+  coincidan. Se ensanchó envolviendo `_pending_from_json` con una pausa de
+  0,3 s.
+
+### Rechazado o limitado, con motivo
+
+- **Sin cambio de esquema ni migración:** las columnas `pending_action` y
+  `pending_action_expires_at` ya existían.
+- **El reclamo usa la hora del proceso** (`datetime.now(timezone.utc)`), igual
+  que `get()` y `save()` del mismo adaptador, y no un reloj inyectable. Se
+  mantuvo la coherencia con el adaptador en lugar de cambiar los tres métodos.
+- **No se implementó la idempotencia del envío de notificaciones**
+  (`push_sent_at`): sigue diseñada y pendiente.
+- **Costo aceptado por el equipo:** si la escritura en `academic` falla después
+  del reclamo, la acción se pierde y el estudiante repite su mensaje.
+
+### Verificación
+
+- Antes del cambio, la prueba del caso de uso falló con `assert 2 == 1`: dos
+  tareas creadas.
+- Con el cambio, la prueba de ocho hilos pasó 5 de 5 corridas; quitando
+  `.with_for_update()` falló 5 de 5. El archivo se restauró y se comprobó que
+  la llamada sigue presente.
+- Suite completa con las variables del CI y `TEST_DATABASE_URL` sobre
+  `taia_test`: **226 aprobadas**.
+- Enlaces de `modos_fallo_s11.md` y arc42 §11: 66 comprobados, 0 rotos.

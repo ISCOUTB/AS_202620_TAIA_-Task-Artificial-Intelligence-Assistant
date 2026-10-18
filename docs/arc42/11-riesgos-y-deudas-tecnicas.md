@@ -147,17 +147,16 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 - Gemini no responde, devuelve `429`, `404` o `5xx`, o responde con una forma inválida: el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo, sin escribir nada ([ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)).
 - Gemini responde tarde: timeout de 20 s en el cliente `httpx`, con el mismo resultado.
 - Telegram no responde o responde tarde: timeout de 5 s y respuesta `503` en `POST /reminders/{id}/notify`.
-- Confirmación repetida de forma secuencial: el segundo «sí» ya no encuentra la acción pendiente y no crea otra tarea.
+- Confirmación repetida, seguida o simultánea: el caso de uso reclama la acción pendiente de forma atómica (`take_pending`, con `SELECT ... FOR UPDATE` en una transacción corta) y solo la petición que la reclama la ejecuta ([modos_fallo_s11.md, confirmación de una acción pendiente](../modos_fallo_s11.md#confirmación-de-una-acción-pendiente)). `RF-AGT-04`.
 
 **Deuda técnica:**
 
-- **Confirmación concurrente.** Dos «sí» simultáneos pueden crear dos tareas. Diseño: reclamar la acción pendiente con un `UPDATE ... RETURNING` atómico antes de ejecutarla ([modos_fallo_s11.md, confirmación de una acción pendiente](../modos_fallo_s11.md#confirmación-de-una-acción-pendiente)). Pendiente de implementar.
 - **Notificación reenviada.** `SendNotificationUseCase` no comprueba `push_sent_at` antes de enviar, así que un segundo `POST /reminders/{id}/notify` reenvía el mensaje. Diseño: aplicar la regla de `RF-NOT-02` y del diccionario de datos ([modos_fallo_s11.md, envío de una notificación](../modos_fallo_s11.md#envío-de-una-notificación)). Pendiente de implementar. Aun implementado, la garantía es «al menos una vez», porque `sendMessage` de Telegram no admite clave de idempotencia.
 - **Timeout por encima de S3.** El timeout de 20 s supera el umbral de 7 s de S3; ADR-0007 lo acepta porque el p95 medido del modelo es 1 618,8 ms.
 - **Fallo sin registro.** El caso de uso captura `LLMError` sin escribir en el log (negativa de ADR-0007).
 
-**Pruebas:** los modos de Gemini "no responde", "responde tarde", `429`, respuesta malformada y confirmación repetida secuencial tienen prueba. La confirmación concurrente y los fallos de Telegram solo están descritos ([modos_fallo_s11.md, qué está probado](../modos_fallo_s11.md#qué-está-probado-y-qué-solo-está-descrito)).
+**Pruebas:** los modos de Gemini "no responde", "responde tarde", `429`, respuesta malformada y confirmación repetida, seguida y simultánea, tienen prueba. Los fallos de Telegram solo están descritos ([modos_fallo_s11.md, qué está probado](../modos_fallo_s11.md#qué-está-probado-y-qué-solo-está-descrito)).
 
 **Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje; RNF-09; RF-AGT-20; RF-AGT-04; RF-NOT-02.
 
-**Estado:** Parcialmente atendido. Los modos de Gemini están mitigados y probados; las dos operaciones repetidas tienen diseño y siguen pendientes de implementar.
+**Estado:** Parcialmente atendido. Los modos de Gemini, incluida la confirmación repetida, están mitigados y probados; el reenvío de notificaciones tiene diseño y sigue pendiente de implementar.

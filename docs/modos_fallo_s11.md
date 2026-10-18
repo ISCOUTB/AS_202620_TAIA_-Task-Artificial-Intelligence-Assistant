@@ -18,8 +18,8 @@ Es la única llamada de red en el camino de una petición del asistente (`POST /
 | Cliente HTTP y timeout de 20 s | [`gemini_llm.py:32`](../backend/app/modules/ai/adapters/outbound/gemini_llm.py) (`_DEFAULT_TIMEOUT`), [`gemini_llm.py:93`](../backend/app/modules/ai/adapters/outbound/gemini_llm.py) (`httpx.Client(timeout=...)`) |
 | Llamada y traducción de errores a `LLMError` | [`gemini_llm.py:138-164`](../backend/app/modules/ai/adapters/outbound/gemini_llm.py) (`_generate`) |
 | Validación de la forma de la respuesta | [`gemini_llm.py:173-187`](../backend/app/modules/ai/adapters/outbound/gemini_llm.py) (`_extract_text`), [`gemini_llm.py:226`](../backend/app/modules/ai/adapters/outbound/gemini_llm.py) (`_load_json`) |
-| Captura de `LLMError` y mensaje al estudiante | [`handle_message.py:100-101`](../backend/app/modules/ai/application/use_cases/handle_message.py), [`replies.py:99`](../backend/app/modules/ai/application/replies.py) (`service_unavailable`) |
-| Escritura solo tras confirmación, resuelta sin el modelo | [`handle_message.py:191-217`](../backend/app/modules/ai/application/use_cases/handle_message.py) (`_resolve_pending`, `_execute`) |
+| Captura de `LLMError` y mensaje al estudiante | [`handle_message.py:105-106`](../backend/app/modules/ai/application/use_cases/handle_message.py), [`replies.py:99`](../backend/app/modules/ai/application/replies.py) (`service_unavailable`) |
+| Escritura solo tras confirmación, resuelta sin el modelo | [`handle_message.py:95-101`](../backend/app/modules/ai/application/use_cases/handle_message.py) (reclamo de la acción), [`handle_message.py:196-220`](../backend/app/modules/ai/application/use_cases/handle_message.py) (`_resolve_pending`, `_execute`) |
 
 Requisitos relacionados: `RF-AGT-20` (degradación si el LLM no está disponible), `RF-AGT-04`
 (confirmación determinista) y `RNF-09` (una caída de Gemini no impide usar el resto de funciones).
@@ -28,9 +28,9 @@ Requisitos relacionados: `RF-AGT-20` (degradación si el LLM no está disponible
 
 | Modo de fallo | Causa típica | Efecto para el estudiante | Mitigación | Dónde está en el código | Estado | Prueba |
 |---|---|---|---|---|---|---|
-| **No responde** | Error de red, DNS, conexión rechazada o respuesta `5xx` | Recibe «Ahora no puedo procesar tu mensaje. Intenta de nuevo en un momento.» No se crea ni se modifica nada. | Fallar cerrado: el adaptador traduce el fallo a `LLMError` y el caso de uso responde un mensaje fijo, sin reintentos (ADR-0007, opción A). | `gemini_llm.py:152` (error de transporte), `gemini_llm.py:155` (estado no exitoso), `handle_message.py:100-101` | Implementada | [`test_network_failure_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_http_error_status_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_llm_failure_returns_friendly_message`](../backend/tests/test_ai_handle_message.py) |
+| **No responde** | Error de red, DNS, conexión rechazada o respuesta `5xx` | Recibe «Ahora no puedo procesar tu mensaje. Intenta de nuevo en un momento.» No se crea ni se modifica nada. | Fallar cerrado: el adaptador traduce el fallo a `LLMError` y el caso de uso responde un mensaje fijo, sin reintentos (ADR-0007, opción A). | `gemini_llm.py:152` (error de transporte), `gemini_llm.py:155` (estado no exitoso), `handle_message.py:105-106` | Implementada | [`test_network_failure_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_http_error_status_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_llm_failure_returns_friendly_message`](../backend/tests/test_ai_handle_message.py) |
 | **Responde tarde** | Proveedor saturado o colgado | Espera hasta 20 s y recibe el mismo mensaje fijo. | Timeout de 20 s en el cliente `httpx`; al vencer, `httpx.ReadTimeout` se traduce a `LLMError` por la misma ruta que "no responde". | `gemini_llm.py:32`, `gemini_llm.py:93`, `gemini_llm.py:152` | Implementada, con una negativa declarada: 20 s supera el umbral de S3 (p95 ≤ 7 s). El p95 medido del modelo es 1 618,8 ms, así que el timeout solo afecta a la cola. ADR-0007 acepta el riesgo con el valor actual. | [`test_timeout_raises_llm_error_rf_agt_20`](../backend/tests/test_ai_gemini_llm.py), [`test_default_client_timeout_is_twenty_seconds_rf_agt_20`](../backend/tests/test_ai_gemini_llm.py), [`test_gemini_timeout_returns_friendly_message_without_writing_rf_agt_20`](../backend/tests/test_ai_handle_message.py) |
-| **Llega dos veces** | El estudiante envía «sí» dos veces o el cliente reintenta `POST /ai/message` | Si los dos «sí» llegan **seguidos**, se crea una sola tarea: el primero consume la acción pendiente y el segundo ya no la encuentra. Si llegan **a la vez**, se pueden crear **dos tareas**. | Secuencial: la acción pendiente se borra antes de ejecutarse. Concurrente: ninguna; la conversación se lee al empezar y se guarda al final sin bloqueo. | `handle_message.py:81` (lectura), `handle_message.py:196-199` (consumo de la acción), `handle_message.py:87` (guardado) | Secuencial: implementada. Concurrente: pendiente; el diseño está en la sección [Idempotencia y transacciones](#idempotencia-y-transacciones). | Secuencial: [`test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04`](../backend/tests/test_ai_create_task_confirmation.py). Concurrente: sin prueba; necesita PostgreSQL y dos peticiones simultáneas. |
+| **Llega dos veces** | El estudiante envía «sí» dos veces o el cliente reintenta `POST /ai/message` | Se crea una sola tarea, lleguen los dos «sí» seguidos o a la vez. La petición que pierde se atiende como un mensaje sin acción pendiente. | Reclamo atómico de la acción antes de ejecutarla: solo la petición que la reclama la ejecuta ([diseño](#confirmación-de-una-acción-pendiente)). | `handle_message.py:95-101` (reclamo), `sqlalchemy_conversation_store.py:54-75` (`take_pending` con `SELECT ... FOR UPDATE`) | Implementada | Seguidos: [`test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04`](../backend/tests/test_ai_create_task_confirmation.py). Simultáneos: [`test_confirmaciones_simultaneas_crean_una_sola_tarea_rf_agt_04`](../backend/tests/test_ai_create_task_confirmation.py) y, con PostgreSQL y ocho hilos, [`test_take_pending_hands_the_action_to_a_single_caller_rf_agt_04`](../backend/tests/test_sql_persistence_replacements.py). |
 | Límite de cadencia (`429`) | Ráfaga de llamadas contra la cuota por minuto del nivel gratuito | Mismo mensaje fijo; el estudiante decide cuándo reintentar. | `LLMError` sin reintento automático: reintentar contra un límite de cadencia consume la misma cuota que lo provocó (ADR-0007, opción B descartada). | `gemini_llm.py:155` | Implementada | [`test_http_error_status_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py) (simula un `429`) |
 | Respuesta malformada | Cuerpo que no es JSON, sin candidatos, sin texto, o JSON cortado por `maxOutputTokens` | Mismo mensaje fijo; no se escribe nada. | Validación estricta de la forma de la respuesta en la capa anticorrupción; cualquier desviación es `LLMError`. | `gemini_llm.py:161`, `gemini_llm.py:173-187`, `gemini_llm.py:226` | Implementada | [`test_response_without_candidates_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_non_json_content_raises_llm_error`](../backend/tests/test_ai_gemini_llm.py), [`test_answer_system_help_rejects_empty_answer`](../backend/tests/test_ai_gemini_llm.py) |
 | Modelo retirado (`404`) | Google retira el modelo configurado | Mismo mensaje fijo hasta que se cambie `GEMINI_MODEL` y se reinicie. | `LLMError`; la recuperación es manual ([arc42 §11.7](arc42/11-riesgos-y-deudas-tecnicas.md)). | `gemini_llm.py:155` | Implementada (sin recuperación automática) | Cubierta por la misma ruta que el `429` |
@@ -69,7 +69,7 @@ El envío de una notificación llama a `sendMessage` de la API de Telegram.
 | Timeout | Implementada | 20 s hacia Gemini y 5 s hacia Telegram (rutas en las tablas anteriores). |
 | Reintentos con espera creciente | No implementada, por decisión | ADR-0007, opción B: el fallo más frecuente es el límite de cadencia, y reintentar consume la misma cuota y suma latencia a S3. El reintento lo decide el estudiante. |
 | Circuit breaker | No implementado | Hay un solo proveedor y ningún respaldo al que conmutar; ante un fallo rápido (`429`, `5xx`) la llamada ya termina sin esperar. Abrir el circuito solo ahorraría la espera del timeout en una caída prolongada. Se revisa si se agrega un proveedor de respaldo (ADR-0007, opción C). |
-| Idempotencia | Parcial | Ver la sección [Idempotencia y transacciones](#idempotencia-y-transacciones). |
+| Idempotencia | Implementada en la confirmación; pendiente en el envío de notificaciones | Ver la sección [Idempotencia y transacciones](#idempotencia-y-transacciones). |
 | Saga y outbox | No aplica hoy | Ver la sección [Idempotencia y transacciones](#idempotencia-y-transacciones). La mensajería es tema de la semana 12. |
 
 ## Qué está probado y qué solo está descrito
@@ -79,7 +79,7 @@ El envío de una notificación llama a `sendMessage` de la API de Telegram.
 | Gemini no responde | Sí | |
 | Gemini responde tarde | Sí | |
 | Gemini: confirmación repetida, secuencial | Sí | |
-| Gemini: confirmación repetida, concurrente | | Sí |
+| Gemini: confirmación repetida, concurrente | Sí | |
 | Gemini: `429`, respuesta malformada | Sí | |
 | Telegram no responde o responde tarde | | Sí |
 | Telegram: envío duplicado | | Sí |
@@ -92,64 +92,77 @@ pendiente y el envío de una notificación.
 
 ### Confirmación de una acción pendiente
 
-**Problema.** El caso de uso lee la conversación al empezar
-([`handle_message.py:81`](../backend/app/modules/ai/application/use_cases/handle_message.py)),
-borra la acción pendiente en memoria y la ejecuta
-([`handle_message.py:196-199`](../backend/app/modules/ai/application/use_cases/handle_message.py)),
-y guarda la conversación al final
-([`handle_message.py:87`](../backend/app/modules/ai/application/use_cases/handle_message.py)). La
-lectura y el guardado usan sesiones distintas
-([`sqlalchemy_conversation_store.py:26`](../backend/app/modules/ai/adapters/outbound/sqlalchemy_conversation_store.py)
-y [`:58`](../backend/app/modules/ai/adapters/outbound/sqlalchemy_conversation_store.py)), y la
-tarea se crea en una tercera sesión del módulo `academic`
-([`sqlalchemy_task_repository.py:21-22`](../backend/app/modules/academic/adapters/outbound/sqlalchemy_task_repository.py)).
-Si dos «sí» llegan a la vez, ambos leen la acción antes de que alguno guarde, y ambos crean la tarea.
+**Problema.** Antes de este cambio (commit `354fd0e`), el caso de uso leía la conversación al
+empezar (`handle_message.py:81`), borraba la acción pendiente en memoria y la ejecutaba
+(`handle_message.py:196-199`), y guardaba la conversación al final (`handle_message.py:87`). La
+lectura y el guardado usan sesiones distintas, y la tarea se crea en una tercera sesión del módulo
+`academic` ([`sqlalchemy_task_repository.py:21-22`](../backend/app/modules/academic/adapters/outbound/sqlalchemy_task_repository.py)).
+Si dos «sí» llegaban a la vez, ambos leían la acción antes de que alguno guardara, y ambos creaban
+la tarea. La prueba `test_confirmaciones_simultaneas_crean_una_sola_tarea_rf_agt_04` lo reprodujo
+sobre ese código: **dos tareas** en lugar de una.
 
-**Diseño elegido: reclamar la acción de forma atómica antes de ejecutarla.** El puerto
-`ConversationStore` publica una operación que toma la acción pendiente y la borra en una sola
-sentencia:
+**Diseño: reclamar la acción de forma atómica antes de ejecutarla.** El puerto `ConversationStore`
+publica `take_pending`, que retira la acción pendiente vigente y la devuelve, o devuelve `None` si
+no hay. El caso de uso solo ejecuta la acción que recibió de `take_pending`
+([`handle_message.py:95-101`](../backend/app/modules/ai/application/use_cases/handle_message.py)); la petición que recibe `None` se atiende como un mensaje sin
+acción pendiente, igual que un segundo «sí» que llega después del primero.
+
+En PostgreSQL, `take_pending` lee y vacía la acción en **una sola transacción corta**
+([`sqlalchemy_conversation_store.py:54-75`](../backend/app/modules/ai/adapters/outbound/sqlalchemy_conversation_store.py)):
 
 ```sql
-UPDATE conversations
-SET pending_action = NULL, pending_action_expires_at = NULL
+SELECT ... FROM conversations
 WHERE user_id = :user_id
   AND pending_action IS NOT NULL
-  AND pending_action_expires_at > now()
-RETURNING pending_action;
+  AND pending_action_expires_at > :ahora
+FOR UPDATE;
+-- si hay fila: se convierte a PendingAction y se ponen a NULL
+-- pending_action y pending_action_expires_at; COMMIT.
 ```
 
-`_resolve_pending` ejecuta la acción solo si la sentencia devolvió una fila. La petición que no
-recibe fila responde como si no hubiera acción pendiente.
-
 **Por qué funciona.** En el nivel de aislamiento por defecto de PostgreSQL (Read Committed), si un
-`UPDATE` encuentra una fila que otra transacción está modificando, espera a que esa transacción
-termine y vuelve a evaluar el `WHERE` sobre la versión nueva de la fila
+`SELECT FOR UPDATE` encuentra una fila que otra transacción está modificando, espera a que esa
+transacción termine, vuelve a evaluar el `WHERE` sobre la versión nueva de la fila y solo la
+devuelve si la sigue cumpliendo
 ([documentación de PostgreSQL, §13.2.1](https://www.postgresql.org/docs/current/transaction-iso.html#XACT-READ-COMMITTED)).
-La segunda petición encuentra `pending_action IS NULL`, la condición deja de cumplirse y no se
-actualiza ni se devuelve ninguna fila. Solo una de las dos peticiones obtiene la acción.
+La segunda petición encuentra `pending_action IS NULL` y no recibe nada. Solo una petición obtiene
+la acción.
 
-Es el mismo patrón que el diccionario ya fija para tomar recordatorios
-([`diccionario_datos.md`, §7.1, reglas](diccionario_datos.md)): `UPDATE ... WHERE status = 'pending'`,
-donde una actualización que no afecta filas significa que otro proceso ya lo tomó.
+El bloqueo dura solo lo que tarda el reclamo, no la petición entera: no espera al modelo ni abarca
+la escritura en `academic`. Es la misma idea que el diccionario fija para tomar recordatorios
+([`diccionario_datos.md`, §7.1, reglas](diccionario_datos.md)): una toma condicionada al estado
+que, si no encuentra la fila, significa que otro proceso ya la tomó.
 
 **Alternativas descartadas.**
 
 | Alternativa | Por qué no |
 |---|---|
-| Bloqueo de fila (`SELECT ... FOR UPDATE`) al leer la conversación | El bloqueo solo dura lo que dura la transacción, y `get()` cierra la suya al terminar de leer. Mantenerlo durante toda la petición exigiría una transacción que abarque la escritura en `academic`, lo que cruza la frontera entre módulos ([ADR-0001](adr/0001-estilo-arquitectonico.md)). |
+| `UPDATE ... RETURNING` en una sola sentencia | En un `UPDATE`, `RETURNING` devuelve el contenido **nuevo** de la fila, que aquí sería `NULL`. Devolver el anterior con `old.` solo existe desde PostgreSQL 18 ([documentación 17](https://www.postgresql.org/docs/17/dml-returning.html) frente a [la actual](https://www.postgresql.org/docs/current/dml-returning.html)), y la versión de la base desplegada no está verificada. |
+| Bloquear la conversación durante toda la petición | Exigiría una transacción que abarque la lectura, la escritura en `academic` y el guardado, lo que cruza la frontera entre módulos ([ADR-0001](adr/0001-estilo-arquitectonico.md)) y mantiene el bloqueo mientras se espera al modelo. |
 | Número de versión en `conversations` (bloqueo optimista) | El conflicto se detectaría en `save()`, al final de la petición, cuando la tarea duplicada ya se creó en `academic`. |
 
 **Costo aceptado.** Si la escritura en `academic` falla después de reclamar la acción, la acción ya
 no existe y el estudiante tiene que repetir su mensaje. Es fallar cerrado, coherente con S1 y con
 [ADR-0007](adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md): ante la duda, no se escribe.
 
-**Cambios que implica.** Un método nuevo en el puerto `ConversationStore`, implementado en
-`SqlAlchemyConversationStore` y en `InMemoryConversationStore`, y su uso en `_resolve_pending`. No
-cambia el esquema ni requiere migración: las columnas `pending_action` y `pending_action_expires_at`
-ya existen ([`diccionario_datos.md`, §8.1](diccionario_datos.md)).
+**Cambios.** El método `take_pending` en el puerto
+([`conversation_store.py`](../backend/app/modules/ai/application/ports/conversation_store.py)),
+implementado en `SqlAlchemyConversationStore` y en
+[`InMemoryConversationStore`](../backend/app/modules/ai/adapters/outbound/in_memory_conversation_store.py),
+y su uso en el caso de uso. No cambia el esquema ni requiere migración: las columnas
+`pending_action` y `pending_action_expires_at` ya existían ([`diccionario_datos.md`, §8.1](diccionario_datos.md)).
 
-**Estado.** Diseñado, pendiente de implementar. Mientras tanto, la repetición **secuencial** ya no
-duplica, porque el segundo «sí» no encuentra la acción.
+**Pruebas** (`RF-AGT-04`):
+
+- [`test_confirmaciones_simultaneas_crean_una_sola_tarea_rf_agt_04`](../backend/tests/test_ai_create_task_confirmation.py):
+  dos peticiones que leyeron la conversación con la acción pendiente crean una sola tarea.
+- [`test_take_pending_hands_the_action_to_a_single_caller_rf_agt_04`](../backend/tests/test_sql_persistence_replacements.py):
+  ocho hilos reclaman la misma acción en PostgreSQL y solo uno la recibe. La prueba ensancha la
+  ventana entre la lectura y el borrado; sin `FOR UPDATE` falla en cada corrida.
+- [`test_take_pending_ignores_an_expired_action_rf_agt_04`](../backend/tests/test_sql_persistence_replacements.py):
+  una acción vencida no se puede reclamar.
+
+**Estado.** Implementada.
 
 ### Envío de una notificación
 
@@ -197,7 +210,7 @@ una transacción local y, si uno falla, se compensan los anteriores. En TAIA no 
   [ADR-0004](adr/0004-plataforma-base-de-datos.md)).
 - **La llamada externa es de solo lectura y ocurre antes de escribir.** Gemini solo interpreta el
   mensaje; la escritura ocurre después, en `_execute`, tras la confirmación, y no vuelve a llamar al
-  modelo ([`handle_message.py:204-217`](../backend/app/modules/ai/application/use_cases/handle_message.py)).
+  modelo ([`handle_message.py:207-220`](../backend/app/modules/ai/application/use_cases/handle_message.py)).
   Si Gemini falla, no hay nada escrito que compensar.
 - **Cada escritura es una transacción local** de un solo módulo, como crear una tarea en `academic`.
 

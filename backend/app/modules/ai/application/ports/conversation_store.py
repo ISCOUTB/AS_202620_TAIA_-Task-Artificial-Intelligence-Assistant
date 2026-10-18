@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.domain.messages import PendingAction
 
 
 class ConversationStore(ABC):
@@ -17,3 +18,10 @@ class ConversationStore(ABC):
     @abstractmethod
     def save(self, conversation: Conversation) -> None:
         ...
+
+    @abstractmethod
+    def take_pending(self, user_id: str) -> PendingAction | None:
+        """Retira y devuelve la accion pendiente vigente, o None si no hay.
+
+        Debe ser atomica: si dos peticiones la reclaman a la vez, solo una la
+        recibe (RF-AGT-04)."""

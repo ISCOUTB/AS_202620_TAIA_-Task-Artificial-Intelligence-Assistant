@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
+import threading
+import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import text
 
+from app.modules.ai.adapters.outbound import sqlalchemy_conversation_store
 from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import SqlAlchemyConversationStore
 from app.modules.ai.domain.conversation import Conversation
 from app.modules.ai.domain.messages import ActionKind, ExtractedTaskData, PendingAction
@@ -91,3 +95,62 @@ def test_conversation_and_pending_action_round_trip(clean_db):
     assert restored.turns[0].text == "Crea una tarea"
     assert restored.pending is not None
     assert restored.pending.task.title == "Informe"
+
+
+def _save_pending(store: SqlAlchemyConversationStore) -> str:
+    user_id = str(uuid.uuid4())
+    conversation = Conversation(user_id=user_id)
+    conversation.set_pending(
+        PendingAction(
+            kind=ActionKind.CREATE_TASK,
+            task=ExtractedTaskData(
+                title="Informe",
+                due_at=datetime.now(timezone.utc) + timedelta(days=2),
+            ),
+            summary="¿Confirmas?",
+        )
+    )
+    store.save(conversation)
+    return user_id
+
+
+def test_take_pending_hands_the_action_to_a_single_caller_rf_agt_04(clean_db, monkeypatch):
+    store = SqlAlchemyConversationStore(clean_db)
+    user_id = _save_pending(store)
+    # Ensancha la ventana entre leer la accion y vaciarla, para que todas las
+    # peticiones la lean a la vez si nada las hace esperar.
+    original = sqlalchemy_conversation_store._pending_from_json
+
+    def slow_pending_from_json(data):
+        time.sleep(0.3)
+        return original(data)
+
+    monkeypatch.setattr(sqlalchemy_conversation_store, "_pending_from_json", slow_pending_from_json)
+    callers = 8
+    barrier = threading.Barrier(callers)
+
+    def take(_):
+        barrier.wait()
+        return store.take_pending(user_id)
+
+    with ThreadPoolExecutor(max_workers=callers) as pool:
+        results = list(pool.map(take, range(callers)))
+
+    taken = [action for action in results if action is not None]
+    assert len(taken) == 1
+    assert taken[0].task.title == "Informe"
+    assert store.get(user_id).pending is None
+
+
+def test_take_pending_ignores_an_expired_action_rf_agt_04(clean_db):
+    store = SqlAlchemyConversationStore(clean_db)
+    user_id = _save_pending(store)
+    with clean_db.begin() as session:
+        session.execute(
+            text(
+                "UPDATE conversations "
+                "SET pending_action_expires_at = now() - interval '1 minute'"
+            )
+        )
+
+    assert store.take_pending(user_id) is None

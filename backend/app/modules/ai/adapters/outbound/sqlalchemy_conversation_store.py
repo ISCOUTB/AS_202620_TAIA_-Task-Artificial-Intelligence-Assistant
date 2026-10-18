@@ -51,6 +51,29 @@ class SqlAlchemyConversationStore(ConversationStore):
                 pending=pending,
             )
 
+    def take_pending(self, user_id: str) -> PendingAction | None:
+        # FOR UPDATE hace esperar a una segunda peticion simultanea; al
+        # continuar, PostgreSQL reevalua el WHERE sobre la fila ya vaciada y
+        # no la devuelve. No se usa UPDATE ... RETURNING porque devuelve el
+        # valor nuevo (NULL); el anterior solo existe desde PostgreSQL 18.
+        identifier = uuid.UUID(user_id)
+        with self._session_factory.begin() as session:
+            state = session.scalars(
+                select(ConversationModel)
+                .where(
+                    ConversationModel.user_id == identifier,
+                    ConversationModel.pending_action.is_not(None),
+                    ConversationModel.pending_action_expires_at > datetime.now(timezone.utc),
+                )
+                .with_for_update()
+            ).first()
+            if state is None:
+                return None
+            action = _pending_from_json(state.pending_action)
+            state.pending_action = None
+            state.pending_action_expires_at = None
+            return action
+
     def save(self, conversation: Conversation) -> None:
         identifier = uuid.UUID(conversation.user_id)
         pending = _pending_to_json(conversation.pending) if conversation.pending else None

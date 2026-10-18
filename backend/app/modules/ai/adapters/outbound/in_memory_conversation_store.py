@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.modules.ai.application.ports.conversation_store import ConversationStore
 from app.modules.ai.domain.conversation import Conversation
+from app.modules.ai.domain.messages import PendingAction
 
 
 class InMemoryConversationStore(ConversationStore):
@@ -15,3 +16,11 @@ class InMemoryConversationStore(ConversationStore):
 
     def save(self, conversation: Conversation) -> None:
         self._by_user[conversation.user_id] = conversation
+
+    def take_pending(self, user_id: str) -> PendingAction | None:
+        conversation = self._by_user.get(user_id)
+        if conversation is None:
+            return None
+        action = conversation.pending
+        conversation.clear_pending()
+        return action
