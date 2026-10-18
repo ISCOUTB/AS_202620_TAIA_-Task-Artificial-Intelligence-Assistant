@@ -160,6 +160,24 @@ def test_network_failure_raises_llm_error():
         llm.interpret(REQUEST, NOW)
 
 
+def test_timeout_raises_llm_error_rf_agt_20():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("Gemini no respondio a tiempo", request=request)
+
+    llm = _gemini(handler)
+
+    with pytest.raises(LLMError):
+        llm.interpret(REQUEST, NOW)
+
+
+def test_default_client_timeout_is_twenty_seconds_rf_agt_20():
+    llm = GeminiLLM(api_key="test-key")
+    try:
+        assert llm._client.timeout == httpx.Timeout(20.0)
+    finally:
+        llm.close()
+
+
 def test_response_without_candidates_raises_llm_error():
     llm = _gemini(lambda request: httpx.Response(200, json={"candidates": []}))
 

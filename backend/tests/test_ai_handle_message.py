@@ -2,7 +2,10 @@
 
 from datetime import datetime, timedelta, timezone
 
+import httpx
+
 from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
 from app.modules.ai.adapters.outbound.in_memory_academic_gateway import (
     InMemoryAcademicGateway,
 )
@@ -241,6 +244,27 @@ def test_llm_failure_returns_friendly_message():
     reply = uc.execute(_msg("crea una tarea"))
 
     assert "intenta de nuevo" in reply.text.lower()
+
+
+def test_gemini_timeout_returns_friendly_message_without_writing_rf_agt_20():
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("Gemini no respondio a tiempo", request=request)
+
+    academic = InMemoryAcademicGateway()
+    uc = HandleUserMessageUseCase(
+        llm=GeminiLLM(
+            api_key="test-key",
+            client=httpx.Client(transport=httpx.MockTransport(handler)),
+        ),
+        academic=academic,
+        conversations=InMemoryConversationStore(),
+        now=lambda: datetime(2026, 9, 10, tzinfo=TZ),
+    )
+
+    reply = uc.execute(_msg("crea la tarea taller para el viernes"))
+
+    assert "intenta de nuevo" in reply.text.lower()
+    assert academic.list_tasks("u1", TaskFilters()) == []
 
 
 def test_data_isolation_between_users():

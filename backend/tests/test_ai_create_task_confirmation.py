@@ -95,6 +95,18 @@ def test_confirmacion_crea_la_tarea(respuesta):
     assert "cree la tarea" in reply.text.lower()
 
 
+def test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04():
+    # Dos "sí" seguidos: el primero consume la accion pendiente y el segundo
+    # ya no la encuentra. El caso concurrente no se cubre aqui (ver
+    # docs/modos_fallo_s11.md, confirmacion de una accion pendiente).
+    caso, academic = _montar()
+
+    for _ in range(2):
+        caso.execute(IncomingRequest(user_id="u1", text="sí", channel=Channel.TELEGRAM))
+
+    assert len(academic.list_tasks("u1", TaskFilters())) == 1
+
+
 @pytest.mark.parametrize("respuesta", NO_CONFIRMAN)
 def test_una_respuesta_negativa_no_crea_la_tarea(respuesta):
     caso, academic = _montar()
