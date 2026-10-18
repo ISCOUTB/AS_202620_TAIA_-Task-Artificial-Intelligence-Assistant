@@ -639,7 +639,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
       (entries, _observer) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            if (visibleElements.indexOf(entry.target) === -1) {
+            if (visibleElements.includes(entry.target) === -1) {
               visibleElements.push(entry.target);
             }
           } else {
