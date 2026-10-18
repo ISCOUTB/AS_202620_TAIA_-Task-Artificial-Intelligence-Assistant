@@ -82,6 +82,8 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Estado:** **Abierto.** La evaluación sortea el problema con una pausa; el producto no lo sortea, porque la aplicación no reintenta ni explica el `429`.
 
+**Actualización S11:** la medida pendiente de reintentar ante `429` se descartó en [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md) (opción B), porque reintentar consume la misma cuota que provoca el fallo y suma latencia a S3. El comportamiento vigente es fallar cerrado con un mensaje de reintento; ver [11.12](#1112-fallos-parciales-de-las-integraciones-externas).
+
 ## 11.7. Retirada de modelos del proveedor
 
 **Riesgo:** El proveedor retira modelos. `gemini-2.5-flash`, que era el valor por defecto de `GeminiLLM`, devolvió **404** a una credencial recién obtenida. Google limita el acceso a los modelos 2.5 a las cuentas que ya los usaban.
@@ -102,9 +104,9 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Mitigación:** Mantener límites claros entre módulos y dependencias mediante interfaces. Si el crecimiento futuro lo justifica, los módulos podrán evolucionar hacia componentes desplegables de forma independiente.
 
-**Estado:** Decisión aceptada para el MVP.
+**Estado:** Decisión aceptada para el MVP y revisada en S11: [ADR-0008](../adr/0008-mantener-monolito-sin-extraer-modulos.md) evalúa extraer `ai` o `reminders` y decide no extraer ningún módulo, con los hechos que obligarían a revisar la decisión.
 
-## 11.8. Costo de la VM fuera de la capa gratuita
+## 11.9. Costo de la VM fuera de la capa gratuita
 
 **Riesgo:** La VM `VM.Standard.E5.Flex` no es Always Free y se cobra a la tarjeta registrada en OCI: 39,42 USD/mes a precio de lista.
 
@@ -114,7 +116,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Estado:** Riesgo abierto.
 
-## 11.9. API sin HTTPS
+## 11.10. API sin HTTPS
 
 **Deuda técnica:** La API se expone por HTTP en el puerto 8000 de la VM.
 
@@ -124,7 +126,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Estado:** Pendiente.
 
-## 11.10. Red de OCI fuera de Terraform
+## 11.11. Red de OCI fuera de Terraform
 
 **Deuda técnica:** Terraform describe la VM, pero no la VCN, la subred, la IP pública ni las reglas de seguridad, que se administran desde la consola.
 
@@ -133,3 +135,29 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 **Mitigación:** Declarar e importar esos recursos en `terraform/` con sus valores actuales.
 
 **Estado:** Pendiente.
+
+## 11.12. Fallos parciales de las integraciones externas
+
+**Riesgo:** Las integraciones con Gemini y con Telegram pueden no responder, responder tarde o recibir la misma operación dos veces. El análisis completo, con la mitigación de cada caso, su ruta en el código y su prueba, está en [modos_fallo_s11.md](../modos_fallo_s11.md).
+
+**Impacto:** Sin mitigación, un fallo de Gemini dejaría al estudiante sin respuesta, y una operación repetida podría crear una tarea duplicada o enviar dos veces el mismo recordatorio.
+
+**Mitigación aplicada:**
+
+- Gemini no responde, devuelve `429`, `404` o `5xx`, o responde con una forma inválida: el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo, sin escribir nada ([ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)).
+- Gemini responde tarde: timeout de 20 s en el cliente `httpx`, con el mismo resultado.
+- Telegram no responde o responde tarde: timeout de 5 s y respuesta `503` en `POST /reminders/{id}/notify`.
+- Confirmación repetida de forma secuencial: el segundo «sí» ya no encuentra la acción pendiente y no crea otra tarea.
+
+**Deuda técnica:**
+
+- **Confirmación concurrente.** Dos «sí» simultáneos pueden crear dos tareas. Diseño: reclamar la acción pendiente con un `UPDATE ... RETURNING` atómico antes de ejecutarla ([modos_fallo_s11.md, confirmación de una acción pendiente](../modos_fallo_s11.md#confirmación-de-una-acción-pendiente)). Pendiente de implementar.
+- **Notificación reenviada.** `SendNotificationUseCase` no comprueba `push_sent_at` antes de enviar, así que un segundo `POST /reminders/{id}/notify` reenvía el mensaje. Diseño: aplicar la regla de `RF-NOT-02` y del diccionario de datos ([modos_fallo_s11.md, envío de una notificación](../modos_fallo_s11.md#envío-de-una-notificación)). Pendiente de implementar. Aun implementado, la garantía es «al menos una vez», porque `sendMessage` de Telegram no admite clave de idempotencia.
+- **Timeout por encima de S3.** El timeout de 20 s supera el umbral de 7 s de S3; ADR-0007 lo acepta porque el p95 medido del modelo es 1 618,8 ms.
+- **Fallo sin registro.** El caso de uso captura `LLMError` sin escribir en el log (negativa de ADR-0007).
+
+**Pruebas:** los modos de Gemini "no responde", "responde tarde", `429`, respuesta malformada y confirmación repetida secuencial tienen prueba. La confirmación concurrente y los fallos de Telegram solo están descritos ([modos_fallo_s11.md, qué está probado](../modos_fallo_s11.md#qué-está-probado-y-qué-solo-está-descrito)).
+
+**Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje; RNF-09; RF-AGT-20; RF-AGT-04; RF-NOT-02.
+
+**Estado:** Parcialmente atendido. Los modos de Gemini están mitigados y probados; las dos operaciones repetidas tienen diseño y siguen pendientes de implementar.

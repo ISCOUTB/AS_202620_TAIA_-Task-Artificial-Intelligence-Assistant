@@ -58,3 +58,7 @@ compuestos en `main.py`. Ver [ADR-0006](../adr/0006-fronteras-y-evaluacion-verif
 ## 9.9. ADR-0007 — Comportamiento ante fallo o degradación del proveedor de lenguaje
 
 Aceptado por el equipo. Ante un fallo de Gemini (red, timeout, `429`, `404`, `5xx` o respuesta malformada), el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo de reintento, sin reintentar y sin escribir nada. Se descartaron los reintentos, porque consumen la misma cuota que provoca el fallo más frecuente; un proveedor de respaldo, porque exige otro adaptador y otra evaluación; un intérprete por reglas, por S1; y un `503`, porque el contrato de `/ai/message` no lo declara. Ver [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md).
+
+## 9.10. ADR-0008 — Mantener el monolito modular sin extraer módulos a servicios
+
+Aceptado por el equipo. Se evaluaron tres opciones con los mismos criterios (carga, aislamiento de fallos, consistencia, latencia de S3, costo y operación, equipo): no extraer, extraer `ai` y extraer `reminders`. Se decide no extraer: no hay carga que escalar, el fallo dominante (la cuota de Gemini) no se resuelve separando procesos, y extraer `ai` convertiría la confirmación y creación de una tarea en una transacción distribuida. La decisión se revisa si la carga de `/ai/message` degrada el resto de la API, si se agrega un segundo proveedor de LLM o si el envío programado de `RF-NOT-02` necesita correr aparte. Ver [ADR-0008](../adr/0008-mantener-monolito-sin-extraer-modulos.md).
