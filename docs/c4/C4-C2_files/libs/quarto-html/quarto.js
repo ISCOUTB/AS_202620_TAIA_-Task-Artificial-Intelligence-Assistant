@@ -600,7 +600,7 @@ window.document.addEventListener("DOMContentLoaded", function (_event) {
       return true;
     }
 
-    const hasMarginCaption = Array.from(el.classList).find((className) => {
+    const hasMarginCaption = Array.from(el.classList).some((className) => {
       return className == "margin-caption";
     });
     if (hasMarginCaption) {
