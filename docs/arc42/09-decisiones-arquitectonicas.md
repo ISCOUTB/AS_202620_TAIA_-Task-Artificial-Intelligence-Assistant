@@ -39,7 +39,15 @@ La estrategia de integración de la API principal está documentada en [ADR-0002
 
 ## 9.5. ADR-0003 — Plataforma de despliegue de la API
 
-La API se despliega en una VM `VM.Standard.E5.Flex` de Oracle Cloud con Docker, con la imagen en GitHub Container Registry y despliegue automático desde `main`. Se descartó Render Free por la suspensión tras 15 minutos sin tráfico, que incumple S3 y RNF-08 en la primera petición. La VM no es Always Free y cuesta 39,42 USD/mes. Ver [ADR-0003](../adr/0003-plataforma-despliegue-api.md).
+La API se despliega como el servicio **`backend` de Docker Compose administrado
+por Dokploy**. GitHub Actions ejecuta CI y solicita el despliegue mediante
+`DOKPLOY_WEBHOOK_URL` para la revisión actual de `main`. Dokploy construye desde
+Git y administra el entorno, logs y dominio; el resultado se comprueba en
+Deployments y `/health`. Esta decisión sustituye la operación directa por
+SSH/GHCR y conserva la comparación OCI/Render como antecedente. No determina
+un cambio de servidor, proveedor de PostgreSQL o costo mensual. Ver
+[ADR-0003](../adr/0003-plataforma-despliegue-api.md), incluidos los límites
+del webhook y las verificaciones operativas pendientes.
 
 ## 9.6. ADR-0004 — Plataforma de la base de datos
 
