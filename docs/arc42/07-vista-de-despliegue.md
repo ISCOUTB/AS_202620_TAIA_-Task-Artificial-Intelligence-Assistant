@@ -9,10 +9,10 @@ La arquitectura de despliegue distingue entre la **arquitectura objetivo** y el 
 
 | | |
 |---|---|
-| URL pública | `http://157.137.215.57:8000` |
-| Health check | `GET http://157.137.215.57:8000/health` → `200 {"status": "ok"}` |
-| Métrica | `GET http://157.137.215.57:8000/metrics` |
-| Documentación interactiva | `http://157.137.215.57:8000/docs` |
+| URL pública | `https://taia-sistema.iscoutb.dev` |
+| Health check | `GET https://taia-sistema.iscoutb.dev/health` → `200 {"status": "ok"}` |
+| Métrica | `GET https://taia-sistema.iscoutb.dev/metrics` |
+| Documentación interactiva | `https://taia-sistema.iscoutb.dev/docs` |
 | Respaldo (alternativa del taller) | `https://taia-backend-latest.onrender.com` |
 
 ## 7.1. Infraestructura: una caja por pieza
@@ -68,7 +68,7 @@ La arquitectura de despliegue distingue entre la **arquitectura objetivo** y el 
 ## 7.2. Flujo de despliegue
 =======
 El despliegue actual utiliza Docker Compose administrado por Dokploy. La API
-publicada está disponible en el dominio sslip.io documentado arriba.
+publicada está disponible en el dominio documentado arriba.
 
 ## 7.2. Corte vertical actualmente ejecutable
 
@@ -76,7 +76,7 @@ El despliegue remoto actual utiliza Docker Compose y Dokploy. La API publicada
 está disponible en:
 
 ```text
-http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
+https://taia-sistema.iscoutb.dev
 ```
 
 El corte vertical actualmente ejecutable corresponde al **backend de TAIA ejecutado como una única aplicación FastAPI**. Puede ejecutarse localmente mediante Uvicorn y está desplegado para acceso remoto mediante Docker Compose y Dokploy.

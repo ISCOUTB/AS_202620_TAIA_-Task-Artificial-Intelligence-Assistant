@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-BASE = "http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io"
+BASE = "https://taia-sistema.iscoutb.dev"
 ROOT = Path(__file__).resolve().parents[1]
 
 
