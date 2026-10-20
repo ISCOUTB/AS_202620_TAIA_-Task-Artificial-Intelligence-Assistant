@@ -2,10 +2,13 @@ name: CI
 
 on:
   push:
-  pull_request:
-
+    branches: [main]
 jobs:
   test:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+
     runs-on: ubuntu-latest
 
     services:
@@ -42,10 +45,10 @@ jobs:
       # construir la imagen, pero así un Dockerfile roto falla aquí y no
       # después de migrar la base.
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0 
 
       - name: Build backend image (no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           # El Dockerfile hace COPY backend/..., así que el contexto es la raíz
           # del repo y el Dockerfile se indica aparte.
@@ -64,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install pip==26.2.1
+          python -m pip install --only-binary=:all: pip==26.2.1
           pip install --require-hashes --only-binary :all: -r backend/requirements-dev.lock.txt
 
       - name: Create databases if needed

@@ -4,17 +4,20 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.23@sha256:61d393e44e249f2e4b526b6c7ddcecce
 
 WORKDIR /app
 
+RUN useradd --create-home appuser
+
 COPY backend/requirements.lock.txt ./requirements.lock.txt
 
-
+RUN chown -R appuser:appuser /app
 
 RUN uv pip install --system --no-cache --require-hashes --only-binary :all: -r requirements.lock.txt
 
 
-COPY backend/app ./app
-COPY backend/alembic.ini .
-COPY backend/alembic ./alembic
+COPY --chown=appuser:appuser backend/app ./app
+COPY --chown=appuser:appuser backend/alembic.ini .
+COPY --chown=appuser:appuser backend/alembic ./alembic
 
+USER appuser
 
 EXPOSE 8000
 
