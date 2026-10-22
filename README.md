@@ -12,7 +12,7 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 | Documentación interactiva | https://taia-sistema.iscoutb.dev/docs |
 | Respaldo en Render (alternativa del taller) | https://taia-backend-latest.onrender.com/health |
 
-La API corre en una VM de Oracle Cloud con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa el CI se despliega automáticamente. El detalle está en [arc42 §7](docs/arc42/07-vista-de-despliegue.md).
+La API corre en un dominio Dokploy con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa al workflow de testeo CI, quien posteriormente al pasar todas las pruebas arranca el workflow de despliegue CD y se despliega automáticamente.
 
 Comprobación desde cualquier red:
 
@@ -195,11 +195,11 @@ El entorno se recrea con estos pasos. Los valores reales de las variables nunca 
 1. Crear un proyecto en Supabase (plan Free) y copiar la cadena de conexión del *pooler* (Project Settings > Database).
 2. Esa cadena es el valor de `DATABASE_URL`. Las tablas las crea la API al arrancar con `alembic upgrade head`.
 
-### 2. VM en Oracle Cloud
+### 2. Dokploy
 
-1. Crear una instancia de cómputo en OCI con Oracle Linux, abrir el puerto 8000 en la lista de seguridad de la subred y en el firewall del sistema, y configurar el acceso por SSH con una clave.
-2. Instalar Docker en la VM (paquetes de Oracle Linux) y habilitarlo con `sudo systemctl enable --now docker`.
-3. Adoptar la instancia en Terraform siguiendo [terraform/README.md](terraform/README.md): completar `terraform.tfvars` con los datos de la instancia, `terraform init`, `terraform import` y un `terraform plan` sin cambios.
+1. Crear y configurar un entorno en dokploy para que construya por medio del Dockerfile la api
+2. Crear y configurar el dominio que usará la api, exponiendo el puerto 8000 y asegurando que la conexión sea https.
+
 
 ### 3. Secretos de GitHub Actions
 
@@ -209,25 +209,20 @@ En *Settings > Secrets and variables > Actions* del repositorio:
 |---|---|
 | `DATABASE_URL` | Cadena de conexión de Supabase |
 | `TAIA_JWT_SECRET` | Valor aleatorio largo: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
-| `GHCR_USERNAME`, `GHCR_PAT` | Usuario y token con `write:packages` para publicar en GHCR |
-| `OCI_HOST`, `OCI_USER`, `OCI_SSH_KEY` | IP pública de la VM, usuario (`opc`) y clave privada SSH |
+| `DOKPLOY_URL`, `DOKPLOY_WEBHOOK_URL` | Url del panel y url de despliegue de la aplicacion respectivamente|
+
 
 ### 4. Desplegar
 
 Hacer push a `main`. El workflow [CI](.github/workflows/ci.yml) ejecuta las pruebas y, si queda en verde, [CD](.github/workflows/cd.yml) hace lo siguiente:
+ 
+1. por medio de `DOKPLOY_WEBHOOK_URL` hace una petición http para solicitar a Dokploy que realice el despliegue.
 
-1. Construye `backend/Dockerfile` y publica `ghcr.io/dei0811/taia_backend:<sha12>` y `:latest`.
-2. Por SSH, escribe `~/taia.env` en la VM con los secretos y reemplaza el contenedor `taia_backend` (puerto 8000, `--restart unless-stopped`).
-3. Comprueba `GET /health` desde fuera de la VM, con hasta 12 intentos.
+posteriormente en dokploy:
 
-### 5. Volver a una versión anterior
+1. Construye el Dockerfile y posteriormente despliega la api en el dominio asignado
 
-En la VM, ejecutar el contenedor con una etiqueta anterior de GHCR:
 
-```bash
-sudo docker stop taia_backend && sudo docker rm taia_backend
-sudo docker run -d --name taia_backend --env-file ~/taia.env -p 8000:8000 \
-  --restart unless-stopped ghcr.io/dei0811/taia_backend:<sha12-anterior>
 ```
 
 ## Observabilidad
@@ -242,7 +237,7 @@ sudo docker run -d --name taia_backend --env-file ~/taia.env -p 8000:8000 \
 
 ## Costo
 
-El despliegue cuesta **39,42 USD/mes**, todo por la VM `VM.Standard.E5.Flex`, que no es Always Free. Supabase, GHCR y GitHub Actions quedan en 0 USD con el volumen supuesto. El volumen, el costo por pieza y el punto de ruptura de cada capa gratuita están en [docs/costo_mensual.md](docs/costo_mensual.md).
+Gratuito.
 
 ## Documentación
 
