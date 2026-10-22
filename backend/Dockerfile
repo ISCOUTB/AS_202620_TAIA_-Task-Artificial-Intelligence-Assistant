@@ -10,7 +10,8 @@ COPY backend/requirements.lock.txt ./requirements.lock.txt
 
 
 
-RUN chown -R appuser:appuser /app; uv pip install --system --no-cache --require-hashes --only-binary :all: -r requirements.lock.txt
+RUN chown -R appuser:appuser /app \
+;  uv pip install --system --no-cache --require-hashes --only-binary :all: -r requirements.lock.txt
 
 
 COPY --chown=appuser:appuser backend/app ./app
