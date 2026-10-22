@@ -3,6 +3,11 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      -'backend/**'
+      -'Dockerfile'
+      -'ci.yml'
+      
 jobs:
   test:
     if: >-
