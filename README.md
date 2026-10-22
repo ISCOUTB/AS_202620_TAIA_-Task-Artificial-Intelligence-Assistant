@@ -6,10 +6,10 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 
 | | |
 |---|---|
-| API | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io |
-| Health check | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health → `200 {"status": "ok"}` |
-| Métrica de latencia | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/metrics |
-| Documentación interactiva | http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs |
+| API | https://taia-sistema.iscoutb.dev |
+| Health check | https://taia-sistema.iscoutb.dev/health → `200 {"status": "ok"}` |
+| Métrica de latencia | https://taia-sistema.iscoutb.dev/metrics |
+| Documentación interactiva | https://taia-sistema.iscoutb.dev/docs |
 | Respaldo en Render (alternativa del taller) | https://taia-backend-latest.onrender.com/health |
 
 La API corre en una VM de Oracle Cloud con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa el CI se despliega automáticamente. El detalle está en [arc42 §7](docs/arc42/07-vista-de-despliegue.md).
@@ -17,7 +17,7 @@ La API corre en una VM de Oracle Cloud con Docker y usa Supabase PostgreSQL. Cad
 Comprobación desde cualquier red:
 
 ```bash
-curl -sS -o /dev/null -w 'http=%{http_code} tiempo=%{time_total}s\n' http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health
+curl -sS -o /dev/null -w 'http=%{http_code} tiempo=%{time_total}s\n' https://taia-sistema.iscoutb.dev/health
 ```
 
 ## Integrantes
@@ -108,16 +108,16 @@ La documentación del proyecto se encuentra en la carpeta docs/.
 
 La API desplegada está disponible en:
 
-- API: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io
-- Documentación interactiva: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/docs
-- Health check: http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io/health
+- API: https://taia-sistema.iscoutb.dev
+- Documentación interactiva: https://taia-sistema.iscoutb.dev/docs
+- Health check: https://taia-sistema.iscoutb.dev/health
 
 ## Requisitos
 
 ### Docker Compose / Dokploy
 
 El despliegue actual de la API está publicado en
-`http://taia-sistema-jkbo9i-ec2cd4-144-24-4-187.sslip.io`.
+`https://taia-sistema.iscoutb.dev`.
 
 El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
 `DATABASE_URL` (PostgreSQL) y `TAIA_JWT_SECRET` siguiendo `.env.example`.
