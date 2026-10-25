@@ -66,17 +66,17 @@ C4Container
     Person(estudiante, "Estudiante", "Registra tareas académicas y consulta su información.")
 
     Boundary(taia, "Sistema TAIA", "Sistema") {
-        Container(appmovil, "App Móvil", "Consulta las tareas pendientes y permite registrarlas por formulario.")
-        Container(api, "API TAIA", "Expone la API REST, recibe el webhook, aplica las reglas de negocio y programa recordatorios.")
-        ContainerDb(db, "Base de Datos", "Almacena tareas, materias, horarios y usuarios.")
+        Container(appmovil, "App Móvil", "Flutter", "Consulta las tareas pendientes y permite registrarlas por formulario. Arquitectura objetivo, fuera del backend entregado.")
+        Container(api, "API TAIA", "Python 3.12 · FastAPI · SQLAlchemy, Docker en Dokploy", "Monolito modular (usuario, academic, reminders, ai). Expone la API REST, recibe el webhook, aplica las reglas de negocio y programa recordatorios.")
+        ContainerDb(db, "Base de Datos", "PostgreSQL · Supabase (plan Free), migraciones Alembic", "Una base y un esquema compartidos; cada tabla pertenece a un módulo. Almacena usuarios, materias, horarios, tareas, recordatorios, notificaciones y conversaciones. Sin caché de lectura.")
     }
 
-    BiRel(estudiante, telegram, "Escribe y recibe avisos")
-    Rel(estudiante, appmovil, "Consulta tareas")
-    BiRel(telegram, api, "Mensajes", "JSON/HTTPS")
-    BiRel(api, gemini, "Interpreta", "JSON/HTTPS")
-    Rel(appmovil, api, "Consulta y registra", "JSON/HTTPS")
-    Rel(api, db, "Lee y escribe", "SQL/TCP 5432")
+    BiRel(estudiante, telegram, "Escribe y recibe avisos", "Telegram Bot API / JSON")
+    Rel(estudiante, appmovil, "Consulta tareas", "HTTPS / JSON")
+    BiRel(telegram, api, "Webhook y mensajes", "HTTPS / JSON")
+    BiRel(api, gemini, "Interpreta (≈ 0,0003 USD/op)", "HTTPS / JSON")
+    Rel(appmovil, api, "Consulta y registra", "HTTPS / JSON")
+    Rel(api, db, "Lee y escribe (transacciones locales por módulo)", "SQL sobre TCP 5432 · pooler de Supabase")
 
     UpdateElementStyle(estudiante, $bgColor="#08427b", $fontColor="#ffffff", $borderColor="#052e56")
     UpdateElementStyle(appmovil, $bgColor="#438dd5", $fontColor="#ffffff", $borderColor="#2e6295")
@@ -113,6 +113,8 @@ C4Container
 </tr>
 </tbody>
 </table>
+<p><strong>Almacenes y brokers.</strong> TAIA tiene un solo almacén, PostgreSQL en Supabase (<a href="../adr/0004-plataforma-base-de-datos.md">ADR-0004</a>), compartido por los cuatro módulos con referencias lógicas entre ellos (<a href="../adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md">ADR-0009</a>). No hay caché ni broker de mensajes: las integraciones son llamadas HTTP síncronas (<a href="../adr/0002-estrategia-integracion-api-sincrona.md">ADR-0002</a>); consistencia y caché en <a href="../arc42/08-conceptos-transversales.md#810-consistencia-de-los-datos">arc42 §8.10 y §8.11</a>. La versión de PostgreSQL de producción no está verificada en el repositorio; el CI usa <code>postgres:17</code>.</p>
+<p>Costo del proveedor LLM medido en <a href="../evaluacion_ia/resultado_s1_s3.json">resultado_s1_s3.json</a> (0,000312 USD por operación); comportamiento ante fallo en <a href="../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md">ADR-0007</a>.</p>
 </section>
 </section>
 

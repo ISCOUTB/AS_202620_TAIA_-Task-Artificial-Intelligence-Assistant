@@ -11,6 +11,10 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 | Métrica de latencia | https://taia-sistema.iscoutb.dev/metrics |
 | Documentación interactiva | https://taia-sistema.iscoutb.dev/docs |
 | Respaldo en Render (alternativa del taller) | https://taia-backend-latest.onrender.com/health |
+| CI y CD (GitHub Actions) | https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions |
+| Análisis estático y Quality Gate (SonarCloud, público) | https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant |
+
+SonarCloud analiza cada commit con su análisis automático, configurado en [`.sonarcloud.properties`](.sonarcloud.properties). El job `quality-gate` del [CI](.github/workflows/ci.yml) espera el análisis del mismo commit y falla si el Quality Gate no está en OK.
 
 La API corre en un dominio Dokploy con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa al workflow de testeo CI, quien posteriormente al pasar todas las pruebas arranca el workflow de despliegue CD y se despliega automáticamente.
 
@@ -85,9 +89,14 @@ Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters
 
 - [ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
 - [ADR-0002 — Integración HTTP síncrona con OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
-- [ADR-0003 — Plataforma de despliegue de la API](docs/adr/0003-plataforma-despliegue-api.md)
+- [ADR-0003 — Plataforma de despliegue de la API: VM de OCI con Docker](docs/adr/0003-plataforma-despliegue-api.md) (reemplazado por ADR-0010)
 - [ADR-0004 — Plataforma de la base de datos](docs/adr/0004-plataforma-base-de-datos.md)
 - [ADR-0005 — Normalización de la confirmación escrita en español](docs/adr/0005-normalizacion-confirmacion-espanol.md)
+- [ADR-0006 — Fronteras y evaluación verificable](docs/adr/0006-fronteras-y-evaluacion-verificable.md)
+- [ADR-0007 — Comportamiento ante fallo del proveedor LLM](docs/adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)
+- [ADR-0008 — Mantener el monolito sin extraer módulos](docs/adr/0008-mantener-monolito-sin-extraer-modulos.md)
+- [ADR-0009 — Base PostgreSQL compartida con referencias lógicas entre módulos](docs/adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md)
+- [ADR-0010 — Plataforma de despliegue de la API: Dokploy con Docker Compose](docs/adr/0010-despliegue-con-dokploy-y-docker-compose.md)
 
 ## Documentación
 

@@ -3,11 +3,25 @@ name: CI
 on:
   push:
     branches: [main]
+    # Cada patrón es un elemento de la lista ("- 'patrón'"). Sin el espacio
+    # después del guion, YAML lo lee como un solo texto y no como una lista.
     paths:
-      -'backend/**'
-      -'Dockerfile'
-      -'ci.yml'
-      
+      - 'backend/**'
+      - 'tools/**'
+      - 'docker-compose.yml'
+      - 'pytest.ini'
+      - '.sonarcloud.properties'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'tools/**'
+      - 'docker-compose.yml'
+      - 'pytest.ini'
+      - '.sonarcloud.properties'
+      - '.github/workflows/ci.yml'
+
 jobs:
   test:
     if: >-
@@ -123,3 +137,39 @@ jobs:
 
       - name: Verify generated client is synchronized
         run: git diff --exit-code -- backend/generated/taia_api_client.py
+
+  # SonarCloud analiza cada commit con su análisis automático (organización
+  # isco-utb); por eso no se ejecuta un escáner aquí: SonarCloud rechaza el
+  # análisis desde CI mientras el automático está activo. Este job espera el
+  # análisis del mismo commit y falla si el Quality Gate no está en OK, para que
+  # el resultado quede en el run y CD no despliegue con el gate en rojo.
+  # El proyecto es público: la consulta no necesita token.
+  quality-gate:
+    name: SonarCloud Quality Gate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SONAR_PROJECT: ISCOUTB_AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant
+      SONAR_API: https://sonarcloud.io/api
+    steps:
+      - name: Esperar el análisis del commit y comprobar el Quality Gate
+        run: |
+          set -euo pipefail
+          analysis=""
+          for _ in $(seq 1 40); do
+            analysis=$(curl -sf "$SONAR_API/project_analyses/search?project=$SONAR_PROJECT&ps=20" \
+              | jq -r --arg sha "$GITHUB_SHA" '.analyses[] | select(.revision == $sha) | .key' | head -n1)
+            if [ -n "$analysis" ]; then break; fi
+            sleep 15
+          done
+          if [ -z "$analysis" ]; then
+            echo "SonarCloud no publicó un análisis para $GITHUB_SHA en 10 minutos."
+            exit 1
+          fi
+          status=$(curl -sf "$SONAR_API/qualitygates/project_status?analysisId=$analysis")
+          echo "$status" | jq '.projectStatus.conditions[] | {metricKey, status, actualValue, errorThreshold}'
+          gate=$(echo "$status" | jq -r '.projectStatus.status')
+          echo "Quality Gate: $gate"
+          echo "https://sonarcloud.io/project/overview?id=$SONAR_PROJECT"
+          [ "$gate" = "OK" ]

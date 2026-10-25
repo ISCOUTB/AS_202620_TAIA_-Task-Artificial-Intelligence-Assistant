@@ -993,3 +993,54 @@ expresa del responsable del proyecto después de actualizar el repositorio.
 - 18 enlaces locales comprobados en los dos documentos de decisión: 0 rotos.
 - Revisión de formato Markdown y `git diff --check`: sin errores.
 - No se ejecutaron pruebas de aplicación porque los cambios son documentales.
+
+## Entrada 021
+
+**Fecha:** 2026-10-25
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Cerrar las observaciones de la evidencia preliminar de S12 sobre consistencia, caché, la decisión de datos más costosa de revertir, el C4 de contenedores y los pendientes transversales.
+
+### Solicitud realizada
+
+Se entregó a la IA la evidencia preliminar de S12 (commit `eb4d915`, 2/9 criterios) y se solicitó verificar sobre el repositorio qué observaciones atacar para cumplir los nueve criterios, en qué documentos realizar los cambios y, después de revisar el diagnóstico, aplicarlos en orden respetando la forma de escribir de cada documento existente.
+
+### Resultado generado
+
+La IA ayudó a:
+
+* Agregar a arc42 §8 la sección **8.10 Consistencia de los datos**, con la tabla operación → garantía (fuerte, eventual o nombrada), el mecanismo y la evidencia en código de cada operación.
+* Agregar a arc42 §8 la sección **8.11 Caché**: decisión de no usar caché de lectura con sus razones, el disparador para revisarla, el diseño acotado si se introduce (qué, dónde, cuánto) y la política de invalidación tras escritura.
+* Redactar el **ADR-0009 — Una base PostgreSQL compartida con referencias lógicas entre módulos**, con cuatro opciones comparadas y una tabla de costo de reversión, y su resumen en arc42 §9.11.
+* Anotar la tecnología de cada contenedor en [C4-C2](c4/C4-C2.md) (PostgreSQL en Supabase, FastAPI, Flutter), una nota de almacenes y brokers, y regenerar `C4-C2.html` con Quarto.
+* Restaurar el texto aceptado de ADR-0003 (VM de OCI con Docker), marcarlo como reemplazado y mover la decisión de Dokploy a **ADR-0010**, con sus resúmenes en arc42 §9.5 y §9.12 y la lista de ADR del README.
+* Identificar que el proyecto público de SonarCloud (`isco-utb`) usa análisis automático y que su Quality Gate estaba en `ERROR` por cuatro "bugs" en librerías generadas por Quarto (`docs/c4/C4-C2_files/`).
+* Agregar `.sonarcloud.properties` con la exclusión de esos archivos generados y un job `quality-gate` en el CI que espera el análisis del mismo commit y falla si el gate no está en `OK`.
+* Corregir el filtro `paths` del CI, que estaba escrito sin espacio después del guion (`-'backend/**'`) y YAML no lo leía como lista, y agregar el disparador de *pull request*.
+
+### Aceptado
+
+* La tabla operación → garantía basada en el código actual, incluidas las garantías débiles que se aceptan de forma explícita: "al menos una vez" para el envío por Telegram, "última escritura gana" para la edición de tareas y la falta de atomicidad entre reclamar la acción y crear la tarea.
+* No introducir caché de lectura: la carga supuesta es de 0,2 peticiones por segundo, los datos son de un solo usuario y `status` y `priority` dependen de la hora de la consulta.
+* Elegir la base compartida con referencias lógicas como la decisión de datos más costosa de revertir, porque fija qué transacciones son locales y cuánto cuesta extraer un módulo.
+* Conservar ADR-0003 sin cambios en su contenido y registrar el reemplazo en un ADR nuevo.
+* Comprobar el Quality Gate desde el CI consultando la API pública de SonarCloud, sin token.
+
+### Rechazado o modificado
+
+* Se descartó diseñar una caché de tareas: su estado (`overdue`) cambia con el tiempo y una respuesta guardada quedaría mal sin ninguna escritura. El diseño hipotético se limitó a la lista de asignaturas.
+* Se descartó agregar un escáner de SonarCloud dentro del CI, porque SonarCloud rechaza el análisis desde CI mientras el análisis automático está activo.
+* Se descartó usar anclas YAML para no repetir la lista de `paths` en `push` y `pull_request`, para no depender del soporte de esa sintaxis en GitHub Actions.
+* No se anotó la versión de PostgreSQL de producción en el C4: el repositorio no la verifica y el `postgres:17` del CI no la prueba.
+* No se modificó código del backend ni se agregaron pruebas: las observaciones de S12 son de documentación y de CI.
+
+### Verificación realizada
+
+* Las líneas citadas en arc42 §8.10, §8.11 y ADR-0009 se contrastaron con el código (`sqlalchemy_conversation_store.py:54-75`, `sqlalchemy_reminder_repository.py:63-89`, `task.py:118-122`, `manage_tasks.py:54-69`, `create_reminder.py:15-23`, `database.py:42-48`).
+* Se comprobó en los modelos SQLAlchemy que ninguna `ForeignKey` apunta a una tabla de otro módulo y que `reminders.user_id` y `reminders.task_id` son columnas `Uuid` sin clave foránea.
+* El texto restaurado de ADR-0003 se obtuvo de `e2b9dfd`, el commit que lo introdujo, y solo cambió su sección de estado.
+* 105 enlaces relativos y anclajes de los documentos modificados: 0 rotos.
+* El YAML del CI se cargó sin errores con dos jobs (`test` y `quality-gate`) y la lista de `paths` como secuencia.
+* La lógica del job `quality-gate` se probó localmente contra el análisis de SonarCloud de `5aa16fc`: encontró el análisis del commit y devolvió `ERROR`, el estado previo a la exclusión. El resultado con la exclusión se verá en el primer análisis posterior al push.
+* `C4-C2.html` se regeneró con Quarto 1.8.27; las librerías de `C4-C2_files/` no cambiaron.

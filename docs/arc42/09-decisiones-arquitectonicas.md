@@ -37,17 +37,11 @@ ADR-0001 se refleja en la separación entre dominio, aplicación y adaptadores e
 
 La estrategia de integración de la API principal está documentada en [ADR-0002](../adr/0002-estrategia-integracion-api-sincrona.md). La decisión establece HTTP síncrono + JSON y OpenAPI 3.1 como contrato versionado.
 
-## 9.5. ADR-0003 — Plataforma de despliegue de la API
+## 9.5. ADR-0003 — Plataforma de despliegue de la API (reemplazado)
 
-La API se despliega como el servicio **`backend` de Docker Compose administrado
-por Dokploy**. GitHub Actions ejecuta CI y solicita el despliegue mediante
-`DOKPLOY_WEBHOOK_URL` para la revisión actual de `main`. Dokploy construye desde
-Git y administra el entorno, logs y dominio; el resultado se comprueba en
-Deployments y `/health`. Esta decisión sustituye la operación directa por
-SSH/GHCR y conserva la comparación OCI/Render como antecedente. No determina
-un cambio de servidor, proveedor de PostgreSQL o costo mensual. Ver
-[ADR-0003](../adr/0003-plataforma-despliegue-api.md), incluidos los límites
-del webhook y las verificaciones operativas pendientes.
+**Estado:** Reemplazado por ADR-0010.
+
+La API se desplegaba en una VM de OCI (`VM.Standard.E5.Flex`) con Docker, imagen publicada en GHCR y despliegue por SSH desde `cd.yml`. Se descartó Render Free como entorno principal por el arranque en frío tras 15 minutos sin tráfico. La decisión se conserva sin cambios como antecedente. Ver [ADR-0003](../adr/0003-plataforma-despliegue-api.md).
 
 ## 9.6. ADR-0004 — Plataforma de la base de datos
 
@@ -70,3 +64,21 @@ Aceptado por el equipo. Ante un fallo de Gemini (red, timeout, `429`, `404`, `5x
 ## 9.10. ADR-0008 — Mantener el monolito modular sin extraer módulos a servicios
 
 Aceptado por el equipo. Se evaluaron tres opciones con los mismos criterios (carga, aislamiento de fallos, consistencia, latencia de S3, costo y operación, equipo): no extraer, extraer `ai` y extraer `reminders`. Se decide no extraer: no hay carga que escalar, el fallo dominante (la cuota de Gemini) no se resuelve separando procesos, y extraer `ai` convertiría la confirmación y creación de una tarea en una transacción distribuida. La decisión se revisa si la carga de `/ai/message` degrada el resto de la API, si se agrega un segundo proveedor de LLM o si el envío programado de `RF-NOT-02` necesita correr aparte. Ver [ADR-0008](../adr/0008-mantener-monolito-sin-extraer-modulos.md).
+
+## 9.11. ADR-0009 — Una base PostgreSQL compartida con referencias lógicas entre módulos
+
+Aceptado por el equipo. Es la decisión de datos más costosa de revertir: fija qué transacciones son locales y cuánto cuesta extraer un módulo. Los cuatro módulos comparten una base y un esquema; cada tabla tiene un módulo propietario, las `FOREIGN KEY` solo existen dentro de un módulo y las referencias entre módulos son columnas `uuid` validadas por el puerto del propietario y apoyadas en el borrado lógico (RT-04). Se compararon claves foráneas entre módulos (ata el esquema de un módulo al de otro), un esquema por módulo (costo medio de reversión, sin ganancia con un solo equipo) y una base por módulo (alto costo, fuera de la capa gratuita de Supabase). Ver [ADR-0009](../adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md).
+
+## 9.12. ADR-0010 — Plataforma de despliegue de la API: Dokploy con Docker Compose
+
+**Estado:** Aceptado. Reemplaza a ADR-0003.
+
+La API se despliega como el servicio **`backend` de Docker Compose administrado
+por Dokploy**. GitHub Actions ejecuta CI y solicita el despliegue mediante
+`DOKPLOY_WEBHOOK_URL` para la revisión actual de `main`. Dokploy construye desde
+Git y administra el entorno, logs y dominio; el resultado se comprueba en
+Deployments y `/health`. Esta decisión reemplaza a ADR-0003 (operación directa por
+SSH/GHCR) y conserva la comparación OCI/Render como antecedente. No determina
+un cambio de servidor, proveedor de PostgreSQL o costo mensual. Ver
+[ADR-0010](../adr/0010-despliegue-con-dokploy-y-docker-compose.md), incluidos los límites
+del webhook y las verificaciones operativas pendientes.
