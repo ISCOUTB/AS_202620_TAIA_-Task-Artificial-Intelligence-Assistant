@@ -134,7 +134,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Mitigación:** Declarar e importar esos recursos en `terraform/` con sus valores actuales.
 
-**Estado:** Pendiente.
+**Estado:** Descartada el 2026-10-25. La configuración de Terraform se retiró del repositorio: describía la VM de OCI de [ADR-0003](../adr/0003-plataforma-despliegue-api.md), y el despliegue actual con Dokploy ([ADR-0010](../adr/0010-despliegue-con-dokploy-y-docker-compose.md)) no la utiliza.
 
 ## 11.12. Fallos parciales de las integraciones externas
 

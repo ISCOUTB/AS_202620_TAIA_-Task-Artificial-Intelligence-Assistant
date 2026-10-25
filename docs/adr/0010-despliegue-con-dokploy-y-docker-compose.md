@@ -76,9 +76,8 @@ por Dokploy**, con el repositorio Git, rama `main` y Compose Path
 
 La configuración de Environment y el modo Compose corresponden al mecanismo
 [documentado por Dokploy](https://docs.dokploy.com/docs/core/docker-compose).
-Terraform permanece como herramienta opcional para administrar la
-[infraestructura OCI](../../terraform/README.md), independiente del despliegue
-de la aplicación.
+La configuración de Terraform que describía la VM de OCI de ADR-0003 se retiró
+del repositorio el 2026-10-25: no participaba en el despliegue con Dokploy.
 
 ## Consecuencias
 

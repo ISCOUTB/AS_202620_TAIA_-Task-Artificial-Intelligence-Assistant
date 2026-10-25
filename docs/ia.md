@@ -1018,6 +1018,10 @@ La IA ayudó a:
 * Identificar que el proyecto público de SonarCloud (`isco-utb`) usa análisis automático y que su Quality Gate estaba en `ERROR` por cuatro "bugs" en librerías generadas por Quarto (`docs/c4/C4-C2_files/`).
 * Agregar `.sonarcloud.properties` con la exclusión de esos archivos generados y un job `quality-gate` en el CI que espera el análisis del mismo commit y falla si el gate no está en `OK`.
 * Corregir el filtro `paths` del CI, que estaba escrito sin espacio después del guion (`-'backend/**'`) y YAML no lo leía como lista, y agregar el disparador de *pull request*.
+* Retirar la configuración de Terraform (`terraform/`), que describía la VM de OCI de ADR-0003 y no participaba en el despliegue con Dokploy, y actualizar sus referencias en el README, arc42 §7 y §11.11, ADR-0010 y la guía de despliegue.
+* Reescribir arc42 §7 según el despliegue actual con Dokploy: la versión anterior conservaba marcadores de conflicto (`<<<<<<< HEAD`) del merge de `migrate_to_dockploy` y describía la VM de OCI, el despliegue por SSH y los repositorios en memoria.
+* Alinear los tres niveles C4 con la integración real de Telegram: el backend solo envía notificaciones desde `reminders` (`sendMessage`) y no expone un webhook, aunque C1, C2 y C3 dibujaban la entrada de mensajes por Telegram. Se cerró además el bloque Mermaid de C4-C3, que estaba abierto.
+* Corregir la guía de despliegue y el README: el CD usa `DOKPLOY_WEBHOOK_URL` y no la API `compose.deploy` con `DOKPLOY_URL`, `DOKPLOY_API_KEY` y `DOKPLOY_COMPOSE_ID`; el webhook requiere Auto Deploy activado; las variables de la aplicación viven en Environment de Dokploy y no en GitHub; y `docker-compose.local.yml` es un archivo personal en `.gitignore`, cuyo contenido ahora se documenta.
 
 ### Aceptado
 
@@ -1034,6 +1038,7 @@ La IA ayudó a:
 * Se descartó usar anclas YAML para no repetir la lista de `paths` en `push` y `pull_request`, para no depender del soporte de esa sintaxis en GitHub Actions.
 * No se anotó la versión de PostgreSQL de producción en el C4: el repositorio no la verifica y el `postgres:17` del CI no la prueba.
 * No se modificó código del backend ni se agregaron pruebas: las observaciones de S12 son de documentación y de CI.
+* ADR-0003 conserva sus menciones a Terraform, porque describe la decisión tal como se aceptó. Los archivos locales no versionados de Terraform (estado y variables) se eliminaron después de la confirmación del responsable.
 
 ### Verificación realizada
 
@@ -1044,3 +1049,5 @@ La IA ayudó a:
 * El YAML del CI se cargó sin errores con dos jobs (`test` y `quality-gate`) y la lista de `paths` como secuencia.
 * La lógica del job `quality-gate` se probó localmente contra el análisis de SonarCloud de `5aa16fc`: encontró el análisis del commit y devolvió `ERROR`, el estado previo a la exclusión. El resultado con la exclusión se verá en el primer análisis posterior al push.
 * `C4-C2.html` se regeneró con Quarto 1.8.27; las librerías de `C4-C2_files/` no cambiaron.
+* La nueva §7 se contrastó con `docker-compose.yml`, `backend/Dockerfile`, `cd.yml` y `.env.example`; `/health` del dominio respondió `200` y el respaldo de Render respondió en 53 s. Se comprobó que el backend solo envía a Telegram (`sendMessage`) y no expone un webhook. 23 enlaces de §7: 0 rotos.
+* Los tres diagramas C4 se validaron con el parser de Mermaid 11.4.1 y se renderizaron (3 SVG); `C4-C2.html` se regeneró. El fragmento de `docker-compose.local.yml` de la guía se cargó como YAML válido; no se ejecutó con Docker porque no está instalado en el equipo usado.

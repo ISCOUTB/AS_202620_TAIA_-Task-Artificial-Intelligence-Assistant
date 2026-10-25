@@ -61,7 +61,7 @@ La información registrada podrá ser consultada y gestionada desde la aplicaci�
 - **PostgreSQL:** almacenamiento de información académica (Supabase en el despliegue).
 - **Gemini:** interpretación de lenguaje natural y asistencia conversacional.
 - **Telegram Bot API:** canal de captura rápida de información.
-- **Docker, GitHub Actions, GHCR, Oracle Cloud y Terraform:** despliegue.
+- **Docker Compose, Dokploy y GitHub Actions:** despliegue.
 
 ## Estado actual
 
@@ -102,8 +102,6 @@ Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters
 
 - [Despliegue con Docker Compose y Dokploy](docs/despliegue-dokploy.md):
   configuración del servicio, variables, dominio HTTPS y CD mediante la API de Dokploy.
-- [Infraestructura con Terraform en OCI](terraform/README.md): configuración local,
-  opcional para administrar el servidor existente; independiente de Dokploy.
 
 La documentación del proyecto se encuentra en la carpeta docs/.
 
@@ -133,7 +131,9 @@ El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
 Para Dokploy, seleccionar `./docker-compose.yml` y configurar el dominio del
 servicio `backend` en el puerto interno `8000`.
 
-Para ejecutar localmente, copiar `.env.example` a `.env`, completar los valores y usar:
+Para ejecutar localmente, copiar `.env.example` a `.env`, completar los valores, crear el
+`docker-compose.local.yml` personal que publica el puerto (no se versiona; su contenido está en la
+[guía de despliegue](docs/despliegue-dokploy.md#ejecutar-con-compose-localmente)) y usar:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
@@ -216,9 +216,9 @@ En *Settings > Secrets and variables > Actions* del repositorio:
 
 | Secreto | Valor |
 |---|---|
-| `DATABASE_URL` | Cadena de conexión de Supabase |
-| `TAIA_JWT_SECRET` | Valor aleatorio largo: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
-| `DOKPLOY_URL`, `DOKPLOY_WEBHOOK_URL` | Url del panel y url de despliegue de la aplicacion respectivamente|
+| `DOKPLOY_WEBHOOK_URL` | Webhook URL del servicio Compose en Dokploy; la usa `cd.yml` para solicitar el despliegue |
+
+Las variables de la aplicación (`DATABASE_URL`, `TAIA_JWT_SECRET`, `GEMINI_API_KEY` y las de Telegram) no van en GitHub: se configuran en **Environment** de Dokploy. El CI usa su propio PostgreSQL efímero.
 
 
 ### 4. Desplegar
@@ -258,5 +258,4 @@ Gratuito.
 - `docs/calidad/`: atributos y escenarios de calidad.
 - `docs/costo_mensual.md`: estimación de costo.
 - `docs/api/openapi.json`: contrato de la API.
-- `terraform/README.md`: infraestructura en OCI.
 - `docs/ia.md`: registro del uso de inteligencia artificial..
