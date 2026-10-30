@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/taia_colors.dart';
 
-/// Fondo coral con ondas en las esquinas y trazos decorativos. Con [progress]
+/// Fondo en el color principal con ondas en las esquinas y trazos decorativos. Con [progress]
 /// entre 0 y 1 las ondas entran desde los bordes y los trazos aparecen.
 class SplashBackground extends StatelessWidget {
   const SplashBackground({super.key, this.progress = 1});
@@ -25,11 +25,41 @@ class _BackgroundPainter extends CustomPainter {
 
   final double progress;
 
+  // Ondas: el principal aclarado con el color de fondo o con el acento 1.
+  static final _top = Color.lerp(
+    TaiaColors.fieryRose,
+    TaiaColors.ivoryMist,
+    0.12,
+  )!;
+  static final _waveSoft = Color.lerp(
+    TaiaColors.fieryRose,
+    TaiaColors.ivoryMist,
+    0.24,
+  )!;
+  static final _waveLight = Color.lerp(
+    TaiaColors.fieryRose,
+    TaiaColors.ivoryMist,
+    0.38,
+  )!;
+  static final _wavePeach = Color.lerp(
+    TaiaColors.fieryRose,
+    TaiaColors.softPeach,
+    0.8,
+  )!;
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
     final p = Curves.easeOutCubic.transform(progress.clamp(0.0, 1.0));
-    canvas.drawRect(Offset.zero & size, Paint()..color = TaiaColors.coral);
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.center,
+          colors: [_top, TaiaColors.fieryRose],
+        ).createShader(Offset.zero & size),
+    );
 
     // Ondas superiores izquierdas.
     canvas
@@ -42,7 +72,7 @@ class _BackgroundPainter extends CustomPainter {
         ..cubicTo(w * 0.62, h * 0.06, w * 0.5, h * 0.08, w * 0.34, h * 0.13)
         ..cubicTo(w * 0.2, h * 0.17, w * 0.1, h * 0.24, 0, h * 0.27)
         ..close(),
-      Paint()..color = TaiaColors.coralSoft,
+      Paint()..color = _waveSoft,
     );
     canvas.drawPath(
       Path()
@@ -51,7 +81,7 @@ class _BackgroundPainter extends CustomPainter {
         ..cubicTo(w * 0.42, h * 0.05, w * 0.3, h * 0.06, w * 0.2, h * 0.1)
         ..cubicTo(w * 0.1, h * 0.13, w * 0.05, h * 0.17, 0, h * 0.19)
         ..close(),
-      Paint()..color = TaiaColors.coralLight,
+      Paint()..color = _waveLight,
     );
     canvas.restore();
 
@@ -67,7 +97,7 @@ class _BackgroundPainter extends CustomPainter {
         ..lineTo(w, h)
         ..lineTo(0, h)
         ..close(),
-      Paint()..color = TaiaColors.coralSoft,
+      Paint()..color = _waveSoft,
     );
     canvas.drawPath(
       Path()
@@ -75,7 +105,7 @@ class _BackgroundPainter extends CustomPainter {
         ..cubicTo(w * 0.18, h * 0.85, w * 0.32, h * 0.9, w * 0.36, h)
         ..lineTo(0, h)
         ..close(),
-      Paint()..color = TaiaColors.coralLight,
+      Paint()..color = _waveLight,
     );
     canvas.drawPath(
       Path()
@@ -83,7 +113,7 @@ class _BackgroundPainter extends CustomPainter {
         ..cubicTo(w * 0.62, h * 0.93, w * 0.8, h * 0.9, w, h * 0.86)
         ..lineTo(w, h)
         ..close(),
-      Paint()..color = TaiaColors.peach,
+      Paint()..color = _wavePeach,
     );
     canvas.restore();
 

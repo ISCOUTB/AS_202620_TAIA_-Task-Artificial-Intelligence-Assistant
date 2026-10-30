@@ -57,7 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         'Te damos la bienvenida a TAIA',
                         textAlign: TextAlign.center,
                         style: text.headlineSmall?.copyWith(
-                          color: TaiaColors.cream,
+                          color: TaiaColors.ivoryMist,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -71,7 +71,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         'exámenes y horarios.',
                         textAlign: TextAlign.center,
                         style: text.bodyLarge?.copyWith(
-                          color: TaiaColors.cream,
+                          color: TaiaColors.ivoryMist,
                         ),
                       ),
                     ),

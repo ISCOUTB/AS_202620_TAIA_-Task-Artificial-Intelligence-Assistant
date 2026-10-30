@@ -45,7 +45,7 @@ class _WordmarkPainter extends CustomPainter {
       );
       if (t <= 0) continue;
       final paint = Paint()
-        ..color = TaiaColors.cream.withValues(alpha: t.clamp(0.0, 1.0))
+        ..color = TaiaColors.ivoryMist.withValues(alpha: t.clamp(0.0, 1.0))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 24
         ..strokeCap = StrokeCap.round
@@ -97,7 +97,7 @@ class _SparklesPainter extends CustomPainter {
     if (t <= 0) return;
     final s = size.width;
     final paint = Paint()
-      ..color = TaiaColors.cream.withValues(alpha: progress.clamp(0.0, 1.0))
+      ..color = TaiaColors.ivoryMist.withValues(alpha: progress.clamp(0.0, 1.0))
       ..strokeWidth = s * 0.09
       ..strokeCap = StrokeCap.round;
     final origin = Offset(s * 0.1, s * 0.9);

@@ -16,7 +16,7 @@ class TaiaApp extends StatelessWidget {
       title: 'TAIA',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: TaiaColors.coral),
+        colorScheme: ColorScheme.fromSeed(seedColor: TaiaColors.fieryRose),
       ),
       home: const SplashScreen(),
     );

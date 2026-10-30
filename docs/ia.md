@@ -1070,6 +1070,7 @@ Se entregó a la IA la silueta de la mascota (`Trabajo/vocetos/silueta_TAIA.png`
 * Rig de cada tentáculo: un eje calculado por adelgazamiento de la silueta y el contorno amarrado a ese eje, para que el tentáculo se doble con una onda de la base a la punta.
 * Proyecto Flutter solo para Android (`com.taia.app`) con `lib/mascot/` (geometría generada y pintor de la mascota), `lib/splash/` (fondo, logotipo vectorial, destellos y pantalla de splash), `lib/welcome/` (bienvenida provisional) y `lib/theme/` (colores).
 * Fondo coral en el arranque nativo de Android para evitar el destello blanco antes del primer cuadro de Flutter.
+* Colores de la app según los papeles del tablero de diseño: fondo en el principal (Fiery Rose), mascota y logotipo en Ivory Mist, y ondas del principal aclarado con Ivory Mist y Soft Peach. Las gafas y el lazo conservan los tonos del dibujo original de la mascota para que el lazo se distinga del fondo.
 * Tres pruebas de widget del splash.
 
 ### Aceptado
@@ -1081,6 +1082,7 @@ Se entregó a la IA la silueta de la mascota (`Trabajo/vocetos/silueta_TAIA.png`
 
 ### Rechazado o modificado
 
+* Un primer reparto de la paleta (fondo Sunset Coral y ondas planas en Soft Peach y Apricot Whisper) se reemplazó por el del tablero de diseño, a pedido del equipo.
 * La primera animación rotaba cada tentáculo completo desde su base. El equipo la rechazó porque se veía cortada por piezas y sin articulaciones.
 * La animación no se aplicó en Figma: la herramienta alcanzó el límite de llamadas del plan Starter, y la animación de Figma no deforma contornos de vectores.
 * Se descartó reconstruir los tentáculos como tubos de radio variable, porque en reposo no reproducían la silueta original.

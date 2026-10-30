@@ -105,15 +105,15 @@ class _MascotPainter extends CustomPainter {
     ),
   ];
 
-  static final _cream = Paint()..color = TaiaColors.cream;
-  static final _red = Paint()..color = TaiaColors.red;
-  static final _pink = Paint()..color = TaiaColors.pink;
+  static final _cream = Paint()..color = TaiaColors.ivoryMist;
+  static final _red = Paint()..color = TaiaColors.mascotRed;
+  static final _pink = Paint()..color = TaiaColors.mascotPink;
   static final _lens = Paint()
-    ..color = TaiaColors.red
+    ..color = TaiaColors.mascotRed
     ..style = PaintingStyle.stroke
     ..strokeWidth = 38;
   static final _eyeStroke = Paint()
-    ..color = TaiaColors.red
+    ..color = TaiaColors.mascotRed
     ..style = PaintingStyle.stroke
     ..strokeWidth = 37
     ..strokeCap = StrokeCap.round;
