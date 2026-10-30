@@ -1051,3 +1051,44 @@ La IA ayudó a:
 * `C4-C2.html` se regeneró con Quarto 1.8.27; las librerías de `C4-C2_files/` no cambiaron.
 * La nueva §7 se contrastó con `docker-compose.yml`, `backend/Dockerfile`, `cd.yml` y `.env.example`; `/health` del dominio respondió `200` y el respaldo de Render respondió en 53 s. Se comprobó que el backend solo envía a Telegram (`sendMessage`) y no expone un webhook. 23 enlaces de §7: 0 rotos.
 * Los tres diagramas C4 se validaron con el parser de Mermaid 11.4.1 y se renderizaron (3 SVG); `C4-C2.html` se regeneró. El fragmento de `docker-compose.local.yml` de la guía se cargó como YAML válido; no se ejecutó con Docker porque no está instalado en el equipo usado.
+
+## Entrada 022
+
+**Fecha:** 2026-10-29
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Vectorizar la mascota de TAIA, animar sus tentáculos e iniciar el cliente Flutter con el splash de carga.
+
+### Solicitud realizada
+
+Se entregó a la IA la silueta de la mascota (`Trabajo/vocetos/silueta_TAIA.png`) y el prototipo del splash. Se solicitó vectorizarla en Figma, animar los tentáculos mientras la aplicación carga, crear el proyecto Flutter en `frontend/` y construir el splash con el logotipo "TAIA" y una animación de entrada a la pantalla de bienvenida.
+
+### Resultado generado
+
+* Vectorización de la silueta con potrace: cuerpo, cuatro tentáculos separados, lazo, gafas y ojos. Se publicó en Figma (página "Page 1", marco "Mascota TAIA").
+* Rig de cada tentáculo: un eje calculado por adelgazamiento de la silueta y el contorno amarrado a ese eje, para que el tentáculo se doble con una onda de la base a la punta.
+* Proyecto Flutter solo para Android (`com.taia.app`) con `lib/mascot/` (geometría generada y pintor de la mascota), `lib/splash/` (fondo, logotipo vectorial, destellos y pantalla de splash), `lib/welcome/` (bienvenida provisional) y `lib/theme/` (colores).
+* Fondo coral en el arranque nativo de Android para evitar el destello blanco antes del primer cuadro de Flutter.
+* Colores de la app según los papeles del tablero de diseño: fondo en el principal (Fiery Rose), mascota y logotipo en Ivory Mist, y ondas del principal aclarado con Ivory Mist y Soft Peach. Las gafas y el lazo conservan los tonos del dibujo original de la mascota para que el lazo se distinga del fondo.
+* Tres pruebas de widget del splash.
+
+### Aceptado
+
+* Doblar los tentáculos a lo largo de su eje en lugar de rotarlos como piezas rígidas.
+* Dibujar el logotipo "TAIA" como vector, sin fuentes ni paquetes adicionales.
+* Una pantalla de bienvenida provisional mientras no exista su diseño.
+* No agregar el splash a `docs/requerimientos.md` en esta entrega, por decisión del equipo.
+
+### Rechazado o modificado
+
+* Un primer reparto de la paleta (fondo Sunset Coral y ondas planas en Soft Peach y Apricot Whisper) se reemplazó por el del tablero de diseño, a pedido del equipo.
+* La primera animación rotaba cada tentáculo completo desde su base. El equipo la rechazó porque se veía cortada por piezas y sin articulaciones.
+* La animación no se aplicó en Figma: la herramienta alcanzó el límite de llamadas del plan Starter, y la animación de Figma no deforma contornos de vectores.
+* Se descartó reconstruir los tentáculos como tubos de radio variable, porque en reposo no reproducían la silueta original.
+
+### Verificación realizada
+
+* `flutter analyze`: sin observaciones. `flutter test`: 3 pruebas aprobadas.
+* Se renderizaron cuadros del splash entre 0,3 s y 4,6 s con una prueba temporal (luego eliminada) y se revisaron la entrada, el bucle de los tentáculos y la transición a la bienvenida.
+* No se ejecutó en un dispositivo ni en un emulador Android.
