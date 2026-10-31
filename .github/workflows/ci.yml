@@ -13,6 +13,8 @@ on:
       - 'docker-compose.yml'
       - 'pytest.ini'
       - '.sonarcloud.properties'
+      # El modelo de amenazas se valida con tools/verificar_modelo_amenazas.py.
+      - 'docs/modelo_amenazas.md'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
@@ -23,6 +25,8 @@ on:
       - 'docker-compose.yml'
       - 'pytest.ini'
       - '.sonarcloud.properties'
+      # El modelo de amenazas se valida con tools/verificar_modelo_amenazas.py.
+      - 'docs/modelo_amenazas.md'
       - '.github/workflows/ci.yml'
 
 jobs:
@@ -130,10 +134,11 @@ jobs:
         if: always()
         run: docker rm -f taia-smoke || true
 
-      - name: Verify boundaries and credentials
+      - name: Verify boundaries, credentials and threat model
         run: |
           python tools/audit_boundaries.py
           python tools/verificar_dependencias.py
+          python tools/verificar_modelo_amenazas.py
 
       # Busca CVE conocidas en los locks (base de PyPI y OSV). Falla si encuentra
       # alguna, así que CD no despliega con una dependencia vulnerable.
