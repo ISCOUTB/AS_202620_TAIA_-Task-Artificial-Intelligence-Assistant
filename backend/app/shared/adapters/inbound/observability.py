@@ -17,8 +17,9 @@ import time
 from collections import deque
 from math import ceil
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 
+from app.shared.adapters.inbound.auth import get_authenticated_user_id
 from app.shared.clock import now_bogota
 
 logger = logging.getLogger("taia")
@@ -132,6 +133,8 @@ def install_observability(app: FastAPI) -> None:
                 },
             )
 
-    @app.get("/metrics", include_in_schema=False)
+    # RT-01: /metrics no está entre las excepciones de la autenticación JWT.
+    # Revela las rutas y su tráfico, así que no se publica sin sesión.
+    @app.get("/metrics", include_in_schema=False, dependencies=[Depends(get_authenticated_user_id)])
     def read_metrics() -> dict:
         return metrics.snapshot()

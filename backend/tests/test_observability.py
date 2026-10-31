@@ -69,11 +69,12 @@ def test_log_never_contains_request_body_or_token(taia_logs):
 
 
 def test_metrics_reports_p95_against_scenario_targets():
+    headers = register_and_login(client)
     metrics.reset()
     client.get("/health")
     client.post("/ai/message", json={"message": "hola"})
 
-    body = client.get("/metrics").json()
+    body = client.get("/metrics", headers=headers).json()
     health = body["routes"]["GET /health"]
     agent = body["routes"]["POST /ai/message"]
 
@@ -86,8 +87,13 @@ def test_metrics_reports_p95_against_scenario_targets():
     assert agent["quality_reference"] == "S3"
 
 
-def test_metrics_is_public_and_outside_the_contract():
-    assert client.get("/metrics").status_code == 200
+def test_metrics_requires_authentication_and_stays_outside_the_contract():
+    """RT-01: sin token -> 401; con token válido se consulta la métrica."""
+    headers = register_and_login(client)
+
+    assert client.get("/metrics").status_code == 401
+    assert client.get("/metrics", headers={"Authorization": "Bearer no-es-un-jwt"}).status_code == 401
+    assert client.get("/metrics", headers=headers).status_code == 200
     assert "/metrics" not in app.openapi()["paths"]
 
 
