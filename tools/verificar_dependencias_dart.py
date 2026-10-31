@@ -224,34 +224,25 @@ def _normalizar(texto: str) -> str:
     return unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode().lower().strip()
 
 
-def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
-    ruta = Path(valor).resolve()
-    if not ruta.is_relative_to(ROOT):
-        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
-    return ruta
+def analizar(
+    lock_texto: str,
+    pubspec_texto: str,
+    transporte=None,
+    online: bool = False,
+) -> dict:
+    """Devuelve el resultado completo, con o sin la consulta a OSV."""
 
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--online", action="store_true", help="Consulta OSV por CVE en el ecosistema Pub.")
-    parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
-    args = parser.parse_args()
-
-    for ruta in (LOCK, PUBSPEC):
-        if not ruta.is_file():
-            parser.error("No existe: {}".format(ruta.relative_to(ROOT)))
-
-    paquetes = analizar_lock(LOCK.read_text(encoding="utf-8"))
-    directas = analizar_pubspec(PUBSPEC.read_text(encoding="utf-8"))
+    paquetes = analizar_lock(lock_texto)
+    directas = analizar_pubspec(pubspec_texto)
 
     sin_version, sin_sha256, origenes_no_permitidos, problemas = _problemas_del_lock(paquetes)
     faltantes, problemas_directas = _problemas_de_directas(paquetes, directas)
     problemas.extend(problemas_directas)
 
     vulnerabilidades: list[dict] = []
-    if args.online:
+    if online:
         try:
-            vulnerabilidades = consultar_osv(paquetes)
+            vulnerabilidades = consultar_osv(paquetes, transporte=transporte)
         except (urllib.error.URLError, TimeoutError, ValueError) as error:
             problemas.append("no se pudo consultar OSV: {}".format(error))
         for hallazgo in vulnerabilidades:
@@ -269,7 +260,7 @@ def main() -> int:
         por_dependencia[tipo] = por_dependencia.get(tipo, 0) + 1
         por_origen[origen] = por_origen.get(origen, 0) + 1
 
-    resultado = {
+    return {
         "lock": str(LOCK.relative_to(ROOT)).replace("\\", "/"),
         "paquetes": len(paquetes),
         "por_dependencia": dict(sorted(por_dependencia.items())),
@@ -279,11 +270,35 @@ def main() -> int:
         "sin_sha256": sin_sha256,
         "origenes_no_permitidos": origenes_no_permitidos,
         "directas_faltantes": faltantes,
-        "osv_consultado": args.online,
+        "osv_consultado": online,
         "vulnerabilidades": vulnerabilidades,
         "problemas": problemas,
         "veredicto": "ok" if not problemas else "con problemas",
     }
+
+
+def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
+    ruta = Path(valor).resolve()
+    if not ruta.is_relative_to(ROOT):
+        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
+    return ruta
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--online", action="store_true", help="Consulta OSV por CVE en el ecosistema Pub.")
+    parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
+    args = parser.parse_args()
+
+    for ruta in (LOCK, PUBSPEC):
+        if not ruta.is_file():
+            parser.error("No existe: {}".format(ruta.relative_to(ROOT)))
+
+    resultado = analizar(
+        LOCK.read_text(encoding="utf-8"),
+        PUBSPEC.read_text(encoding="utf-8"),
+        online=args.online,
+    )
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
@@ -292,7 +307,7 @@ def main() -> int:
         )
         print("escrito: {}".format(args.json))
 
-    return 0 if not problemas else 1
+    return 0 if resultado["veredicto"] == "ok" else 1
 
 
 if __name__ == "__main__":
