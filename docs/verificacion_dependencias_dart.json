@@ -1,0 +1,31 @@
+{
+  "lock": "frontend/pubspec.lock",
+  "paquetes": 27,
+  "por_dependencia": {
+    "direct dev": 2,
+    "direct main": 2,
+    "transitive": 23
+  },
+  "por_origen": {
+    "hosted": 24,
+    "sdk": 3
+  },
+  "directas_declaradas": {
+    "main": [
+      "cupertino_icons",
+      "flutter"
+    ],
+    "dev": [
+      "flutter_lints",
+      "flutter_test"
+    ]
+  },
+  "sin_version": [],
+  "sin_sha256": [],
+  "origenes_no_permitidos": [],
+  "directas_faltantes": [],
+  "osv_consultado": true,
+  "vulnerabilidades": [],
+  "problemas": [],
+  "veredicto": "ok"
+}
