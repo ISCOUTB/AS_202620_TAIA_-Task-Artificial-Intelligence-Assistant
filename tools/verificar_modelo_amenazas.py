@@ -37,7 +37,9 @@ SECCION_MITIGACIONES = "3. plan de mitigacion"
 ESTADOS = ("hecha", "pendiente", "aceptada", "en curso")
 
 COLUMNAS_AMENAZAS = ("id", "elemento c4", "stride", "owasp", "amenaza", "p", "i", "prio")
-COLUMNAS_MITIGACIONES = ("id", "mitigacion", "dueno", "estado", "evidencia")
+COLUMNAS_MITIGACIONES = ("id", "mitigacion", "dueno", "estado", "evidencia", "residual")
+
+RESIDUALES = ("bajo", "medio", "alto")
 
 PATRON_ID = re.compile(r"^T-\d{2}$")
 PATRON_ENLACE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
@@ -125,7 +127,7 @@ def analizar(texto: str, raiz: Path, documento: str = "docs/modelo_amenazas.md")
     if seccion_mitigaciones is None:
         problemas.append("no se encontro la seccion '## 3. Plan de mitigacion'")
     if problemas:
-        return _resultado(documento, [], [], {}, {}, [], problemas)
+        return _resultado(documento, [], [], {}, {}, {}, [], problemas)
 
     tabla_amenazas = _tabla(seccion_amenazas)
     tabla_mitigaciones = _tabla(seccion_mitigaciones)
@@ -134,7 +136,7 @@ def analizar(texto: str, raiz: Path, documento: str = "docs/modelo_amenazas.md")
     if tabla_mitigaciones is None:
         problemas.append("la seccion 3 no tiene una tabla markdown")
     if problemas:
-        return _resultado(documento, [], [], {}, {}, [], problemas)
+        return _resultado(documento, [], [], {}, {}, {}, [], problemas)
 
     amenazas = _leer_amenazas(*tabla_amenazas, problemas)
     mitigaciones = _leer_mitigaciones(*tabla_mitigaciones, raiz, problemas)
@@ -177,6 +179,11 @@ def analizar(texto: str, raiz: Path, documento: str = "docs/modelo_amenazas.md")
         clave = fila["estado"].split()[0] if fila["estado"] else "desconocido"
         por_estado[clave] = por_estado.get(clave, 0) + 1
 
+    por_residual: dict[str, int] = {}
+    for fila in mitigaciones:
+        clave = fila["residual"] or "desconocido"
+        por_residual[clave] = por_residual.get(clave, 0) + 1
+
     evidencias_inexistentes = [
         {"id": fila["id"], "enlace": enlace}
         for fila in mitigaciones
@@ -184,7 +191,14 @@ def analizar(texto: str, raiz: Path, documento: str = "docs/modelo_amenazas.md")
     ]
 
     return _resultado(
-        documento, amenazas, mitigaciones, por_prioridad, por_estado, evidencias_inexistentes, problemas
+        documento,
+        amenazas,
+        mitigaciones,
+        por_prioridad,
+        por_estado,
+        por_residual,
+        evidencias_inexistentes,
+        problemas,
     )
 
 
@@ -260,6 +274,10 @@ def _leer_mitigaciones(
         elif not _normalizar(estado).startswith(ESTADOS):
             problemas.append("{}: estado no reconocido '{}'".format(identificador, estado))
 
+        residual = valor("residual")
+        if _normalizar(residual) not in RESIDUALES:
+            problemas.append("{}: riesgo residual no reconocido '{}'".format(identificador, residual))
+
         evidencia = valor("evidencia")
         enlaces = PATRON_ENLACE.findall(evidencia)
         if not evidencia or (not enlaces and not PATRON_SHA.search(evidencia)):
@@ -280,6 +298,7 @@ def _leer_mitigaciones(
                 "dueno": valor("dueno"),
                 "estado": estado,
                 "evidencia": evidencia,
+                "residual": residual,
                 "evidencias_inexistentes": inexistentes,
             }
         )
@@ -302,6 +321,7 @@ def _resultado(
     mitigaciones: list[dict],
     por_prioridad: dict[str, int],
     por_estado: dict[str, int],
+    por_residual: dict[str, int],
     evidencias_inexistentes: list[dict],
     problemas: list[str],
 ) -> dict:
@@ -311,6 +331,7 @@ def _resultado(
         "mitigaciones": len(mitigaciones),
         "por_prioridad": dict(sorted(por_prioridad.items(), key=lambda par: par[0])),
         "por_estado": dict(sorted(por_estado.items())),
+        "por_residual": dict(sorted(por_residual.items())),
         "evidencias_inexistentes": evidencias_inexistentes,
         "problemas": problemas,
         "veredicto": "ok" if not problemas else "con problemas",

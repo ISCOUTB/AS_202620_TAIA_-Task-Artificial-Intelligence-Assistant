@@ -14,6 +14,11 @@
     "Hecha": 12,
     "Pendiente": 3
   },
+  "por_residual": {
+    "Alto": 1,
+    "Bajo": 13,
+    "Medio": 3
+  },
   "evidencias_inexistentes": [],
   "problemas": [],
   "veredicto": "ok"

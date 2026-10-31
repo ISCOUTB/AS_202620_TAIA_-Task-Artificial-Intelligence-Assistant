@@ -23,10 +23,10 @@ DOCUMENTO = """## 2. Amenazas priorizadas
 
 ## 3. Plan de mitigacion
 
-| ID | Mitigacion | Dueno | Estado | Evidencia |
-|---|---|---|---|---|
-| T-01 | Limite de intentos | mark | Hecha | `abc1234` |
-| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) |
+| ID | Mitigacion | Dueno | Estado | Evidencia | Residual |
+|---|---|---|---|---|---|
+| T-01 | Limite de intentos | mark | Hecha | `abc1234` | Bajo |
+| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) | Medio |
 
 ## 4. Otra seccion
 """
@@ -46,10 +46,13 @@ def test_documento_completo_pasa(tmp_path):
     assert resultado["mitigaciones"] == 2
     assert resultado["por_prioridad"] == {"2": 1, "9": 1}
     assert resultado["por_estado"] == {"Hecha": 1, "Pendiente": 1}
+    assert resultado["por_residual"] == {"Bajo": 1, "Medio": 1}
 
 
 def test_amenaza_sin_fila_de_mitigacion(tmp_path):
-    documento = DOCUMENTO.replace("| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) |\n", "")
+    documento = DOCUMENTO.replace(
+        "| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) | Medio |\n", ""
+    )
 
     problemas = analizar(tmp_path, documento)["problemas"]
 
@@ -58,9 +61,9 @@ def test_amenaza_sin_fila_de_mitigacion(tmp_path):
 
 def test_mitigacion_sin_amenaza(tmp_path):
     documento = DOCUMENTO.replace(
-        "| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) |",
-        "| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) |\n"
-        "| T-99 | Huerfana | mark | Hecha | `abc1234` |",
+        "| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) | Medio |",
+        "| T-02 | Reglas del prompt | val | Pendiente | [prueba](prueba.md) | Medio |\n"
+        "| T-99 | Huerfana | mark | Hecha | `abc1234` | Bajo |",
     )
 
     problemas = analizar(tmp_path, documento)["problemas"]
@@ -103,6 +106,14 @@ def test_estado_no_reconocido(tmp_path):
     problemas = analizar(tmp_path, documento)["problemas"]
 
     assert any("T-02: estado no reconocido 'En revision'" in problema for problema in problemas)
+
+
+def test_riesgo_residual_no_reconocido(tmp_path):
+    documento = DOCUMENTO.replace("| Pendiente | [prueba](prueba.md) | Medio |", "| Pendiente | [prueba](prueba.md) | Critico |")
+
+    problemas = analizar(tmp_path, documento)["problemas"]
+
+    assert any("T-02: riesgo residual no reconocido 'Critico'" in problema for problema in problemas)
 
 
 def test_evidencia_con_enlace_inexistente(tmp_path):
