@@ -40,30 +40,38 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 
 ## 3. Plan de mitigación
 
-| ID | Mitigación | Dueño | Estado | Evidencia |
-|---|---|---|---|---|
-| T-06 | 30 mensajes por hora y 200 por día; `429` sin llamar al LLM (RF-AGT-19) | luis20072002 | Hecha | `1a3696a`, [prueba](../backend/tests/test_ai_usage_limit.py) |
-| T-07 | 5 fallos por correo cada 15 min; `429` (RNF-03) | luis20072002 | Hecha | `14c487e`, [prueba](../backend/tests/test_usuario_login_rate_limit.py) |
-| T-10 | Webhook con `X-Telegram-Bot-Api-Secret-Token`; el id sale del update (RF-TEL-02) | luis20072002 | Hecha | `2c69809`, [prueba](../backend/tests/test_usuario_telegram_link.py) |
-| T-01 | Reglas en `systemInstruction`, mensaje aparte y delimitado, marcas neutralizadas (RF-AGT-18) | luis20072002 | Hecha | `dbe5634`, [prueba](../backend/tests/test_ai_prompt_injection.py) |
-| T-02 | El LLM solo recibe el texto, sin identificadores; falta la autorización del titular (RF-USR-10) | val | Pendiente | [§6](#6-privacidad) |
-| T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) |
-| T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) |
-| T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) |
-| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) |
-| T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 |
-| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py) |
-| T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | mark | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) |
-| T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` |
-| T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
-| T-13 | PBKDF2-SHA256 con 310 000 iteraciones y sal (RNF-01) | dei0811 | Hecha | [hasher](../backend/app/modules/usuario/adapters/outbound/pbkdf2_password_hasher.py) |
-| T-03 | Riesgo aceptado: el LLM no recibe el historial | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
-| T-05 | Riesgo aceptado: el prompt no tiene secretos y ya es público | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
+| ID | Mitigación | Dueño | Estado | Evidencia | Residual |
+|---|---|---|---|---|---|
+| T-06 | 30 mensajes por hora y 200 por día; `429` sin llamar al LLM (RF-AGT-19) | luis20072002 | Hecha | `1a3696a`, [prueba](../backend/tests/test_ai_usage_limit.py) | Bajo |
+| T-07 | 5 fallos por correo cada 15 min; `429` (RNF-03) | luis20072002 | Hecha | `14c487e`, [prueba](../backend/tests/test_usuario_login_rate_limit.py) | Bajo |
+| T-10 | Webhook con `X-Telegram-Bot-Api-Secret-Token`; el id sale del update (RF-TEL-02) | luis20072002 | Hecha | `2c69809`, [prueba](../backend/tests/test_usuario_telegram_link.py) | Bajo |
+| T-01 | Reglas en `systemInstruction`, mensaje aparte y delimitado, marcas neutralizadas (RF-AGT-18) | luis20072002 | Hecha | `dbe5634`, [prueba](../backend/tests/test_ai_prompt_injection.py) | Bajo |
+| T-02 | El LLM solo recibe el texto, sin identificadores; falta la autorización del titular (RF-USR-10) | val | Pendiente | [§6](#6-privacidad) | Alto |
+| T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) | Bajo |
+| T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) | Bajo |
+| T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
+| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) | Medio |
+| T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 | Bajo |
+| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py) | Medio |
+| T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | mark | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) | Medio |
+| T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` | Bajo |
+| T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
+| T-13 | PBKDF2-SHA256 con 310 000 iteraciones y sal (RNF-01) | dei0811 | Hecha | [hasher](../backend/app/modules/usuario/adapters/outbound/pbkdf2_password_hasher.py) | Bajo |
+| T-03 | Riesgo aceptado: el LLM no recibe el historial | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
+| T-05 | Riesgo aceptado: el prompt no tiene secretos y ya es público | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
 
 **Correspondencia con la prioridad.** Las tres amenazas críticas (T-06, T-07, T-10) se mitigaron
 primero, en la semana del modelado. De las siete altas, seis están hechas; T-02 queda pendiente
 con su requerimiento (RF-USR-10) asignado. T-11, de prioridad media, se
 atendió en la misma semana porque costaba una línea de código.
+
+**Riesgo residual.** Se mide después de aplicar la mitigación, no antes:
+
+- **Bajo:** el control cubre el vector y la evidencia lo demuestra en el repositorio.
+- **Medio:** queda una ventana conocida que no depende solo del código (proveedor externo,
+  revocación de sesión, ausencia de alertas) o una parte del control está aceptada como riesgo.
+- **Alto:** el control todavía no existe; hoy solo T-02, porque el registro no recoge la
+  autorización del titular que exige la Ley 1581 de 2012.
 
 ## 4. Riesgos del componente generativo
 
@@ -150,3 +158,23 @@ Barrido del contrato §9 sobre `2c69809`: **ninguna credencial**. `git grep` sol
 de variables. `git log -S'BEGIN PRIVATE KEY'` encuentra `a3f4d82` y `-S'AIza'` encuentra
 `c57f10b`, pero ambos son texto de documentación que cita el patrón, no una clave. No hay `.env`
 versionado. Los secretos viven en el Environment de Dokploy (RNF-02).
+
+## 8. Revisión y cadencia
+
+**Cómo se comprueba.** `python tools/verificar_modelo_amenazas.py` recorre §2 y §3 y falla si una
+amenaza queda sin mitigación, si la prioridad no es P × I, si la tabla pierde el orden, si una
+fila no tiene dueño o estado, o si un enlace de evidencia no existe. El resultado queda en
+[`verificacion_amenazas.json`](verificacion_amenazas.json). El CI lo ejecuta en cada cambio de este
+documento, así que la tabla no puede degradarse sin que el pipeline lo note.
+
+**Cuándo se vuelve a revisar**, además de cada entrega:
+
+- aparece un endpoint, un módulo o un tercero nuevo en el C4;
+- se agrega una dependencia directa a la API o a la app móvil;
+- pip-audit reporta una CVE que afecte un paquete en uso;
+- ocurre un incidente o una alerta de §3 que no estaba prevista.
+
+**Última revisión:** 2026-10-30, sobre el commit `2c69809`. **Próxima revisión obligatoria:** al
+cerrar el semestre, o antes si se dispara alguno de los puntos anteriores. Los pendientes
+asignados (T-02, T-08, T-14) se siguen en la columna *Estado* de §3; no se cierran aquí sin
+evidencia.
