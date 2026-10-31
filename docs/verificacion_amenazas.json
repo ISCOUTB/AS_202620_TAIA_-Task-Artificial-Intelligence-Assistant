@@ -1,0 +1,20 @@
+{
+  "documento": "docs/modelo_amenazas.md",
+  "amenazas": 17,
+  "mitigaciones": 17,
+  "por_prioridad": {
+    "2": 2,
+    "3": 2,
+    "4": 3,
+    "6": 7,
+    "9": 3
+  },
+  "por_estado": {
+    "Aceptada": 2,
+    "Hecha": 12,
+    "Pendiente": 3
+  },
+  "evidencias_inexistentes": [],
+  "problemas": [],
+  "veredicto": "ok"
+}
