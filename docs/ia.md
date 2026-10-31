@@ -1174,3 +1174,42 @@ El equipo pidió revisar la seguridad contra OWASP Top 10:2025 y OWASP Top 10 fo
 * `flutter analyze`: sin observaciones. No se compiló el APK: el equipo no tiene el SDK de Android.
 * Después del despliegue, `/metrics` sin token respondió `401`, `/telegram/webhook` sin secreto `401` y el contrato publicado incluye los `429`.
 * `systemInstruction` contra la API real de Gemini: `gemini-3.5-flash` y `gemini-3.5-flash-lite` respondieron `200` con el formato nuevo. Hubo respuestas `503` ("high demand") intermitentes con los dos formatos; una de ellas hizo que `tools/probe_deployed_ai.py` recibiera el mensaje de servicio no disponible, como establece ADR-0007.
+
+## Entrada 025
+
+**Fecha:** 2026-10-30
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Implementar ADR-0011: Groq como proveedor LLM de respaldo de Gemini.
+
+### Solicitud realizada
+
+El equipo pidió implementar el respaldo con Groq, porque Gemini deja de responder por exceso de tráfico, y usar las dos credenciales disponibles (`GROQ_API_KEY_1` y `GROQ_API_KEY_2`).
+
+### Resultado generado
+
+* `interpretation_contract.py`: reglas, intenciones, delimitación del texto (RF-AGT-18) y validación de la salida, extraídas de `gemini_llm.py` para que Gemini y Groq apliquen las mismas.
+* `groq_llm.py`: `GroqLLM` sobre chat completions de Groq, con esquema JSON estricto y todo fallo traducido a `LLMError`. `all_from_env()` crea un adaptador por cada clave configurada.
+* `fallback_llm.py`: `FallbackLLM` intenta los proveedores en orden (Gemini, Groq clave 1, Groq clave 2) y, si fallan todos, propaga `LLMError` (ADR-0007).
+* `main.py` compone la cadena; sin claves de Groq funciona como antes. `conftest.py` vacía las claves de Groq para que ninguna prueba salga a la red.
+* Las reglas incluyen ahora el día de la semana ("Ahora es viernes ...").
+* `tools/eval_llm.py --proveedor groq` mide Groq solo. Resultados en `docs/evaluacion_ia/`.
+* RF-AGT-20 tiene ahora una regla y criterios del respaldo; RNF-02 nombra a Groq.
+
+### Aceptado
+
+* Pendiente de revisión del equipo, que decide si activa Groq al configurar `GROQ_API_KEY_1` en Dokploy.
+
+### Rechazado o modificado
+
+* La primera evaluación de Groq dio 18 de 37 fechas límite incorrectas. En 5 de esos casos, agregar el día de la semana a las reglas dio 5 de 5 aciertos; subir `reasoning_effort` a `medium` dio 1 de 5. Se adoptó el día de la semana.
+* Se descartó subir `reasoning_effort`: costaba más tokens y no corregía las fechas.
+* La primera reevaluación de Gemini falló en 92 de 100 llamadas por cuota agotada de `gemini-3.5-flash` (`429`). Se descartó ese resultado y se repitió con `gemini-3.5-flash-lite`, el modelo de la línea base.
+* Sobre la segunda clave de Groq: según la documentación de Groq, los límites se aplican por organización, y el Services Agreement (6.3(d)(iii)) prohíbe usar el servicio para evitar pagos. El código admite las dos claves; configurar la segunda queda a decisión del equipo.
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL`: 280 pruebas aprobadas, 24 de ellas nuevas para Groq y el respaldo. `tools/audit_boundaries.py`: 0 infracciones.
+* Llamada real a Groq: `openai/gpt-oss-120b` acepta el esquema estricto y respondió `unknown` a un intento de inyección.
+* Evaluación con 100 mensajes y el día de la semana: Groq 0,919 de intención y 98/110 campos (umbral 0,9); Gemini flash-lite 0,929 y 105/110. Las evaluaciones se corrieron con cambios sin commit (`arbol_modificado: true` en su procedencia).

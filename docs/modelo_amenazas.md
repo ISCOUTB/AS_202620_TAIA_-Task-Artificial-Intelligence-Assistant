@@ -50,7 +50,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) |
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) |
 | T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) |
-| T-15 | Fallar cerrado (ADR-0007); proveedor de respaldo Groq ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)) | dei0811 | Pendiente | ADR aceptado, sin código |
+| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha; se activa con `GROQ_API_KEY_1` | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) |
 | T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | `curl` del 2026-10-30: 200 y 301 |
 | T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | val | Pendiente | [estado_backend.md](estado_backend.md) |
 | T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | val | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) |
@@ -61,8 +61,8 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-05 | Riesgo aceptado: el prompt no tiene secretos y ya es público | mark | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
 
 **Correspondencia con la prioridad.** Las tres amenazas críticas (T-06, T-07, T-10) se mitigaron
-primero, en la semana del modelado. De las siete altas, cinco están hechas; T-02 y T-15 quedan
-pendientes con requerimiento (RF-USR-10) y ADR (ADR-0011) asignados. T-11, de prioridad media, se
+primero, en la semana del modelado. De las siete altas, seis están hechas; T-02 queda pendiente
+con su requerimiento (RF-USR-10) asignado. T-11, de prioridad media, se
 atendió en la misma semana porque costaba una línea de código.
 
 ## 4. Riesgos del componente generativo
@@ -75,6 +75,20 @@ atendió en la misma semana porque costaba una línea de código.
 | Salida insegura (LLM05) | El modelo devuelve campos o intenciones inventados | JSON con esquema fijo; los campos desconocidos se descartan y una intención no reconocida es `unknown` (`gemini_llm.py`, `_to_interpretation`) |
 | Agencia excesiva (LLM06) | El modelo ejecuta acciones no pedidas | T-04 |
 | Consumo sin límite (LLM10) | Mensajes en serie agotan la cuota | T-06 |
+
+**Evaluación del respaldo** (`tools/eval_llm.py`, 100 mensajes, 2026-10-30):
+
+| Proveedor y reglas | Intención | Campos | Fechas mal | p95 |
+|---|---|---|---|---|
+| Gemini flash-lite, reglas anteriores ([resultado](evaluacion_ia/resultado_s1_100.json)) | 0,889 | 101/110 | 0 | 2 191 ms |
+| Groq gpt-oss-120b, reglas anteriores ([resultado](evaluacion_ia/resultado_groq_s1_100.json)) | 0,899 | 82/110 | 18 | 1 111 ms |
+| Groq, con el día de la semana ([resultado](evaluacion_ia/resultado_groq_s1_100_con_dia.json)) | 0,919 | 98/110 | 1 | 1 199 ms |
+| Gemini flash-lite, con el día de la semana ([resultado](evaluacion_ia/resultado_gemini_s1_100_con_dia.json)) | 0,929 | 105/110 | 0 | 1 690 ms |
+
+Sin el día de la semana, Groq resolvía mal "el lunes" o "el domingo". Agregarlo a las reglas
+compartidas corrigió las fechas en los dos proveedores. Groq queda a un campo del umbral de 0,9;
+como solo responde cuando Gemini falla y toda escritura pide confirmación, activarlo lo decide el
+equipo al configurar `GROQ_API_KEY_1`.
 
 No aplican LLM08 (no hay embeddings ni RAG) ni LLM09 en escrituras, porque toda escritura se
 confirma. LLM09 en las respuestas de ayuda se acepta en §11.13.
