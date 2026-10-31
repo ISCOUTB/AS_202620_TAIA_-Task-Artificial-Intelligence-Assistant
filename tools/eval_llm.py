@@ -4,6 +4,7 @@ Uso:
     python tools/eval_llm.py                 # exige GEMINI_API_KEY
     python tools/eval_llm.py --dry-run       # valida el dataset, sin llamar al modelo
     python tools/eval_llm.py --json salida.json
+    python tools/eval_llm.py --proveedor groq   # respaldo de ADR-0011, exige GROQ_API_KEY_1
 
 A diferencia de `tools/eval_confirmacion.py`, que mide la porcion determinista
 sin red, este guion si llama a Gemini. Sin `GEMINI_API_KEY` no inventa cifras:
@@ -42,6 +43,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM, _DEFAULT_MODEL  # noqa: E402
+from app.modules.ai.adapters.outbound.groq_llm import (  # noqa: E402
+    GroqLLM,
+    _DEFAULT_MODEL as _GROQ_DEFAULT_MODEL,
+)
+from app.modules.ai.application.ports.llm import LLMPort  # noqa: E402
 from app.modules.ai.domain.messages import Channel, IncomingRequest, Intent  # noqa: E402
 
 DATASET = ROOT / "docs" / "evaluacion_ia" / "dataset.jsonl"
@@ -50,6 +56,9 @@ AHORA = datetime(2026, 9, 10, 12, 0, tzinfo=TZ)
 
 INTENCIONES = {i.value for i in Intent}
 PAUSA_ENTRE_LLAMADAS = 6  # segundos; evita el limite por minuto del nivel gratuito
+# Groq limita tokens por minuto y gpt-oss gasta tokens razonando: con 6 s se
+# pasaria del limite y un 429 contaria como fallo de exactitud.
+PAUSA_POR_PROVEEDOR = {"gemini": PAUSA_ENTRE_LLAMADAS, "groq": 8}
 
 
 def cargar_dataset() -> list[dict]:
@@ -158,11 +167,12 @@ def _costo(tokens_entrada: int, tokens_salida: int,
     return (tokens_entrada / 1e6 * precio_input) + (tokens_salida / 1e6 * precio_output)
 
 
-def evaluar(filas: list[dict], precio_input: float | None, precio_output: float | None) -> dict:
+def evaluar(filas: list[dict], precio_input: float | None, precio_output: float | None,
+            llm: LLMPort | None = None, pausa: float = PAUSA_ENTRE_LLAMADAS) -> dict:
     validas = [fila for fila in filas if fila["text"].strip()]
     if not validas:
         raise ValueError("No hay mensajes no vacíos para evaluar.")
-    llm = GeminiLLM.from_env()
+    llm = llm or GeminiLLM.from_env()
     aciertos = 0
     matriz: Counter = Counter()
     fallos: list[dict] = []
@@ -175,7 +185,7 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
 
     try:
         for fila in validas:
-            time.sleep(PAUSA_ENTRE_LLAMADAS)
+            time.sleep(pausa)
             request = IncomingRequest(
                 user_id="u-eval", text=fila["text"], channel=Channel.TELEGRAM
             )
@@ -294,6 +304,8 @@ def main() -> int:
     parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
     parser.add_argument("--precio-input", type=float)
     parser.add_argument("--precio-output", type=float)
+    parser.add_argument("--proveedor", choices=("gemini", "groq"), default="gemini",
+                        help="groq mide solo el respaldo, con GROQ_API_KEY_1 y sin cadena.")
     args = parser.parse_args()
     if any(p is not None and (not math.isfinite(p) or p < 0)
            for p in (args.precio_input, args.precio_output)):
@@ -311,10 +323,12 @@ def main() -> int:
         return 0
 
     load_dotenv(ROOT / "backend" / ".env")
+    load_dotenv(ROOT / ".env")  # el .env que usa docker-compose
 
-    if not os.getenv("GEMINI_API_KEY"):
+    variable = "GROQ_API_KEY_1" if args.proveedor == "groq" else "GEMINI_API_KEY"
+    if not os.getenv(variable):
         print(
-            "S1 y S3 quedan PENDIENTES: no hay GEMINI_API_KEY.\n"
+            f"S1 y S3 quedan PENDIENTES: no hay {variable}.\n"
             "Este guion no inventa mediciones. Defina la clave y vuelva a "
             "ejecutarlo, o use --dry-run para validar el dataset."
         )
@@ -329,10 +343,18 @@ def main() -> int:
         "arbol_modificado": bool(git("status", "--porcelain")),
         "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
         "arnes_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        "modelo": os.getenv("GEMINI_MODEL") or _DEFAULT_MODEL,
+        "proveedor": args.proveedor,
+        "modelo": (os.getenv("GROQ_MODEL") or _GROQ_DEFAULT_MODEL) if args.proveedor == "groq"
+        else (os.getenv("GEMINI_MODEL") or _DEFAULT_MODEL),
         "reloj_interpretacion": AHORA.isoformat(),
     }
-    resultado.update(evaluar(filas, args.precio_input, args.precio_output))
+    if args.proveedor == "groq":
+        llm = GroqLLM(api_key=os.environ["GROQ_API_KEY_1"],
+                      model=os.getenv("GROQ_MODEL") or _GROQ_DEFAULT_MODEL)
+    else:
+        llm = GeminiLLM.from_env()
+    resultado.update(evaluar(filas, args.precio_input, args.precio_output,
+                             llm, PAUSA_POR_PROVEEDOR[args.proveedor]))
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
         _ruta_en_repositorio(parser, args.json).write_text(
