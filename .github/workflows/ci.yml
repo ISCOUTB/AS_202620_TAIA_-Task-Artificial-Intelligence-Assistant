@@ -138,10 +138,12 @@ jobs:
         run: |
           python tools/audit_boundaries.py
           python tools/verificar_dependencias.py
+          python tools/verificar_dependencias_dart.py
           python tools/verificar_modelo_amenazas.py
 
-      # Busca CVE conocidas en los locks (base de PyPI y OSV). Falla si encuentra
-      # alguna, así que CD no despliega con una dependencia vulnerable.
+      # Busca CVE conocidas en los locks de Python (base de PyPI y OSV) y en el
+      # lock de Dart (OSV). Falla si encuentra alguna, así que CD no despliega con
+      # una dependencia vulnerable.
       # --disable-pip audita exactamente lo fijado con hash, sin resolver de nuevo.
       - name: Audit dependencies for known vulnerabilities
         run: |
@@ -149,6 +151,7 @@ jobs:
             pipx run --spec pip-audit==2.10.1 pip-audit \
               -r "$lock" --require-hashes --disable-pip --progress-spinner off
           done
+          python tools/verificar_dependencias_dart.py --online
 
       - name: Regenerate API client from OpenAPI contract
         run: python tools/generate_api_client.py
