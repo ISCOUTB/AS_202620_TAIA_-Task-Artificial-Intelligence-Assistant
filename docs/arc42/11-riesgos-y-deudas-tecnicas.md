@@ -172,7 +172,7 @@ Amenazas del [modelo de amenazas](../modelo_amenazas.md) que el equipo acepta si
 | T-11 (parte) | `/docs` y `/openapi.json` sin sesión (A02) | Publican el mismo contrato que ya está en el repositorio público (`docs/api/openapi.json`); ocultarlos no reduce la superficie. `/metrics` sí se protegió | El contrato incluye rutas internas que no estén en el repositorio |
 | LLM09 | Respuesta de ayuda incorrecta | Solo afecta a `system_help`, que no escribe datos, está limitada a una descripción fija de TAIA y a 3 frases | La ayuda empieza a ejecutar acciones o a usar datos del usuario |
 
-**Estado:** Aceptadas el 2026-10-30. Dueño del seguimiento: mark.
+**Estado:** Aceptadas el 2026-10-30. Seguimiento: val (T-03, T-05 y LLM09) y luis20072002 (T-11).
 
 ## 11.14. Latencia del asistente cuando responde el respaldo
 

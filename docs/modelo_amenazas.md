@@ -13,8 +13,8 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
   (A01 a A10) o de OWASP Top 10 for LLM Applications 2025 (LLM01 a LLM10).
 - **Priorización:** probabilidad (P) e impacto (I) en escala 1 (baja) a 3 (alta).
   Prioridad = P × I: 9 crítica, 6 alta, 3 o 4 media, 1 o 2 baja.
-- **Dueños:** luis20072002 aplicó las mitigaciones de esta semana; las demás se reparten entre
-  val, dei0811 y mark.
+- **Dueños:** luis20072002 aplicó las mitigaciones de esta semana. Las demás se reparten por
+  igual entre val, dei0811 y mark: tres por persona y una pendiente para cada uno.
 
 ## 2. Amenazas priorizadas
 
@@ -50,15 +50,15 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) |
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) |
 | T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) |
-| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha; se activa con `GROQ_API_KEY_1` | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) |
+| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) |
 | T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | `curl` del 2026-10-30: 200 y 301 |
-| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | val | Pendiente | [estado_backend.md](estado_backend.md) |
-| T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | val | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) |
+| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [estado_backend.md](estado_backend.md) |
+| T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | mark | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) |
 | T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` |
 | T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
 | T-13 | PBKDF2-SHA256 con 310 000 iteraciones y sal (RNF-01) | dei0811 | Hecha | [hasher](../backend/app/modules/usuario/adapters/outbound/pbkdf2_password_hasher.py) |
-| T-03 | Riesgo aceptado: el LLM no recibe el historial | mark | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
-| T-05 | Riesgo aceptado: el prompt no tiene secretos y ya es público | mark | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
+| T-03 | Riesgo aceptado: el LLM no recibe el historial | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
+| T-05 | Riesgo aceptado: el prompt no tiene secretos y ya es público | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
 
 **Correspondencia con la prioridad.** Las tres amenazas críticas (T-06, T-07, T-10) se mitigaron
 primero, en la semana del modelado. De las siete altas, seis están hechas; T-02 queda pendiente
