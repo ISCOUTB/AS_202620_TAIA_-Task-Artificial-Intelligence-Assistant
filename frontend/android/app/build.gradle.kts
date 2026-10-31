@@ -36,6 +36,7 @@ android {
             // R8 reduce y ofusca el código de la versión publicada.
             isMinifyEnabled = true
             isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
 }
