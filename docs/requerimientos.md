@@ -602,7 +602,7 @@ El sistema debe permitir vincular la cuenta TAIA con una cuenta de Telegram medi
 - Vincular una cuenta de Telegram que ya pertenece a otro usuario → `409`.
 
 ### RF-TEL-02 · Canal del bot autenticado
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 La confirmación de la vinculación y la recepción de mensajes solo pueden venir del bot de Telegram. El webhook del bot se protege con el encabezado `X-Telegram-Bot-Api-Secret-Token`. El `telegram_user_id` se toma del *update* firmado de Telegram, nunca de un cuerpo que pueda enviar cualquier cliente.
 

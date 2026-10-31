@@ -53,6 +53,7 @@ from app.modules.academic.adapters.inbound.structure_api import (
 )
 from app.modules.reminders.adapters.inbound.http_controller import router as reminders_router
 from app.modules.usuario.adapters.inbound.api import router as usuario_router
+from app.modules.usuario.adapters.inbound.telegram_webhook import router as telegram_webhook_router
 from app.shared.adapters.inbound.observability import install_observability
 from app.shared.adapters.inbound.readiness import require_database
 
@@ -122,6 +123,7 @@ app.include_router(academic_subjects_router)
 app.include_router(academic_schedule_router)
 app.include_router(academic_period_router)
 app.include_router(usuario_router)
+app.include_router(telegram_webhook_router)
 app.include_router(ai_router)
 app.include_router(reminders_router)
 

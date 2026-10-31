@@ -188,9 +188,12 @@ El token generado es temporal y está asociado al usuario autenticado.
 ```text
 Telegram
     │
-    │ token + telegram_user_id
+    │ update con "/start <código>"
+    │ X-Telegram-Bot-Api-Secret-Token
     ▼
-POST /users/telegram/link/confirm
+POST /telegram/webhook
+    │
+    ├── secreto incorrecto ───► HTTP 401
     │
     ▼
 ConfirmTelegramLinkUseCase
@@ -212,6 +215,8 @@ La vinculación se rechaza si:
 * el token ya fue utilizado;
 * el Telegram ya pertenece a otro usuario;
 * el usuario ya tiene otra cuenta Telegram vinculada.
+
+El `telegram_user_id` se toma del remitente del update (`message.from.id`). Cuando la vinculación se rechaza, el webhook responde `204` igual, porque Telegram reintenta cualquier respuesta que no sea 2xx (RF-TEL-02).
 
 ---
 

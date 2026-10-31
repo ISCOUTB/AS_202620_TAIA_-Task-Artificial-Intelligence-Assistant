@@ -1620,47 +1620,38 @@
         ]
       }
     },
-    "/users/telegram/link/confirm": {
+    "/telegram/webhook": {
       "post": {
         "tags": [
-          "users"
+          "telegram"
         ],
-        "summary": "Confirm Telegram Link",
-        "description": "Confirma una vinculación usando la identidad recibida por el bot de Telegram.\n\nEste endpoint representa el callback interno del bot: telegram_user_id debe\nprovenir del usuario que inició el bot mediante el deep link.",
-        "operationId": "confirm_telegram_link_users_telegram_link_confirm_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TelegramLinkConfirmRequest"
-              }
+        "summary": "Telegram Webhook",
+        "description": "Recibe los updates del bot y confirma la vinculación con `/start <código>`.",
+        "operationId": "telegram_webhook_telegram_webhook_post",
+        "parameters": [
+          {
+            "name": "X-Telegram-Bot-Api-Secret-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Telegram-Bot-Api-Secret-Token"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
-                }
-              }
-            }
+          "204": {
+            "description": "Successful Response"
           },
-          "400": {
-            "description": "El token de vinculación es inválido o expiró.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "La cuenta ya está vinculada con Telegram.",
+          "401": {
+            "description": "Falta el secreto del webhook o no es válido.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1670,11 +1661,11 @@
             }
           },
           "422": {
-            "description": "Los datos del usuario no son válidos.",
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2963,27 +2954,6 @@
         "type": "object",
         "title": "TaskUpdateRequest",
         "description": "Campos opcionales para actualizar una tarea."
-      },
-      "TelegramLinkConfirmRequest": {
-        "properties": {
-          "token": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Token"
-          },
-          "telegram_user_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0.0,
-            "title": "Telegram User Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "token",
-          "telegram_user_id"
-        ],
-        "title": "TelegramLinkConfirmRequest"
       },
       "TelegramLinkResponse": {
         "properties": {

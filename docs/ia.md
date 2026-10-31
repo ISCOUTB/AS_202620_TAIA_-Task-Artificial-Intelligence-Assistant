@@ -1092,3 +1092,38 @@ Se entregó a la IA la silueta de la mascota (`Trabajo/vocetos/silueta_TAIA.png`
 * `flutter analyze`: sin observaciones. `flutter test`: 3 pruebas aprobadas.
 * Se renderizaron cuadros del splash entre 0,3 s y 4,6 s con una prueba temporal (luego eliminada) y se revisaron la entrada, el bucle de los tentáculos y la transición a la bienvenida.
 * No se ejecutó en un dispositivo ni en un emulador Android.
+
+## Entrada 023
+
+**Fecha:** 2026-10-30
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Implementar RF-TEL-02: webhook del bot de Telegram protegido con secreto, en reemplazo del endpoint de confirmación sin autenticar.
+
+### Solicitud realizada
+
+Se pidió implementar RF-TEL-02 después de configurar `TAIA_TELEGRAM_BOT_TOKEN`, `TAIA_TELEGRAM_BOT_USERNAME` y `TAIA_WEBHOOK_SECRET` en Dokploy y en el `.env` local.
+
+### Resultado generado
+
+* `backend/app/modules/usuario/adapters/inbound/telegram_webhook.py`: `POST /telegram/webhook`. Compara `X-Telegram-Bot-Api-Secret-Token` con `TAIA_WEBHOOK_SECRET` en tiempo constante (`hmac.compare_digest`) antes de leer el cuerpo y responde `401` si falta, no coincide o la variable no está configurada. Con `/start <código>` llama a `ConfirmTelegramLinkUseCase` con el `telegram_user_id` del remitente del update (`message.from.id`). Responde `204` en los demás casos, también cuando la vinculación se rechaza, porque Telegram reintenta cualquier respuesta que no sea 2xx.
+* Se retiró `POST /users/telegram/link/confirm` y su esquema `TelegramLinkConfirmRequest` de `api.py`.
+* Se registró el router en `app/main.py` y se regeneraron `docs/api/openapi.json` y `backend/generated/taia_api_client.py`.
+* `backend/tests/test_usuario_telegram_link.py`: las pruebas de vinculación pasan por el webhook; se agregaron casos sin secreto, con secreto incorrecto, sin la variable configurada, con un cuerpo que no es JSON, y con mensajes y updates que no son `/start <código>`.
+* Se actualizaron RF-TEL-02 en `docs/requerimientos.md`, `docs/estado_backend.md`, arc42 §6.4 y §7, y la nota de C4-C3.
+
+### Aceptado
+
+* Pendiente de revisión del equipo.
+
+### Rechazado o modificado
+
+* No se agregó una respuesta del bot al usuario después de vincular: no está en los requerimientos y queda señalado en `docs/estado_backend.md` junto con el criterio "→ `409`" de RF-TEL-01, que ya no aplica a una respuesta HTTP.
+* Los mensajes que no son `/start <código>` se ignoran; la conversación con el agente es RF-TEL-04.
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL` sobre PostgreSQL local: 235 pruebas aprobadas, incluida la prueba de contrato OpenAPI.
+* `tools/audit_boundaries.py`: 0 infracciones y 0 regresiones.
+* No se registró el webhook en Telegram (`setWebhook`) ni se probó contra el bot real.

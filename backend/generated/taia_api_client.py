@@ -138,8 +138,8 @@ class TaiaApiClient:
     def create_telegram_link_users_me_telegram_link_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/me/telegram/link", body, **{})
 
-    def confirm_telegram_link_users_telegram_link_confirm_post(self, body: object | None = None) -> object:
-        return self._request("POST", "/users/telegram/link/confirm", body, **{})
+    def telegram_webhook_telegram_webhook_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/telegram/webhook", body, **{})
 
     def handle_message_ai_message_post(self, body: object | None = None) -> object:
         return self._request("POST", "/ai/message", body, **{})

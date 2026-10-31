@@ -19,10 +19,7 @@ from app.modules.usuario.adapters.outbound.provider import (
 )
 from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from app.modules.usuario.application.use_cases.link_telegram import (
-    ConfirmTelegramLinkUseCase,
     CreateTelegramLinkUseCase,
-    TelegramAlreadyLinkedError,
-    TelegramLinkTokenInvalidError,
     UserAlreadyLinkedError,
 )
 from app.modules.usuario.application.use_cases.login_user import (
@@ -82,11 +79,6 @@ class LoginResponse(BaseModel):
 class TelegramLinkResponse(BaseModel):
     telegram_deep_link: str
     expires_at: str
-
-
-class TelegramLinkConfirmRequest(BaseModel):
-    token: str = Field(..., min_length=1, max_length=64)
-    telegram_user_id: int = Field(..., gt=0)
 
 
 class ErrorResponse(BaseModel):
@@ -197,34 +189,3 @@ def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse
         telegram_deep_link=f"https://t.me/{bot_username}?start={link.token}",
         expires_at=link.expires_at.isoformat(),
     )
-
-
-@router.post(
-    "/telegram/link/confirm",
-    responses={
-        400: {"model": ErrorResponse, "description": "El token de vinculación es inválido o expiró."},
-        409: {"model": ErrorResponse, "description": "La cuenta ya está vinculada con Telegram."},
-        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
-    },
-)
-def confirm_telegram_link(payload: TelegramLinkConfirmRequest) -> UserResponse:
-    """Confirma una vinculación usando la identidad recibida por el bot de Telegram.
-
-    Este endpoint representa el callback interno del bot: telegram_user_id debe
-    provenir del usuario que inició el bot mediante el deep link.
-    """
-    try:
-        user = ConfirmTelegramLinkUseCase(_repository, _telegram_link_repository).execute(
-            token=payload.token,
-            telegram_user_id=payload.telegram_user_id,
-        )
-    except TelegramLinkTokenInvalidError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    except TelegramAlreadyLinkedError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
-    except UserAlreadyLinkedError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-
-    return UserResponse.from_domain(user)
