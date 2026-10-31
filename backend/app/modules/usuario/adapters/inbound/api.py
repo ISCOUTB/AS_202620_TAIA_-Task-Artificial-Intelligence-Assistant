@@ -12,6 +12,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 from app.modules.usuario.adapters.outbound.provider import (
+    failed_login_attempt_repository as _failed_login_attempt_repository,
     password_hasher as _password_hasher,
     repository as _repository,
     telegram_link_repository as _telegram_link_repository,
@@ -26,6 +27,7 @@ from app.modules.usuario.application.use_cases.login_user import (
     InactiveUserError,
     InvalidCredentialsError,
     LoginUserUseCase,
+    TooManyLoginAttemptsError,
 )
 from app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
@@ -116,10 +118,13 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
         401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
         403: {"model": ErrorResponse, "description": "La cuenta está inactiva."},
         422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+        429: {"model": ErrorResponse, "description": "Demasiados intentos fallidos con ese correo (RNF-03)."},
     },
 )
 def login_user(payload: UserLoginRequest) -> LoginResponse:
-    use_case = LoginUserUseCase(_repository, _password_hasher, _token_service)
+    use_case = LoginUserUseCase(
+        _repository, _password_hasher, _token_service, _failed_login_attempt_repository
+    )
     try:
         access_token = use_case.execute(
             email=payload.email,
@@ -134,6 +139,11 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
     except InactiveUserError as error:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(error),
+        ) from error
+    except TooManyLoginAttemptsError as error:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=str(error),
         ) from error
     except InvalidEmailError as error:

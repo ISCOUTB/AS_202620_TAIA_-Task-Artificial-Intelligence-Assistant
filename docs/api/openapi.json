@@ -1532,6 +1532,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Demasiados intentos fallidos con ese correo (RNF-03).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
