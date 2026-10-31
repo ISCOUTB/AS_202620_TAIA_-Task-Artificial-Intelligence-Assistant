@@ -24,6 +24,10 @@
   "sin_sha256": [],
   "origenes_no_permitidos": [],
   "directas_faltantes": [],
+  "sdks": {
+    "dart": ">=3.13.1 <4.0.0",
+    "flutter": ">=3.18.0-18.0.pre.54"
+  },
   "osv_consultado": true,
   "vulnerabilidades": [],
   "problemas": [],

@@ -184,3 +184,20 @@ def test_lock_del_repositorio_es_consistente():
     assert resultado["problemas"] == []
     assert resultado["paquetes"] > 0
     assert resultado["por_origen"]["hosted"] > 0
+
+
+def test_lock_sin_bloque_de_sdks():
+    documento = LOCK.split("sdks:")[0]
+
+    resultado = verificador.analizar(documento, PUBSPEC)
+
+    assert any("no declara la version minima de Dart" in p for p in resultado["problemas"])
+
+
+def test_pubspec_y_lock_discrepan_en_la_version_de_dart():
+    pubspec = PUBSPEC.replace("sdk: ^3.13.1", "sdk: ^3.20.0")
+
+    resultado = verificador.analizar(LOCK, pubspec)
+
+    assert resultado["sdks"]["dart"] == ">=3.13.1 <4.0.0"
+    assert any("pubspec.yaml exige Dart 3.20.0" in p for p in resultado["problemas"])

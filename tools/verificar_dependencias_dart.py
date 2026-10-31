@@ -121,6 +121,50 @@ def analizar_pubspec(texto: str) -> dict[str, list[str]]:
     return directas
 
 
+def analizar_sdks(texto: str) -> dict[str, str]:
+    """Lee el bloque `sdks` del lock: la version minima de Dart y de Flutter."""
+
+    sdks: dict[str, str] = {}
+    bloque: str | None = None
+
+    for linea in texto.splitlines():
+        if not linea.strip() or linea.lstrip().startswith("#"):
+            continue
+        sangria = len(linea) - len(linea.lstrip())
+        contenido = linea.strip()
+        if sangria == 0:
+            bloque = contenido.rstrip(":")
+            continue
+        if bloque != "sdks" or sangria != 2:
+            continue
+        clave, _, valor = contenido.partition(":")
+        sdks[clave.strip()] = _limpiar(valor)
+
+    return sdks
+
+
+def version_minima_pubspec(texto: str) -> str | None:
+    """Extrae la version minima de `environment.sdk` en pubspec.yaml."""
+
+    seccion: str | None = None
+    for linea in texto.splitlines():
+        if not linea.strip() or linea.lstrip().startswith("#"):
+            continue
+        limpia = linea.split(" #", 1)[0].rstrip()
+        if not linea.startswith(" ") and limpia.endswith(":"):
+            seccion = limpia[:-1].strip()
+            continue
+        if seccion != "environment":
+            continue
+        if not linea.startswith("  ") or linea.startswith("    "):
+            continue
+        clave, _, valor = limpia.strip().partition(":")
+        if clave.strip() == "sdk":
+            minimo = re.search(r"\d+\.\d+\.\d+", valor)
+            return minimo.group(0) if minimo else None
+    return None
+
+
 def _problemas_del_lock(paquetes: dict[str, dict]) -> tuple[list[str], list[str], list[str], list[str]]:
     sin_version: list[str] = []
     sin_sha256: list[str] = []
@@ -239,6 +283,15 @@ def analizar(
     faltantes, problemas_directas = _problemas_de_directas(paquetes, directas)
     problemas.extend(problemas_directas)
 
+    sdks = analizar_sdks(lock_texto)
+    minimo = version_minima_pubspec(pubspec_texto)
+    if not sdks.get("dart"):
+        problemas.append("el lock no declara la version minima de Dart en 'sdks'")
+    elif minimo and minimo not in sdks["dart"]:
+        problemas.append(
+            "pubspec.yaml exige Dart {} y el lock declara '{}'".format(minimo, sdks["dart"])
+        )
+
     vulnerabilidades: list[dict] = []
     if online:
         try:
@@ -270,6 +323,7 @@ def analizar(
         "sin_sha256": sin_sha256,
         "origenes_no_permitidos": origenes_no_permitidos,
         "directas_faltantes": faltantes,
+        "sdks": sdks,
         "osv_consultado": online,
         "vulnerabilidades": vulnerabilidades,
         "problemas": problemas,
