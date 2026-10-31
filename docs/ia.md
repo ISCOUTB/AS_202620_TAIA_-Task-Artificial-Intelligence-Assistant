@@ -1127,3 +1127,47 @@ Se pidió implementar RF-TEL-02 después de configurar `TAIA_TELEGRAM_BOT_TOKEN`
 * `python -m pytest` con `TEST_DATABASE_URL` sobre PostgreSQL local: 235 pruebas aprobadas, incluida la prueba de contrato OpenAPI.
 * `tools/audit_boundaries.py`: 0 infracciones y 0 regresiones.
 * No se registró el webhook en Telegram (`setWebhook`) ni se probó contra el bot real.
+
+## Entrada 024
+
+**Fecha:** 2026-10-30
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Evidencia S13: modelado de amenazas con STRIDE sobre el C4, análisis de dependencias, privacidad y las mitigaciones priorizadas.
+
+### Solicitud realizada
+
+El equipo pidió revisar la seguridad contra OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2025, decidió qué mitigaciones aplicar en la semana (inyección de prompt, límite del agente, límite de login y `/metrics`) y pidió redactar el ADR del proveedor de respaldo y el requerimiento de autorización de datos.
+
+### Resultado generado
+
+* `41aa1d2`: PyJWT 2.15.1 y certifi 2026.10.18 en los locks; paso de pip-audit en `ci.yml`; el CI también corre con `frontend/**`.
+* `1cf3d03`: `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release y `lang="es"` en el cliente Flutter.
+* `14c487e`: límite de 5 fallos de login por correo cada 15 minutos (RNF-03), con puerto, adaptadores en memoria y SQLAlchemy y respuesta `429`.
+* `15ecb9b`: `/metrics` exige JWT (RT-01).
+* `1a3696a`: límite de 30 mensajes por hora y 200 por día al agente (RF-AGT-19). `SqlAlchemyConversationStore.save` pasó de reescribir la conversación a agregar solo los mensajes nuevos, con retención de 24 horas.
+* `dbe5634`: reglas del agente en `systemInstruction`, texto del estudiante aparte y delimitado, con las marcas neutralizadas (RF-AGT-18).
+* `docs/modelo_amenazas.md`, arc42 §8.12 y §11.13, cierre de §11.10, ADR-0011, nota de reemplazo parcial en ADR-0007, RF-USR-10 en `requerimientos.md` y la relación del webhook en C4-C3.
+
+### Aceptado
+
+* Pendiente de revisión del equipo.
+
+### Rechazado o modificado
+
+* Se descartó agregar pip-audit al lock de desarrollo: suma más de diez dependencias. Se ejecuta con `pipx run` y versión fija.
+* Al regenerar los locks, uv subió también idna, pydantic, starlette y otras. Se repitió partiendo del lock existente para cambiar solo PyJWT y certifi.
+* Se descartó ocultar `/docs` y `/openapi.json`: publican el mismo contrato que está en el repositorio. Quedó como amenaza aceptada.
+* En `/metrics`, el parámetro de usuario sin uso se cambió por `dependencies=[...]` para no dejar un parámetro muerto.
+* Una afirmación de la IA sobre CVE-2026-48523 ("confusión de algoritmo") se corrigió contra la descripción del aviso: es un bypass de la lista de algoritmos con claves PyJWK.
+* El MCP de SonarQube no conectó; el estado de SonarCloud se tomó de su API pública.
+* `isMinifyEnabled = true` no cerró `kotlin:S7204` en el run 41158064339. Se agregó `proguardFiles` con el archivo por defecto de Android; no se referencia `proguard-rules.pro` porque no existe. Su efecto se verá en el siguiente análisis.
+* SonarCloud marcó `python:S5778` en dos pruebas de `test_ai_usage_limit.py`: el mensaje se construye ahora fuera del bloque `pytest.raises`.
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL` sobre PostgreSQL local: 256 pruebas aprobadas. `tools/audit_boundaries.py`: 0 infracciones. Cliente generado sincronizado.
+* pip-audit 2.10.1 sobre los dos locks: "No known vulnerabilities found". `tools/verificar_dependencias.py`: `ok`.
+* `flutter analyze`: sin observaciones. No se compiló el APK: el equipo no tiene el SDK de Android.
+* No se probó `systemInstruction` contra la API real de Gemini.

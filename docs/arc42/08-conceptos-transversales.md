@@ -261,3 +261,26 @@ Si se introduce la caché anterior:
    de un nombre de asignatura desactualizado, nunca una tarea desactualizada.
 4. Si la escritura falla, no se invalida nada, porque la caché sigue
    coincidiendo con la base.
+
+## 8.12 Arquitectura de seguridad
+
+Resultado del modelado STRIDE de S13. Las amenazas, su prioridad, sus dueños y su estado están en
+[modelo_amenazas.md](../modelo_amenazas.md); las aceptadas, en [§11.13](11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas).
+
+| Capa | Mecanismo | Dónde | Amenazas |
+|---|---|---|---|
+| Transporte | TLS en Traefik; HTTP redirige a HTTPS (RNF-04) | Dokploy ([§7](07-vista-de-despliegue.md)) | T-17 |
+| Identidad | JWT HS256 de 30 min, secreto solo por entorno (RT-01, RNF-02); PBKDF2-SHA256 con 310 000 iteraciones (RNF-01) | Módulo Usuario | T-08, T-13 |
+| Canal Telegram | Webhook con `X-Telegram-Bot-Api-Secret-Token` comparado en tiempo constante; el id sale del update (RF-TEL-02) | `telegram_webhook.py` | T-10 |
+| Autorización | El usuario sale del token, nunca del cuerpo ni del LLM; lo ajeno responde `404` (RT-02) | `shared/adapters/inbound/auth.py` y cada módulo | T-09 |
+| Límites de uso | 5 fallos de login por correo cada 15 min (RNF-03); 30 mensajes por hora y 200 por día al agente (RF-AGT-19) | `login_user.py`, `handle_message.py` | T-06, T-07 |
+| Componente generativo | Reglas en `systemInstruction` y texto delimitado como dato; JSON con esquema; lista cerrada de intenciones; confirmación antes de escribir; el LLM solo recibe el texto | Módulo AI ([ADR-0005](../adr/0005-normalizacion-confirmacion-espanol.md), [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md), [ADR-0011](../adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)) | T-01 a T-05, T-15 |
+| Operación | `/metrics` exige JWT; logs JSON sin cuerpos ni tokens (RNF-05) | `observability.py` | T-11, T-14 |
+| Cadena de suministro | Locks con hash (`--require-hashes`), pip-audit y Quality Gate de SonarCloud en el CI | [ci.yml](../../.github/workflows/ci.yml) | T-12, T-16 |
+
+Reglas que se mantienen al cambiar el código:
+
+* Ningún identificador producido por el LLM se usa para acceder a datos.
+* Toda ruta nueva exige JWT, salvo las excepciones de RT-01.
+* Un secreto nuevo entra por variable de entorno y nunca tiene valor por defecto.
+* Una dependencia nueva entra al lock con hash y pasa por pip-audit.

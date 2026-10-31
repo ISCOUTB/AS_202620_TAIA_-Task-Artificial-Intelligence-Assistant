@@ -6,7 +6,7 @@ TAIA se despliega como **un único contenedor** (monolito modular, [ADR-0001](..
 |---|---|
 | URL pública | `https://taia-sistema.iscoutb.dev` |
 | Health check | `GET https://taia-sistema.iscoutb.dev/health` → `200 {"status": "ok"}` |
-| Métrica | `GET https://taia-sistema.iscoutb.dev/metrics` |
+| Métrica | `GET https://taia-sistema.iscoutb.dev/metrics`, con `Authorization: Bearer <JWT>` (RT-01) |
 | Documentación interactiva | `https://taia-sistema.iscoutb.dev/docs` |
 | Respaldo (alternativa del taller) | `https://taia-backend-latest.onrender.com`, con arranque en frío (53 s medidos el 2026-10-25) |
 
@@ -92,7 +92,7 @@ Las variables están declaradas en [`.env.example`](../../.env.example). En el d
 ## 7.4. Observabilidad
 
 - **Logs estructurados:** la API escribe una línea JSON por petición en stdout ([`observability.py`](../../backend/app/shared/adapters/inbound/observability.py)), con los campos `timestamp`, `level`, `event`, `method`, `route`, `status`, `duration_ms` y `user_id`. Nunca incluye cuerpos ni tokens (RNF-05). Se consultan en la pestaña *Logs* del servicio en Dokploy.
-- **Métrica:** `GET /metrics` devuelve `http_request_duration_p95_ms` por ruta, comparada con el objetivo de su escenario: `POST /ai/message` con **S3** (p95 ≤ 7 000 ms) y el resto con **RNF-08** (p95 < 500 ms). Se calcula en memoria sobre las últimas 1 000 peticiones por ruta y se reinicia con cada despliegue.
+- **Métrica:** `GET /metrics` exige un JWT válido (RT-01) y devuelve `http_request_duration_p95_ms` por ruta, comparada con el objetivo de su escenario: `POST /ai/message` con **S3** (p95 ≤ 7 000 ms) y el resto con **RNF-08** (p95 < 500 ms). Se calcula en memoria sobre las últimas 1 000 peticiones por ruta y se reinicia con cada despliegue.
 - **Salud:** el health check de Compose consulta `/health` cada 30 s (60 s de gracia al arrancar, 3 reintentos); Dokploy muestra el estado *healthy* del contenedor.
 
 ## 7.5. Entorno de desarrollo

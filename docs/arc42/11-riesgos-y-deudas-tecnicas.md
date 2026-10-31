@@ -124,7 +124,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 **Mitigación:** Configurar un dominio y un proxy inverso con TLS delante del contenedor.
 
-**Estado:** Pendiente.
+**Estado:** Resuelta. Dokploy publica `https://taia-sistema.iscoutb.dev` con TLS en Traefik ([ADR-0010](../adr/0010-despliegue-con-dokploy-y-docker-compose.md)). El 2026-10-30, `GET /health` por HTTPS respondió `200` y por HTTP respondió `301` hacia HTTPS (amenaza T-17 de [modelo_amenazas.md](../modelo_amenazas.md)).
 
 ## 11.11. Red de OCI fuera de Terraform
 
@@ -160,3 +160,16 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 **Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje; RNF-09; RF-AGT-20; RF-AGT-04; RF-NOT-02.
 
 **Estado:** Parcialmente atendido. Los modos de Gemini, incluida la confirmación repetida, están mitigados y probados; el reenvío de notificaciones tiene diseño y sigue pendiente de implementar.
+
+## 11.13. Amenazas aceptadas
+
+Amenazas del [modelo de amenazas](../modelo_amenazas.md) que el equipo acepta sin mitigación adicional, con el motivo y lo que obligaría a revisarlas.
+
+| ID | Amenaza | Motivo para aceptarla | Se revisa si |
+|---|---|---|---|
+| T-03 | Envenenamiento del contexto conversacional (LLM04) | El historial se guarda, pero no se envía al LLM: cada interpretación ve solo el mensaje actual. La acción pendiente expira a los 10 min y exige confirmación | El contexto empieza a enviarse al modelo (RF-AGT-15) |
+| T-05 | Fuga del prompt de sistema (LLM07) | El prompt no contiene secretos, claves ni datos de usuarios, y ya es público en el repositorio (`gemini_llm.py`) | Se agrega al prompt información que no sea pública |
+| T-11 (parte) | `/docs` y `/openapi.json` sin sesión (A02) | Publican el mismo contrato que ya está en el repositorio público (`docs/api/openapi.json`); ocultarlos no reduce la superficie. `/metrics` sí se protegió | El contrato incluye rutas internas que no estén en el repositorio |
+| LLM09 | Respuesta de ayuda incorrecta | Solo afecta a `system_help`, que no escribe datos, está limitada a una descripción fija de TAIA y a 3 frases | La ayuda empieza a ejecutar acciones o a usar datos del usuario |
+
+**Estado:** Aceptadas el 2026-10-30. Dueño del seguimiento: mark.
