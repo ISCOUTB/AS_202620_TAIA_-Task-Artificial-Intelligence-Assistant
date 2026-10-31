@@ -1215,3 +1215,35 @@ El equipo pidió implementar el respaldo con Groq, porque Gemini deja de respond
 * `python -m pytest` con `TEST_DATABASE_URL`: 280 pruebas aprobadas, 24 de ellas nuevas para Groq y el respaldo. `tools/audit_boundaries.py`: 0 infracciones.
 * Llamada real a Groq: `openai/gpt-oss-120b` acepta el esquema estricto y respondió `unknown` a un intento de inyección.
 * Evaluación con 100 mensajes y el día de la semana: Groq 0,919 de intención y 98/110 campos (umbral 0,9); Gemini flash-lite 0,929 y 105/110. Las evaluaciones se corrieron con cambios sin commit (`arbol_modificado: true` en su procedencia).
+
+## Entrada 026
+
+**Fecha:** 2026-10-30
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Corregir el consumo del modelo que se registraba dos veces y registrar la latencia del respaldo como riesgo.
+
+### Solicitud realizada
+
+En los logs de producción del primer mensaje atendido por Groq, el equipo vio que la confirmación ("sí") registraba de nuevo el consumo del mensaje anterior y que el mensaje tardó 9 337 ms. Pidió corregir lo primero y registrar lo segundo como riesgo.
+
+### Resultado generado
+
+* `HandleUserMessageUseCase` guarda el consumo de la llamada al modelo de cada mensaje y lo reinicia al empezar el siguiente. Un mensaje que no llama al modelo (confirmación, mensaje vacío o demasiado largo, límite de uso) no informa consumo.
+* `backend/tests/test_ai_usage_reporting.py`: tres pruebas del consumo por mensaje.
+* arc42 §11.14: latencia del asistente cuando responde el respaldo, con la evidencia del log.
+
+### Aceptado
+
+* El equipo pidió las dos cosas: la corrección del consumo y el registro de la latencia como riesgo aceptado, sin cambiar el timeout de ADR-0007.
+
+### Rechazado o modificado
+
+* Se descartó bajar el timeout de Gemini: cambia una decisión de ADR-0007 y aumentaría los fallos por respuestas lentas pero válidas.
+* El error no lo introdujo el respaldo: `GeminiLLM.last_usage()` ya devolvía el último consumo aunque el mensaje no llamara al modelo.
+
+### Verificación realizada
+
+* Sin la corrección, 2 de las 3 pruebas nuevas fallan; con ella pasan las 3.
+* `python -m pytest` con `TEST_DATABASE_URL`: 283 pruebas aprobadas. `tools/audit_boundaries.py`: 0 infracciones.

@@ -173,3 +173,17 @@ Amenazas del [modelo de amenazas](../modelo_amenazas.md) que el equipo acepta si
 | LLM09 | Respuesta de ayuda incorrecta | Solo afecta a `system_help`, que no escribe datos, está limitada a una descripción fija de TAIA y a 3 frases | La ayuda empieza a ejecutar acciones o a usar datos del usuario |
 
 **Estado:** Aceptadas el 2026-10-30. Dueño del seguimiento: mark.
+
+## 11.14. Latencia del asistente cuando responde el respaldo
+
+**Riesgo:** El respaldo de [ADR-0011](../adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md) solo actúa después de que Gemini falla. Si Gemini tarda en fallar, esa espera se suma a la respuesta de Groq. El timeout del cliente de Gemini es de 20 s ([ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)).
+
+**Evidencia:** En producción, el 2026-10-30 a las 22:47, Gemini respondió `503` después de unos 8,6 s y Groq respondió en 0,7 s. `POST /ai/message` tardó 9 337 ms en total, por encima del objetivo de S3 (p95 ≤ 7 000 ms). El mensaje sí se atendió: sin el respaldo habría terminado en "servicio no disponible".
+
+**Impacto:** Cuando Gemini está saturado, algunas respuestas del asistente superan S3. Si Gemini agota los 20 s, la respuesta puede llegar a unos 21 s.
+
+**Mitigación considerada:** Bajar el timeout de Gemini para pasar antes a Groq. No se aplica: cambiaría una decisión de ADR-0007 y aumentaría los fallos por respuestas de Gemini que son lentas pero válidas.
+
+**Relación:** S3 — Respuesta del asistente ante un mensaje; RF-AGT-20; T-15 de [modelo_amenazas.md](../modelo_amenazas.md).
+
+**Estado:** Aceptado por el equipo el 2026-10-30. Se revisa si `GET /metrics` muestra el p95 de `POST /ai/message` por encima de 7 000 ms de forma sostenida.
