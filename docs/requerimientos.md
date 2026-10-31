@@ -837,6 +837,14 @@ El sistema debe limitar la cantidad de mensajes al agente por usuario: 30 por ho
 
 Si el proveedor de LLM falla o no está configurado, el agente responde que el servicio no está disponible y no ejecuta ninguna acción. El resto de la aplicación sigue funcionando.
 
+**Reglas**
+- Si el proveedor principal (Gemini) falla y hay un proveedor de respaldo configurado (Groq, [ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)), el mensaje se intenta con el respaldo. Solo si fallan todos se responde que el servicio no está disponible.
+- El respaldo aplica las mismas reglas que el principal: esquema JSON fijo, texto del usuario delimitado (RF-AGT-18) y validación de la salida.
+
+**Criterios de aceptación**
+- Gemini falla y Groq responde → el agente atiende el mensaje con la respuesta de Groq.
+- Fallan todos los proveedores → mensaje de servicio no disponible, sin escribir nada.
+
 ---
 
 ## 10. Plan de estudio (EST) y perfil con estadísticas (PRF)
@@ -903,7 +911,7 @@ Mínimos iniciales. Los escenarios de calidad detallados están en `docs/calidad
 | ID | Categoría | Requerimiento |
 |---|---|---|
 | RNF-01 | Seguridad | Contraseñas con hash y sal (PBKDF2-SHA256 con ≥310 000 iteraciones, o Argon2). Tokens de renovación, recuperación y vinculación almacenados solo como hash. |
-| RNF-02 | Seguridad | Secretos (JWT, Gemini, Telegram, Firebase, base de datos) solo por variables de entorno. Si falta el secreto JWT en producción, el sistema no arranca (sin valor por defecto). |
+| RNF-02 | Seguridad | Secretos (JWT, Gemini, Groq, Telegram, Firebase, base de datos) solo por variables de entorno. Si falta el secreto JWT en producción, el sistema no arranca (sin valor por defecto). |
 | RNF-03 | Seguridad | Límite de intentos: login 5 fallos por identificador cada 15 minutos; "olvidé mi contraseña" 3 por correo cada hora. |
 | RNF-04 | Seguridad | Comunicación solo por HTTPS en despliegue. |
 | RNF-05 | Privacidad | Los logs no contienen contraseñas, tokens ni mensajes completos del usuario al agente. Los identificadores de usuario sí se permiten. |
