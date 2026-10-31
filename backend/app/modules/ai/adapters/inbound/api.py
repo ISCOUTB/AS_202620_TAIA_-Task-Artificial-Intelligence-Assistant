@@ -8,7 +8,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
+from app.modules.ai.application.use_cases.handle_message import (
+    HandleUserMessageUseCase,
+    UsageLimitExceededError,
+)
 from app.modules.ai.domain.messages import Channel, IncomingRequest
 from app.shared.adapters.inbound.auth import CurrentUserId
 
@@ -51,7 +54,10 @@ class AIMessageResponse(BaseModel):
     awaiting_confirmation: bool
 
 
-@router.post("/message")
+@router.post(
+    "/message",
+    responses={429: {"description": "Se superó el límite de mensajes al asistente (RF-AGT-19)."}},
+)
 def handle_message(
     payload: AIMessageRequest,
     user_id: CurrentUserId,
@@ -59,13 +65,19 @@ def handle_message(
 ) -> AIMessageResponse:
     """Procesa un mensaje del usuario autenticado con el asistente IA."""
 
-    reply = use_case.execute(
-        IncomingRequest(
-            user_id=str(user_id),
-            text=payload.text,
-            channel=payload.channel,
+    try:
+        reply = use_case.execute(
+            IncomingRequest(
+                user_id=str(user_id),
+                text=payload.text,
+                channel=payload.channel,
+            )
         )
-    )
+    except UsageLimitExceededError as error:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(error),
+        ) from error
     # S5: el costo por intercambio se registra en el log. No se expone en la
     # respuesta porque el contrato HTTP esta congelado (ver docs/api).
     usage = use_case.last_usage()

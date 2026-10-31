@@ -6,7 +6,7 @@ El modelo de lenguaje piensa; academico valida y persiste."""
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 import unicodedata
 
 from app.modules.ai.application import replies
@@ -51,6 +51,10 @@ def _normalizar_respuesta(text: str) -> str:
     return sin_acentos.casefold().strip(_MARCAS)
 
 
+class UsageLimitExceededError(Exception):
+    """El estudiante supero el limite de mensajes al asistente (RF-AGT-19)."""
+
+
 class HandleUserMessageUseCase:
     """Punto de entrada del asistente para un mensaje de un estudiante."""
 
@@ -60,11 +64,16 @@ class HandleUserMessageUseCase:
         academic: AcademicGateway,
         conversations: ConversationStore,
         now: Callable[[], datetime] | None = None,
+        hourly_limit: int = 30,
+        daily_limit: int = 200,
     ) -> None:
         self._llm = llm
         self._academic = academic
         self._conversations = conversations
         self._now = now or (lambda: datetime.now(COLOMBIA_TZ))
+        # RF-AGT-19: 30 mensajes por hora y 200 por dia, configurables al componer.
+        self._hourly_limit = hourly_limit
+        self._daily_limit = daily_limit
 
     def last_usage(self) -> LLMUsage | None:
         """Consumo de la ultima llamada al modelo, para medir el costo (S5)."""
@@ -77,6 +86,7 @@ class HandleUserMessageUseCase:
             return AssistantReply(replies.rephrase())
         if len(text) > MAX_INPUT_CHARS:
             return AssistantReply(replies.too_long())
+        self._check_usage_limit(request.user_id)
 
         conversation = self._conversations.get(request.user_id)
         conversation.record("user", text)
@@ -86,6 +96,20 @@ class HandleUserMessageUseCase:
         conversation.record("assistant", reply.text)
         self._conversations.save(conversation)
         return reply
+
+    def _check_usage_limit(self, user_id: str) -> None:
+        """Rechaza el mensaje sin llamar al LLM si se supero el limite (RF-AGT-19)."""
+
+        now = self._now()
+        windows = (
+            (timedelta(hours=1), self._hourly_limit),
+            (timedelta(days=1), self._daily_limit),
+        )
+        for window, limit in windows:
+            if self._conversations.count_user_messages_since(user_id, now - window) >= limit:
+                raise UsageLimitExceededError(
+                    "Alcanzaste el límite de mensajes al asistente. Intenta de nuevo más tarde."
+                )
 
     # -- ruteo ---------------------------------------------------------------
 

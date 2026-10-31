@@ -1712,6 +1712,9 @@
               }
             }
           },
+          "429": {
+            "description": "Se superó el límite de mensajes al asistente (RF-AGT-19)."
+          },
           "422": {
             "description": "Validation Error",
             "content": {

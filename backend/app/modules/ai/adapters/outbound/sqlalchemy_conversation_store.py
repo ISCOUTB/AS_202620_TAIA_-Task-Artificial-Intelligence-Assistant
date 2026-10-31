@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import sessionmaker
 
 from app.modules.ai.adapters.outbound.sqlalchemy_models import ConversationMessageModel, ConversationModel
@@ -15,6 +15,8 @@ from app.modules.ai.domain.conversation import Conversation, Turn
 from app.modules.ai.domain.messages import ActionKind, ExtractedTaskData, HISTORY_LIMIT, PendingAction
 
 PENDING_TTL = timedelta(minutes=10)
+# Retencion de conversation_messages segun el diccionario de datos (8.2).
+MESSAGE_RETENTION = timedelta(hours=24)
 
 
 class SqlAlchemyConversationStore(ConversationStore):
@@ -86,12 +88,29 @@ class SqlAlchemyConversationStore(ConversationStore):
             state.pending_action = pending
             state.pending_action_expires_at = expires_at
             session.flush()
+            # Solo se agregan los mensajes nuevos: reescribir los anteriores les
+            # cambiaria created_at y el limite de uso no podria contarlos.
             session.execute(
-                delete(ConversationMessageModel).where(ConversationMessageModel.user_id == identifier)
+                delete(ConversationMessageModel).where(
+                    ConversationMessageModel.user_id == identifier,
+                    ConversationMessageModel.created_at < datetime.now(timezone.utc) - MESSAGE_RETENTION,
+                )
             )
             session.add_all(
                 ConversationMessageModel(user_id=identifier, role=turn.role, content=turn.text)
-                for turn in conversation.turns
+                for turn in conversation.take_unsaved()
+            )
+
+    def count_user_messages_since(self, user_id: str, since: datetime) -> int:
+        with self._session_factory() as session:
+            return session.scalar(
+                select(func.count())
+                .select_from(ConversationMessageModel)
+                .where(
+                    ConversationMessageModel.user_id == uuid.UUID(user_id),
+                    ConversationMessageModel.role == "user",
+                    ConversationMessageModel.created_at >= since,
+                )
             )
 
 

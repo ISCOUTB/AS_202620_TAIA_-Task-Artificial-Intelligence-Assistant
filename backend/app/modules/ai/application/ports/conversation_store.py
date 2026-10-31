@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from app.modules.ai.domain.conversation import Conversation
 from app.modules.ai.domain.messages import PendingAction
@@ -17,7 +18,11 @@ class ConversationStore(ABC):
 
     @abstractmethod
     def save(self, conversation: Conversation) -> None:
-        ...
+        """Guarda la accion pendiente y agrega los mensajes no guardados."""
+
+    @abstractmethod
+    def count_user_messages_since(self, user_id: str, since: datetime) -> int:
+        """Cuenta los mensajes del estudiante desde `since` (RF-AGT-19)."""
 
     @abstractmethod
     def take_pending(self, user_id: str) -> PendingAction | None:
