@@ -16,6 +16,11 @@ ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 # RNF-02 exige el secreto JWT; las pruebas usan uno propio.
 os.environ.setdefault("TAIA_JWT_SECRET", secrets.token_urlsafe(48))
 
+# Ninguna prueba llama a Groq real (ADR-0011): sin esto, una clave en el .env
+# del desarrollador haría que el respaldo saliera a la red cuando falla Gemini.
+for _groq_key in ("GROQ_API_KEY_1", "GROQ_API_KEY_2"):
+    os.environ[_groq_key] = ""
+
 if TEST_DATABASE_URL:
     # Se ejecuta antes de que los módulos de prueba importen app.main.
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL

@@ -25,7 +25,9 @@ configure_academic_task_management(AcademicTaskManagementService(academic_reposi
 # peticion y nunca se cerraba. Ademas, si falta GEMINI_API_KEY el proceso no
 # arranca, en vez de responder 503 en cada peticion mientras /health dice ok.
 from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
+from app.modules.ai.adapters.outbound.fallback_llm import FallbackLLM
 from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.adapters.outbound.groq_llm import GroqLLM
 from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import (
     SqlAlchemyConversationStore,
 )
@@ -36,10 +38,12 @@ from app.modules.ai.adapters.inbound.api import (
 from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
 from app.shared.adapters.outbound.database import get_session_factory
 
-gemini_llm = GeminiLLM.from_env()
+# ADR-0011: Groq respalda a Gemini con cada credencial configurada, en orden.
+# Sin credenciales de Groq, el agente usa solo Gemini, como antes.
+llm = FallbackLLM([GeminiLLM.from_env(), *GroqLLM.all_from_env()])
 configure_ai_use_case(
     HandleUserMessageUseCase(
-        llm=gemini_llm,
+        llm=llm,
         academic=AcademicGatewayAdapter(),
         conversations=SqlAlchemyConversationStore(get_session_factory()),
     )
@@ -106,7 +110,7 @@ async def lifespan(app: FastAPI):
     """
 
     yield
-    gemini_llm.close()
+    llm.close()
 
 
 app = FastAPI(
