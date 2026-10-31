@@ -74,13 +74,19 @@ class HandleUserMessageUseCase:
         # RF-AGT-19: 30 mensajes por hora y 200 por dia, configurables al componer.
         self._hourly_limit = hourly_limit
         self._daily_limit = daily_limit
+        self._usage: LLMUsage | None = None
 
     def last_usage(self) -> LLMUsage | None:
-        """Consumo de la ultima llamada al modelo, para medir el costo (S5)."""
+        """Consumo de la llamada al modelo del ultimo mensaje, para medir el costo (S5).
 
-        return self._llm.last_usage()
+        Es None si ese mensaje no llamo al modelo, como una confirmacion: antes
+        se repetia el consumo del mensaje anterior y el costo se contaba doble.
+        """
+
+        return self._usage
 
     def execute(self, request: IncomingRequest) -> AssistantReply:
+        self._usage = None
         text = request.text.strip()
         if not text:
             return AssistantReply(replies.rephrase())
@@ -126,6 +132,7 @@ class HandleUserMessageUseCase:
 
         try:
             interpretation = self._llm.interpret(request, self._now())
+            self._usage = self._llm.last_usage()
         except LLMError:
             return AssistantReply(replies.service_unavailable())
 
@@ -144,7 +151,9 @@ class HandleUserMessageUseCase:
 
     def _system_help(self, question: str) -> AssistantReply:
         try:
-            return AssistantReply(self._llm.answer_system_help(question))
+            answer = self._llm.answer_system_help(question)
+            self._usage = self._llm.last_usage()
+            return AssistantReply(answer)
         except LLMError:
             return AssistantReply(replies.service_unavailable())
 
