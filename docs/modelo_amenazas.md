@@ -49,7 +49,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-02 | El LLM solo recibe el texto, sin identificadores; falta la autorización del titular (RF-USR-10) | val | Pendiente | [§6](#6-privacidad) | Alto |
 | T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) | Bajo |
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) | Bajo |
-| T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
+| T-12 | Locks con hash, pip-audit en CI, `pubspec.lock` verificado contra OSV y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
 | T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) | Medio |
 | T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 | Bajo |
 | T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py) | Medio |
@@ -127,8 +127,13 @@ que nadie lo vio hasta que falló el CI de `2c69809`. El CI ahora también corre
 `ERROR` solo por `kotlin:S7204`, que se atendió declarando `proguardFiles` en la versión release.
 Los code smells nuevos no afectan al gate (mantenibilidad A).
 
-**Límite:** el cliente Flutter solo depende de `cupertino_icons` y pip-audit no cubre paquetes de
-Dart. Se revisará cuando la app agregue dependencias.
+**Dependencias del cliente Flutter.** `pip-audit` no cubre Dart, así que el lock de la app se
+verifica con `tools/verificar_dependencias_dart.py`: 27 paquetes (24 alojados en pub.dev y 3 del
+SDK), todos con versión y `sha256`, sin dependencias `git` ni `path`, y las directas
+(`cupertino_icons`, `flutter_lints`) coinciden con `pubspec.yaml`. La consulta a OSV del ecosistema
+Pub no reporta avisos. El resultado queda en
+[`verificacion_dependencias_dart.json`](verificacion_dependencias_dart.json) y el CI lo ejecuta con
+`--online` junto a pip-audit.
 
 ## 6. Privacidad
 
