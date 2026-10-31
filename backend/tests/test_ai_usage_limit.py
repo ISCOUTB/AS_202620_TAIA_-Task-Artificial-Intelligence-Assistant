@@ -49,9 +49,10 @@ def test_hourly_limit_rejects_without_calling_the_llm():
     use_case = _use_case(llm, hourly=2)
     use_case.execute(_msg())
     use_case.execute(_msg())
+    third = _msg("tercero")
 
     with pytest.raises(UsageLimitExceededError):
-        use_case.execute(_msg("tercero"))
+        use_case.execute(third)
 
     assert "tercero" not in llm.seen
 
@@ -60,9 +61,10 @@ def test_daily_limit_applies_independently_of_the_hourly_one():
     use_case = _use_case(FakeLLM(_unknown(3)), hourly=10, daily=2)
     use_case.execute(_msg())
     use_case.execute(_msg())
+    third = _msg()
 
     with pytest.raises(UsageLimitExceededError):
-        use_case.execute(_msg())
+        use_case.execute(third)
 
 
 def test_limit_is_per_user():
