@@ -1152,7 +1152,8 @@ El equipo pidió revisar la seguridad contra OWASP Top 10:2025 y OWASP Top 10 fo
 
 ### Aceptado
 
-* Pendiente de revisión del equipo.
+* El equipo aceptó todo el resultado generado: las versiones de PyJWT y certifi, el paso de pip-audit en el CI, las correcciones del cliente Flutter, las cuatro mitigaciones (RNF-03, RT-01 en `/metrics`, RF-AGT-19 y RF-AGT-18) y los documentos de la entrega.
+* Se aceptó el reparto de dueños del modelo de amenazas: luis20072002 para lo hecho en la semana; val, dei0811 y mark para lo pendiente y lo aceptado.
 
 ### Rechazado o modificado
 
@@ -1170,4 +1171,5 @@ El equipo pidió revisar la seguridad contra OWASP Top 10:2025 y OWASP Top 10 fo
 * `python -m pytest` con `TEST_DATABASE_URL` sobre PostgreSQL local: 256 pruebas aprobadas. `tools/audit_boundaries.py`: 0 infracciones. Cliente generado sincronizado.
 * pip-audit 2.10.1 sobre los dos locks: "No known vulnerabilities found". `tools/verificar_dependencias.py`: `ok`.
 * `flutter analyze`: sin observaciones. No se compiló el APK: el equipo no tiene el SDK de Android.
-* No se probó `systemInstruction` contra la API real de Gemini.
+* Después del despliegue, `/metrics` sin token respondió `401`, `/telegram/webhook` sin secreto `401` y el contrato publicado incluye los `429`.
+* `systemInstruction` contra la API real de Gemini: `gemini-3.5-flash` y `gemini-3.5-flash-lite` respondieron `200` con el formato nuevo. Hubo respuestas `503` ("high demand") intermitentes con los dos formatos; una de ellas hizo que `tools/probe_deployed_ai.py` recibiera el mensaje de servicio no disponible, como establece ADR-0007.
