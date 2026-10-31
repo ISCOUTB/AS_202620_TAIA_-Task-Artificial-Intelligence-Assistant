@@ -4,6 +4,8 @@
 
 Aceptado por el equipo el 2026-10-05, tras revisar la propuesta redactada con apoyo de IA (ver [ia.md, entrada 017](../ia.md)).
 
+**Reemplazado parcialmente por [ADR-0011](0011-usar-groq-como-proveedor-llm-de-respaldo.md)** el 2026-10-30, solo en el punto 4 de la decisión (sin respaldo). El resto sigue vigente.
+
 ## Contexto
 
 TAIA interpreta los mensajes del estudiante con un proveedor externo de lenguaje, hoy Gemini (`gemini-3.5-flash-lite`), detrás del puerto `LLMPort` (ver [ADR-0001](0001-estilo-arquitectonico.md)). El proveedor no lo construimos ni lo controlamos (sistema externo en el [C4 nivel 2](../c4/C4-C2.md)), y opera en su nivel gratuito, con límites que ya se observaron en el proyecto:
