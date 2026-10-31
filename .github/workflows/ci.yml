@@ -7,6 +7,8 @@ on:
     # después del guion, YAML lo lee como un solo texto y no como una lista.
     paths:
       - 'backend/**'
+      # El Quality Gate de SonarCloud también evalúa el cliente Flutter.
+      - 'frontend/**'
       - 'tools/**'
       - 'docker-compose.yml'
       - 'pytest.ini'
@@ -16,6 +18,7 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - 'tools/**'
       - 'docker-compose.yml'
       - 'pytest.ini'
@@ -131,6 +134,16 @@ jobs:
         run: |
           python tools/audit_boundaries.py
           python tools/verificar_dependencias.py
+
+      # Busca CVE conocidas en los locks (base de PyPI y OSV). Falla si encuentra
+      # alguna, así que CD no despliega con una dependencia vulnerable.
+      # --disable-pip audita exactamente lo fijado con hash, sin resolver de nuevo.
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          for lock in backend/requirements.lock.txt backend/requirements-dev.lock.txt; do
+            pipx run --spec pip-audit==2.10.1 pip-audit \
+              -r "$lock" --require-hashes --disable-pip --progress-spinner off
+          done
 
       - name: Regenerate API client from OpenAPI contract
         run: python tools/generate_api_client.py
