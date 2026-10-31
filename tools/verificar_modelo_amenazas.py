@@ -41,6 +41,11 @@ COLUMNAS_MITIGACIONES = ("id", "mitigacion", "dueno", "estado", "evidencia", "re
 
 RESIDUALES = ("bajo", "medio", "alto")
 
+# Categorias STRIDE y referencias OWASP aceptadas. Las de LLM son del Top 10
+# for LLM Applications 2025; A01..A10, del Top 10:2025.
+STRIDE = ("spoofing", "tampering", "repudiation", "info. disclosure", "dos", "elevation")
+PATRON_OWASP = re.compile(r"^(A0[1-9]|A10|LLM0[1-9]|LLM10)$")
+
 PATRON_ID = re.compile(r"^T-\d{2}$")
 PATRON_ENLACE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 PATRON_SHA = re.compile(r"`[0-9a-f]{7,40}`")
@@ -219,6 +224,17 @@ def _leer_amenazas(
         for columna in ("elemento c4", "stride", "owasp", "amenaza"):
             if not valor(columna):
                 problemas.append("{}: la columna '{}' esta vacia".format(identificador, columna))
+
+        stride = valor("stride")
+        if stride and _normalizar(stride) not in STRIDE:
+            problemas.append("{}: categoria STRIDE no reconocida '{}'".format(identificador, stride))
+
+        owasp = valor("owasp")
+        for referencia in (parte.strip() for parte in owasp.split(",")):
+            if referencia and not PATRON_OWASP.match(referencia):
+                problemas.append(
+                    "{}: referencia OWASP no reconocida '{}'".format(identificador, referencia)
+                )
 
         probabilidad = _entero(valor("p"))
         impacto = _entero(valor("i"))

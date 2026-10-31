@@ -116,6 +116,22 @@ def test_riesgo_residual_no_reconocido(tmp_path):
     assert any("T-02: riesgo residual no reconocido 'Critico'" in problema for problema in problemas)
 
 
+def test_categoria_stride_no_reconocida(tmp_path):
+    documento = DOCUMENTO.replace("| Spoofing |", "| Suplantacion |")
+
+    problemas = analizar(tmp_path, documento)["problemas"]
+
+    assert any("T-01: categoria STRIDE no reconocida 'Suplantacion'" in p for p in problemas)
+
+
+def test_referencia_owasp_no_reconocida(tmp_path):
+    documento = DOCUMENTO.replace("| A07 |", "| A11 |")
+
+    problemas = analizar(tmp_path, documento)["problemas"]
+
+    assert any("T-01: referencia OWASP no reconocida 'A11'" in p for p in problemas)
+
+
 def test_evidencia_con_enlace_inexistente(tmp_path):
     documento = DOCUMENTO.replace("[prueba](prueba.md)", "[prueba](no-existe.md)")
 
