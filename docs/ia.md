@@ -1115,7 +1115,8 @@ Se pidió implementar RF-TEL-02 después de configurar `TAIA_TELEGRAM_BOT_TOKEN`
 
 ### Aceptado
 
-* Pendiente de revisión del equipo.
+* El equipo aceptó el webhook `POST /telegram/webhook` con su secreto, el retiro de `POST /users/telegram/link/confirm` y las pruebas.
+* El webhook se registró en Telegram con `setWebhook` y, ya desplegado, responde `401` sin el secreto.
 
 ### Rechazado o modificado
 
