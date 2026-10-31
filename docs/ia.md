@@ -1199,7 +1199,9 @@ El equipo pidió implementar el respaldo con Groq, porque Gemini deja de respond
 
 ### Aceptado
 
-* Pendiente de revisión del equipo, que decide si activa Groq al configurar `GROQ_API_KEY_1` en Dokploy.
+* El equipo aceptó el respaldo y lo activó en Dokploy con `GROQ_API_KEY_1`, `GROQ_API_KEY_2` y `GROQ_MODEL=openai/gpt-oss-120b`. La segunda clave es de otra cuenta de Groq.
+* El equipo cambió `GEMINI_MODEL` a `gemini-3.5-flash-lite`: `gemini-3.5-flash` respondía `429` por cuota agotada, y flash-lite dio el mejor resultado de la evaluación (0,929 de intención y 105/110 campos).
+* La corrección de `pythonsecurity:S8707` en `tools/eval_llm.py` (`0a77ab1`) dejó el Quality Gate en `OK`; el respaldo quedó desplegado con el run de CD 41165578996.
 
 ### Rechazado o modificado
 
