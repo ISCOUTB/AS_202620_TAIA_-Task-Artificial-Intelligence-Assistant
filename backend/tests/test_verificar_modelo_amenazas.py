@@ -147,3 +147,17 @@ def test_seccion_ausente(tmp_path):
     problemas = analizar(tmp_path, documento)["problemas"]
 
     assert any("no se encontro la seccion '## 3. Plan de mitigacion'" in p for p in problemas)
+
+
+def test_documento_del_repositorio_es_consistente():
+    """Regresion sobre el documento real: si alguien rompe una fila, CI falla."""
+
+    resultado = verificador.analizar(
+        verificador.DOC.read_text(encoding="utf-8"),
+        verificador.DOC.parent,
+        "docs/modelo_amenazas.md",
+    )
+
+    assert resultado["problemas"] == []
+    assert resultado["amenazas"] == resultado["mitigaciones"]
+    assert resultado["amenazas"] > 0

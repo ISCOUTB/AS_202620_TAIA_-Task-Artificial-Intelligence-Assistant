@@ -51,8 +51,8 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) |
 | T-12 | Locks con hash, pip-audit en CI y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) |
 | T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) |
-| T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | `curl` del 2026-10-30: 200 y 301 |
-| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [estado_backend.md](estado_backend.md) |
+| T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 |
+| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py) |
 | T-14 | Logs JSON sin datos sensibles (RNF-05); faltan alertas | mark | Pendiente | [observability.py](../backend/app/shared/adapters/inbound/observability.py) |
 | T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` |
 | T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) |
