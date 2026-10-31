@@ -325,7 +325,10 @@ def main() -> int:
     load_dotenv(ROOT / "backend" / ".env")
     load_dotenv(ROOT / ".env")  # el .env que usa docker-compose
 
-    variable = "GROQ_API_KEY_1" if args.proveedor == "groq" else "GEMINI_API_KEY"
+    # Constante elegida a partir del argumento: argparse ya lo limita a dos
+    # valores, pero asi el texto que llega al archivo de salida no sale de la CLI.
+    proveedor = "groq" if args.proveedor == "groq" else "gemini"
+    variable = "GROQ_API_KEY_1" if proveedor == "groq" else "GEMINI_API_KEY"
     if not os.getenv(variable):
         print(
             f"S1 y S3 quedan PENDIENTES: no hay {variable}.\n"
@@ -343,18 +346,18 @@ def main() -> int:
         "arbol_modificado": bool(git("status", "--porcelain")),
         "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
         "arnes_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        "proveedor": args.proveedor,
-        "modelo": (os.getenv("GROQ_MODEL") or _GROQ_DEFAULT_MODEL) if args.proveedor == "groq"
+        "proveedor": proveedor,
+        "modelo": (os.getenv("GROQ_MODEL") or _GROQ_DEFAULT_MODEL) if proveedor == "groq"
         else (os.getenv("GEMINI_MODEL") or _DEFAULT_MODEL),
         "reloj_interpretacion": AHORA.isoformat(),
     }
-    if args.proveedor == "groq":
+    if proveedor == "groq":
         llm = GroqLLM(api_key=os.environ["GROQ_API_KEY_1"],
                       model=os.getenv("GROQ_MODEL") or _GROQ_DEFAULT_MODEL)
     else:
         llm = GeminiLLM.from_env()
     resultado.update(evaluar(filas, args.precio_input, args.precio_output,
-                             llm, PAUSA_POR_PROVEEDOR[args.proveedor]))
+                             llm, PAUSA_POR_PROVEEDOR[proveedor]))
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
         _ruta_en_repositorio(parser, args.json).write_text(
