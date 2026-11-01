@@ -252,6 +252,7 @@ Gratuito.
 
 - `docs/requerimientos.md`: requerimientos (fuente de verdad).
 - `docs/diccionario_datos.md`: datos y restricciones.
+- `docs/politica_privacidad.md`: política de tratamiento de datos que se acepta al registrarse.
 - `docs/arc42/`: arquitectura (arc42).
 - `docs/adr/`: decisiones arquitectónicas.
 - `docs/c4/`: diagramas C4.
