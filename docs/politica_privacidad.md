@@ -66,6 +66,9 @@ No se usan los datos para publicidad, perfilamiento comercial ni venta a tercero
   (`users.consent_accepted_at`) y la **versión** aceptada (`users.consent_policy_version`).
 - La autorización cubre las finalidades de la sección 4 y las transferencias de la sección 6.
 
+El detalle técnico del flujo —campos, respuestas y qué se guarda— está en
+[flujo_consentimiento.md](flujo_consentimiento.md).
+
 ## 6. Transferencias y transmisiones internacionales
 
 TAIA opera desde Colombia, pero se apoya en proveedores fuera del país. Al aceptar esta política,
