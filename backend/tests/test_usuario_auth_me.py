@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from tests.helpers import TEST_PASSWORD
+from tests.helpers import CONSENT, TEST_PASSWORD
 
 
 client = TestClient(app)
@@ -16,7 +16,7 @@ def _base_de_datos_limpia(clean_db) -> None:
 def _register_and_login():
     register = client.post(
         "/users",
-        json={"full_name": "Ana", "email": "ana@example.com", "password": TEST_PASSWORD},
+        json={"full_name": "Ana", "email": "ana@example.com", "password": TEST_PASSWORD, **CONSENT},
     )
     assert register.status_code == 201
 

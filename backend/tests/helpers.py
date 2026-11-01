@@ -11,10 +11,18 @@ from app.shared.clock import now_bogota
 
 TEST_PASSWORD = os.getenv("TAIA_TEST_PASSWORD") or secrets.token_urlsafe(32)
 
+# RF-USR-10: lo que toda prueba envía al registrarse. La versión va literal, no importada
+# del backend, para que un cambio de versión sin tocar las pruebas se note.
+POLICY_VERSION = "2026-11-v1"
+CONSENT = {"consent_accepted": True, "consent_policy_version": POLICY_VERSION}
+
 
 def register_and_login(client, email: str | None = None) -> dict[str, str]:
     email = email or f"user-{uuid.uuid4().hex[:10]}@example.com"
-    created = client.post("/users", json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD})
+    created = client.post(
+        "/users",
+        json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD, **CONSENT},
+    )
     assert created.status_code == 201, created.text
     login = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     assert login.status_code == 200, login.text

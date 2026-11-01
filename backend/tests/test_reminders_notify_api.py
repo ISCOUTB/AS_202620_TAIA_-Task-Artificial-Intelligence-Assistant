@@ -6,13 +6,16 @@ from app.main import app
 from tests import helpers
 from app.modules.reminders.adapters.inbound.http_controller import get_send_notification_use_case
 from app.modules.reminders.application.ports.inbound.reminder_ports import SendNotificationPort
-from tests.helpers import TEST_PASSWORD
+from tests.helpers import CONSENT, TEST_PASSWORD
 
 client = TestClient(app)
 
 
 def register_and_login(email: str) -> dict[str, str]:
-    created = client.post('/users', json={'full_name': 'Estudiante', 'email': email, 'password': TEST_PASSWORD})
+    created = client.post(
+        '/users',
+        json={'full_name': 'Estudiante', 'email': email, 'password': TEST_PASSWORD, **CONSENT},
+    )
     assert created.status_code == 201
     login = client.post('/users/login', json={'email': email, 'password': TEST_PASSWORD})
     assert login.status_code == 200

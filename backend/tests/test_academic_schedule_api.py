@@ -5,14 +5,17 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
-from tests.helpers import TEST_PASSWORD
+from tests.helpers import CONSENT, TEST_PASSWORD
 
 client = TestClient(app)
 
 
 def register_and_login() -> dict:
     email = f"hor-{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/users", json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD})
+    client.post(
+        "/users",
+        json={"full_name": "Estudiante", "email": email, "password": TEST_PASSWORD, **CONSENT},
+    )
     login = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
