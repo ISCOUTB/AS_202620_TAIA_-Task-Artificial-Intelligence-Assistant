@@ -55,7 +55,9 @@ class _Auth:
         self.sessions = InMemorySessionRepository()
         self.tokens = JwtTokenService(secret=SECRET)
         hasher = Pbkdf2PasswordHasher()
-        RegisterUserUseCase(self.users, hasher).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+        RegisterUserUseCase(self.users, hasher).execute(
+            full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+        )
         self.login = LoginUserUseCase(
             self.users, hasher, self.tokens, InMemoryFailedLoginAttemptRepository(), self.sessions, now=self.clock
         )
@@ -190,7 +192,9 @@ def test_api_refresh_returns_new_pair_and_rejects_reuse(clean_db):
 
 def test_sqlalchemy_repository_stores_only_the_hash(clean_db):
     users = SqlAlchemyUserRepository(clean_db)
-    RegisterUserUseCase(users, Pbkdf2PasswordHasher()).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+    RegisterUserUseCase(users, Pbkdf2PasswordHasher()).execute(
+        full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+    )
     user = users.get_by_email(Email(EMAIL))
     sessions = SqlAlchemySessionRepository(clean_db)
     session_id = uuid.uuid4()

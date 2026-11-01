@@ -3104,13 +3104,25 @@
             "type": "string",
             "minLength": 8,
             "title": "Password"
+          },
+          "consent_accepted": {
+            "type": "boolean",
+            "title": "Consent Accepted"
+          },
+          "consent_policy_version": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Consent Policy Version"
           }
         },
         "type": "object",
         "required": [
           "full_name",
           "email",
-          "password"
+          "password",
+          "consent_accepted",
+          "consent_policy_version"
         ],
         "title": "UserCreateRequest"
       },
@@ -3157,6 +3169,29 @@
             "type": "boolean",
             "title": "Telegram Linked"
           },
+          "consent_accepted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Accepted At"
+          },
+          "consent_policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Policy Version"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -3170,6 +3205,8 @@
           "email",
           "status",
           "telegram_linked",
+          "consent_accepted_at",
+          "consent_policy_version",
           "created_at"
         ],
         "title": "UserResponse"

@@ -64,6 +64,15 @@ class Usuario:
     def status(self) -> UserStatus:
         return UserStatus.ACTIVE if self.deactivated_at is None else UserStatus.INACTIVE
 
+    def accept_policy(self, policy_version: str, now: datetime | None = None) -> None:
+        """Registra la constancia de aceptación de la política (RF-USR-10)."""
+
+        clean_version = (policy_version or "").strip()
+        if not clean_version:
+            raise InvalidUserError("La versión de la política es obligatoria.")
+        self.consent_accepted_at = now or now_bogota()
+        self.consent_policy_version = clean_version
+
     def link_telegram(self, telegram_user_id: int, now: datetime | None = None) -> None:
         """Vincula una cuenta Telegram existente con este usuario."""
         if telegram_user_id <= 0:

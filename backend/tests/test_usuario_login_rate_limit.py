@@ -50,7 +50,9 @@ def clock():
 def login(clock):
     users = InMemoryUserRepository()
     hasher = Pbkdf2PasswordHasher()
-    RegisterUserUseCase(users, hasher).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+    RegisterUserUseCase(users, hasher).execute(
+        full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+    )
     return LoginUserUseCase(
         users,
         hasher,
