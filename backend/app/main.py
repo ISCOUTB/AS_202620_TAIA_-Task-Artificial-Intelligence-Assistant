@@ -3,7 +3,11 @@ from typing import Annotated
 
 from fastapi import FastAPI, Depends
 
-from app.modules.usuario.adapters.outbound.provider import repository as usuario_repository, token_service as usuario_token_service
+from app.modules.usuario.adapters.outbound.provider import (
+    repository as usuario_repository,
+    session_repository as usuario_session_repository,
+    token_service as usuario_token_service,
+)
 from app.modules.usuario.application.ports.inbound.identity import configure_identity_service
 from app.modules.usuario.application.services.identity import IdentityServiceImpl
 
@@ -13,7 +17,7 @@ from app.modules.academic.application.ports.inbound.task_management import confi
 from app.modules.academic.application.services.task_lookup import AcademicTaskLookupService
 from app.modules.academic.application.services.task_management import AcademicTaskManagementService
 
-identity_service = IdentityServiceImpl(usuario_repository, usuario_token_service)
+identity_service = IdentityServiceImpl(usuario_repository, usuario_token_service, usuario_session_repository)
 configure_identity_service(identity_service)
 
 academic_repository = get_task_repository()

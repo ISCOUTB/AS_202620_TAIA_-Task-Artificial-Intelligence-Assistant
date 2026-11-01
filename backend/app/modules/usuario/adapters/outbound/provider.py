@@ -5,6 +5,7 @@ from app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2P
 from app.modules.usuario.adapters.outbound.sqlalchemy_failed_login_attempt_repository import (
     SqlAlchemyFailedLoginAttemptRepository,
 )
+from app.modules.usuario.adapters.outbound.sqlalchemy_session_repository import SqlAlchemySessionRepository
 from app.modules.usuario.adapters.outbound.sqlalchemy_telegram_link_repository import SqlAlchemyTelegramLinkRepository
 from app.modules.usuario.adapters.outbound.sqlalchemy_user_repository import SqlAlchemyUserRepository
 from app.shared.adapters.outbound.database import get_session_factory
@@ -15,3 +16,4 @@ password_hasher = Pbkdf2PasswordHasher()
 token_service = JwtTokenService()
 telegram_link_repository = SqlAlchemyTelegramLinkRepository(get_session_factory())
 failed_login_attempt_repository = SqlAlchemyFailedLoginAttemptRepository(get_session_factory())
+session_repository = SqlAlchemySessionRepository(get_session_factory())

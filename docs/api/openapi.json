@@ -1546,6 +1546,88 @@
         }
       }
     },
+    "/users/refresh": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Refresh Session",
+        "description": "Entrega un par de tokens nuevo; el token de renovación usado deja de servir (RF-USR-03).",
+        "operationId": "refresh_session_users_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token de renovación inválido, expirado o revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/logout": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Logout User",
+        "description": "Cierra la sesión actual: su token de acceso y su token de renovación dejan de valer (RF-USR-04).",
+        "operationId": "logout_user_users_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Credenciales ausentes, inválidas o expiradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/users/me": {
       "get": {
         "tags": [
@@ -2355,6 +2437,10 @@
             "type": "string",
             "title": "Access Token"
           },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
           "token_type": {
             "type": "string",
             "title": "Token Type",
@@ -2363,7 +2449,8 @@
         },
         "type": "object",
         "required": [
-          "access_token"
+          "access_token",
+          "refresh_token"
         ],
         "title": "LoginResponse"
       },
@@ -2391,6 +2478,20 @@
           "scheduled_at"
         ],
         "title": "NotificationResponse"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshTokenRequest"
       },
       "ReminderResponse": {
         "properties": {

@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
@@ -15,9 +15,11 @@ from app.modules.usuario.adapters.outbound.provider import (
     failed_login_attempt_repository as _failed_login_attempt_repository,
     password_hasher as _password_hasher,
     repository as _repository,
+    session_repository as _session_repository,
     telegram_link_repository as _telegram_link_repository,
     token_service as _token_service,
 )
+from app.modules.usuario.application.ports.outbound.token_service import AccessTokenClaims
 from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from app.modules.usuario.application.use_cases.link_telegram import (
     CreateTelegramLinkUseCase,
@@ -28,6 +30,12 @@ from app.modules.usuario.application.use_cases.login_user import (
     InvalidCredentialsError,
     LoginUserUseCase,
     TooManyLoginAttemptsError,
+)
+from app.modules.usuario.application.use_cases.manage_sessions import (
+    AuthenticateAccessTokenUseCase,
+    InvalidRefreshTokenError,
+    LogoutUseCase,
+    RefreshSessionUseCase,
 )
 from app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
@@ -53,6 +61,10 @@ class UserLoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=1)
+
+
 class UserResponse(BaseModel):
     id: uuid.UUID
     full_name: str
@@ -75,6 +87,7 @@ class UserResponse(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -123,10 +136,14 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
 )
 def login_user(payload: UserLoginRequest) -> LoginResponse:
     use_case = LoginUserUseCase(
-        _repository, _password_hasher, _token_service, _failed_login_attempt_repository
+        _repository,
+        _password_hasher,
+        _token_service,
+        _failed_login_attempt_repository,
+        _session_repository,
     )
     try:
-        access_token = use_case.execute(
+        tokens = use_case.execute(
             email=payload.email,
             password=payload.password,
         )
@@ -149,7 +166,37 @@ def login_user(payload: UserLoginRequest) -> LoginResponse:
     except InvalidEmailError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    return LoginResponse(access_token=access_token)
+    return LoginResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+
+
+@router.post(
+    "/refresh",
+    responses={401: {"model": ErrorResponse, "description": "Token de renovación inválido, expirado o revocado."}},
+)
+def refresh_session(payload: RefreshTokenRequest) -> LoginResponse:
+    """Entrega un par de tokens nuevo; el token de renovación usado deja de servir (RF-USR-03)."""
+    use_case = RefreshSessionUseCase(_repository, _session_repository, _token_service)
+    try:
+        tokens = use_case.execute(payload.refresh_token)
+    except InvalidRefreshTokenError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(error),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from error
+    return LoginResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
+)
+def logout_user(credentials: BearerCredentials) -> Response:
+    """Cierra la sesión actual: su token de acceso y su token de renovación dejan de valer (RF-USR-04)."""
+    claims = _authenticated_claims(credentials)
+    LogoutUseCase(_session_repository).execute(claims.session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(
@@ -162,6 +209,14 @@ def get_current_user(credentials: BearerCredentials) -> UserResponse:
 
 
 def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
+    claims = _authenticated_claims(credentials)
+    try:
+        return GetCurrentUserUseCase(_repository).execute(claims.user_id)
+    except ValueError as error:
+        raise _invalid_access_token() from error
+
+
+def _authenticated_claims(credentials: HTTPAuthorizationCredentials | None) -> AccessTokenClaims:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -169,14 +224,19 @@ def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usu
             headers={"WWW-Authenticate": "Bearer"},
         )
     try:
-        user_id = _token_service.verify_access_token(credentials.credentials)
-        return GetCurrentUserUseCase(_repository).execute(user_id)
+        return AuthenticateAccessTokenUseCase(_token_service, _session_repository).execute(
+            credentials.credentials
+        )
     except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token de acceso inválido o usuario no encontrado.",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from error
+        raise _invalid_access_token() from error
+
+
+def _invalid_access_token() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token de acceso inválido o usuario no encontrado.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.post(

@@ -8,8 +8,10 @@ from app.modules.usuario.application.ports.outbound.failed_login_attempt_reposit
     FailedLoginAttemptRepository,
 )
 from app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
+from app.modules.usuario.application.ports.outbound.session_repository import SessionRepository
 from app.modules.usuario.application.ports.outbound.token_service import TokenService
 from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
+from app.modules.usuario.application.use_cases.manage_sessions import TokenPair, start_session
 from app.modules.usuario.domain.entities.usuario import Usuario, UserStatus
 from app.modules.usuario.domain.value_objects.email import Email
 from app.shared.clock import Clock, now_bogota
@@ -28,7 +30,7 @@ class TooManyLoginAttemptsError(ValueError):
 
 
 class LoginUserUseCase:
-    """Autentica al usuario y emite un token de acceso."""
+    """Autentica al usuario y abre una sesión con su par de tokens (RF-USR-03)."""
 
     # RNF-03: 5 fallos por identificador cada 15 minutos.
     max_failed_attempts = 5
@@ -40,15 +42,17 @@ class LoginUserUseCase:
         password_hasher: PasswordHasher,
         token_service: TokenService,
         failed_attempts: FailedLoginAttemptRepository,
+        sessions: SessionRepository,
         now: Clock = now_bogota,
     ) -> None:
         self._repository = repository
         self._password_hasher = password_hasher
         self._token_service = token_service
         self._failed_attempts = failed_attempts
+        self._sessions = sessions
         self._now = now
 
-    def execute(self, email: str, password: str) -> str:
+    def execute(self, email: str, password: str) -> TokenPair:
         email_value = Email(email)
         now = self._now()
 
@@ -74,4 +78,4 @@ class LoginUserUseCase:
         if user.status is not UserStatus.ACTIVE:
             raise InactiveUserError("El usuario está inactivo.")
 
-        return self._token_service.create_access_token(user)
+        return start_session(user, self._sessions, self._token_service, self._now)

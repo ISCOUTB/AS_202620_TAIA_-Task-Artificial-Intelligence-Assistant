@@ -52,7 +52,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-12 | Locks con hash, pip-audit en CI, `pubspec.lock` verificado contra OSV y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
 | T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) | Medio |
 | T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 | Bajo |
-| T-08 | Expiración del JWT a 30 min; falta renovación y revocación (RF-USR-03, 04) | dei0811 | Pendiente | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py) | Medio |
+| T-08 | JWT de 30 min con `sid`; cada petición comprueba que la sesión siga activa; renovación con rotación de un solo uso y revocación de todas las sesiones ante reutilización; `POST /users/logout` revoca la sesión (RF-USR-03, 04) | dei0811 | Hecha | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py), [prueba](../backend/tests/test_usuario_sessions.py) | Bajo |
 | T-14 | Logs JSON sin datos sensibles y seis alertas sobre la misma ventana (RNF-05); transiciones en `alert_triggered`/`alert_cleared` | mark | Hecha | [observability.py](../backend/app/shared/adapters/inbound/observability.py), [prueba](../backend/tests/test_alertas.py), [runbook](runbook_alertas.md) | Medio |
 | T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` | Bajo |
 | T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
@@ -182,5 +182,5 @@ documento, así que la tabla no puede degradarse sin que el pipeline lo note.
 **Última revisión:** 2026-10-31. La revisión de fondo se hizo sobre `2c69809`; después se
 agregaron las alertas de T-14 y la verificación de dependencias Dart. **Próxima revisión
 obligatoria:** al cerrar el semestre, o antes si se dispara alguno de los puntos anteriores. Los
-pendientes asignados (T-02, T-08) se siguen en la columna *Estado* de §3; no se cierran aquí sin
+pendientes asignados (T-02) se siguen en la columna *Estado* de §3; no se cierran aquí sin
 evidencia.

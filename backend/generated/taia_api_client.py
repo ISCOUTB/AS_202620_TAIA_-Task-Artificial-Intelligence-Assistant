@@ -132,6 +132,12 @@ class TaiaApiClient:
     def login_user_users_login_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/login", body, **{})
 
+    def refresh_session_users_refresh_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/users/refresh", body, **{})
+
+    def logout_user_users_logout_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/users/logout", body, **{})
+
     def get_current_user_users_me_get(self, body: object | None = None) -> object:
         return self._request("GET", "/users/me", body, **{})
 

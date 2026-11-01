@@ -12,6 +12,7 @@ from app.main import app
 from app.modules.usuario.adapters.outbound.in_memory_failed_login_attempt_repository import (
     InMemoryFailedLoginAttemptRepository,
 )
+from app.modules.usuario.adapters.outbound.in_memory_session_repository import InMemorySessionRepository
 from app.modules.usuario.adapters.outbound.in_memory_user_repository import InMemoryUserRepository
 from app.modules.usuario.adapters.outbound.jwt_token_service import JwtTokenService
 from app.modules.usuario.adapters.outbound.pbkdf2_password_hasher import Pbkdf2PasswordHasher
@@ -55,6 +56,7 @@ def login(clock):
         hasher,
         JwtTokenService(secret="secreto-de-prueba-suficientemente-largo"),
         InMemoryFailedLoginAttemptRepository(),
+        InMemorySessionRepository(),
         now=clock,
     )
 
