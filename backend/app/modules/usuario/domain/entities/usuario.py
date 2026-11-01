@@ -33,6 +33,8 @@ class Usuario:
     telegram_user_id: int | None = None
     telegram_linked_at: datetime | None = None
     deactivated_at: datetime | None = None
+    consent_accepted_at: datetime | None = None
+    consent_policy_version: str | None = None
     created_at: datetime = field(default_factory=now_bogota)
 
     MAX_FULL_NAME_LENGTH = 100
