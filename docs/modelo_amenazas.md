@@ -14,7 +14,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 - **Priorización:** probabilidad (P) e impacto (I) en escala 1 (baja) a 3 (alta).
   Prioridad = P × I: 9 crítica, 6 alta, 3 o 4 media, 1 o 2 baja.
 - **Dueños:** luis20072002 aplicó las mitigaciones de esta semana. Las demás se reparten por
-  igual entre val, dei0811 y mark: tres por persona y una pendiente para cada uno.
+  igual entre val, dei0811 y mark: tres por persona, todas cerradas.
 
 ## 2. Amenazas priorizadas
 
@@ -46,7 +46,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-07 | 5 fallos por correo cada 15 min; `429` (RNF-03) | luis20072002 | Hecha | `14c487e`, [prueba](../backend/tests/test_usuario_login_rate_limit.py) | Bajo |
 | T-10 | Webhook con `X-Telegram-Bot-Api-Secret-Token`; el id sale del update (RF-TEL-02) | luis20072002 | Hecha | `2c69809`, [prueba](../backend/tests/test_usuario_telegram_link.py) | Bajo |
 | T-01 | Reglas en `systemInstruction`, mensaje aparte y delimitado, marcas neutralizadas (RF-AGT-18) | luis20072002 | Hecha | `dbe5634`, [prueba](../backend/tests/test_ai_prompt_injection.py) | Bajo |
-| T-02 | El LLM solo recibe el texto, sin identificadores; falta la autorización del titular (RF-USR-10) | val | Pendiente | [§6](#6-privacidad) | Alto |
+| T-02 | Autorización previa, expresa e informada en el registro (RF-USR-10), con fecha y versión guardadas; el LLM solo recibe el texto, sin identificadores | val | Hecha | [política](politica_privacidad.md), [flujo](flujo_consentimiento.md), [prueba](../backend/tests/test_usuario_consent.py) | Medio |
 | T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) | Bajo |
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) | Bajo |
 | T-12 | Locks con hash, pip-audit en CI, `pubspec.lock` verificado contra OSV y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
@@ -151,8 +151,13 @@ Pub no reporta avisos. El resultado queda en
 **Base del tratamiento.** La Ley 1581 de 2012 y su decreto reglamentario 1377 de 2013 exigen la
 autorización previa, expresa e informada del titular. La transferencia a servicios fuera de
 Colombia (Supabase en `us-west-2`, Google, Telegram y, según ADR-0011, Groq) también requiere esa
-autorización. **Hoy TAIA no la recoge**: el registro no pide consentimiento. Se agregó
-**RF-USR-10** a los requerimientos (pendiente, dueña val).
+autorización. Desde RF-USR-10 el registro **exige** aceptar la
+[política de tratamiento](politica_privacidad.md): sin aceptación la cuenta no se crea (`422`) y,
+cuando se crea, quedan guardadas la fecha (`users.consent_accepted_at`) y la versión
+(`users.consent_policy_version`). El flujo está en
+[flujo_consentimiento.md](flujo_consentimiento.md). **Queda un riesgo residual medio**: no hay
+contrato de encargado del tratamiento firmado con los proveedores, así que la protección depende de
+sus condiciones de servicio.
 
 **Minimización ya aplicada:** no se pide teléfono (D-09); el LLM no recibe identificadores; los
 mensajes y los intentos fallidos se borran a las 24 horas; los logs no guardan cuerpos ni tokens.
@@ -179,8 +184,8 @@ documento, así que la tabla no puede degradarse sin que el pipeline lo note.
 - pip-audit reporta una CVE que afecte un paquete en uso;
 - ocurre un incidente o una alerta de §3 que no estaba prevista.
 
-**Última revisión:** 2026-10-31. La revisión de fondo se hizo sobre `2c69809`; después se
-agregaron las alertas de T-14 y la verificación de dependencias Dart. **Próxima revisión
-obligatoria:** al cerrar el semestre, o antes si se dispara alguno de los puntos anteriores. Los
-pendientes asignados (T-02) se siguen en la columna *Estado* de §3; no se cierran aquí sin
-evidencia.
+**Última revisión:** 2026-11-01. La revisión de fondo se hizo sobre `2c69809`; después se
+agregaron las alertas de T-14, la verificación de dependencias Dart, las sesiones de T-08 y la
+autorización de tratamiento de T-02. **Próxima revisión obligatoria:** al cerrar el semestre, o
+antes si se dispara alguno de los puntos anteriores. No quedan amenazas pendientes: todas están en
+la columna *Estado* de §3 con su evidencia.
