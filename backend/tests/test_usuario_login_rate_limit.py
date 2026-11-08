@@ -26,7 +26,7 @@ from app.modules.usuario.application.use_cases.login_user import (
 )
 from app.modules.usuario.application.use_cases.register_user import RegisterUserUseCase
 from app.shared.clock import BOGOTA_TZ
-from tests.helpers import TEST_PASSWORD
+from tests.helpers import CONSENT, TEST_PASSWORD
 
 EMAIL = "limite@example.com"
 WRONG_PASSWORD = "contrasena-incorrecta"
@@ -50,7 +50,9 @@ def clock():
 def login(clock):
     users = InMemoryUserRepository()
     hasher = Pbkdf2PasswordHasher()
-    RegisterUserUseCase(users, hasher).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+    RegisterUserUseCase(users, hasher).execute(
+        full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+    )
     return LoginUserUseCase(
         users,
         hasher,
@@ -109,7 +111,10 @@ def test_unregistered_email_is_limited_too(login):
 def test_login_api_returns_429_after_five_failures():
     client = TestClient(app)
     email = f"api-limite-{uuid.uuid4().hex[:8]}@example.com"
-    client.post("/users", json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD})
+    client.post(
+        "/users",
+        json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD, **CONSENT},
+    )
     for _ in range(5):
         response = client.post("/users/login", json={"email": email, "password": WRONG_PASSWORD})
         assert response.status_code == 401

@@ -31,7 +31,7 @@ from app.modules.usuario.application.use_cases.manage_sessions import (
 from app.modules.usuario.application.use_cases.register_user import RegisterUserUseCase
 from app.modules.usuario.domain.value_objects.email import Email
 from app.shared.clock import BOGOTA_TZ
-from tests.helpers import TEST_PASSWORD
+from tests.helpers import CONSENT, TEST_PASSWORD
 
 EMAIL = "sesion@example.com"
 SECRET = "secreto-de-prueba-suficientemente-largo"
@@ -55,7 +55,9 @@ class _Auth:
         self.sessions = InMemorySessionRepository()
         self.tokens = JwtTokenService(secret=SECRET)
         hasher = Pbkdf2PasswordHasher()
-        RegisterUserUseCase(self.users, hasher).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+        RegisterUserUseCase(self.users, hasher).execute(
+            full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+        )
         self.login = LoginUserUseCase(
             self.users, hasher, self.tokens, InMemoryFailedLoginAttemptRepository(), self.sessions, now=self.clock
         )
@@ -147,7 +149,10 @@ def test_logout_invalidates_access_and_refresh_tokens(auth):
 
 def _login(client: TestClient) -> dict:
     email = f"sesion-{uuid.uuid4().hex[:8]}@example.com"
-    created = client.post("/users", json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD})
+    created = client.post(
+        "/users",
+        json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD, **CONSENT},
+    )
     assert created.status_code == 201, created.text
     login = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     assert login.status_code == 200, login.text
@@ -187,7 +192,9 @@ def test_api_refresh_returns_new_pair_and_rejects_reuse(clean_db):
 
 def test_sqlalchemy_repository_stores_only_the_hash(clean_db):
     users = SqlAlchemyUserRepository(clean_db)
-    RegisterUserUseCase(users, Pbkdf2PasswordHasher()).execute(full_name="Ana", email=EMAIL, password=TEST_PASSWORD)
+    RegisterUserUseCase(users, Pbkdf2PasswordHasher()).execute(
+        full_name="Ana", email=EMAIL, password=TEST_PASSWORD, **CONSENT
+    )
     user = users.get_by_email(Email(EMAIL))
     sessions = SqlAlchemySessionRepository(clean_db)
     session_id = uuid.uuid4()

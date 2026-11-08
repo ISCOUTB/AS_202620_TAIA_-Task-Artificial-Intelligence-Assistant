@@ -25,6 +25,11 @@ class UserModel(Base):
             "(telegram_user_id IS NULL) = (telegram_linked_at IS NULL)",
             name="telegram_link_consistent",
         ),
+        # RF-USR-10: la constancia de aceptación va completa o no va.
+        CheckConstraint(
+            "(consent_accepted_at IS NULL) = (consent_policy_version IS NULL)",
+            name="consent_consistent",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
@@ -34,6 +39,8 @@ class UserModel(Base):
     telegram_user_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
     telegram_linked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_policy_version: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -80,6 +87,8 @@ def _to_model(user: Usuario) -> UserModel:
         telegram_user_id=user.telegram_user_id,
         telegram_linked_at=user.telegram_linked_at,
         deactivated_at=user.deactivated_at,
+        consent_accepted_at=user.consent_accepted_at,
+        consent_policy_version=user.consent_policy_version,
         created_at=user.created_at,
     )
 
@@ -93,6 +102,8 @@ def _to_domain(model: UserModel) -> Usuario:
         telegram_user_id=model.telegram_user_id,
         telegram_linked_at=_bogota(model.telegram_linked_at),
         deactivated_at=_bogota(model.deactivated_at),
+        consent_accepted_at=_bogota(model.consent_accepted_at),
+        consent_policy_version=model.consent_policy_version,
         created_at=as_bogota(model.created_at),
     )
 

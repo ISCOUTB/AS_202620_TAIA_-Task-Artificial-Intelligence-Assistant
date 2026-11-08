@@ -87,7 +87,7 @@ PostgreSQL ordena los `ENUM` por el orden de declaración. Por eso `weekday` se 
 
 | Módulo | Tabla | Descripción | Requerimientos | Prioridad |
 |---|---|---|---|---|
-| Usuario | `users` | Cuenta del estudiante | RF-USR-01, 05, 06, 09, RF-TEL-01, 03 | MVP |
+| Usuario | `users` | Cuenta del estudiante | RF-USR-01, 05, 06, 09, 10, RF-TEL-01, 03 | MVP |
 | Usuario | `sessions` | Sesión iniciada en un dispositivo | RF-USR-03, 04, RF-NOT-01 | MVP |
 | Usuario | `refresh_tokens` | Tokens de renovación de una sesión | RF-USR-03 | MVP |
 | Usuario | `password_reset_tokens` | Tokens de recuperación de contraseña | RF-USR-08 | MVP |
@@ -161,6 +161,8 @@ Cuenta de un estudiante. Nunca se elimina físicamente (RF-USR-09).
 | `telegram_user_id` | `bigint` | Sí | | Identificador de la cuenta de Telegram vinculada. |
 | `telegram_linked_at` | `timestamptz` | Sí | | Momento de la vinculación con Telegram. |
 | `deactivated_at` | `timestamptz` | Sí | | Momento de la desactivación. `NULL` = cuenta activa. |
+| `consent_accepted_at` | `timestamptz` | Sí | | Momento en que el estudiante aceptó la política de tratamiento (RF-USR-10). `NULL` en cuentas creadas antes de la política. |
+| `consent_policy_version` | `varchar(20)` | Sí | | Versión de la política aceptada, por ejemplo `2026-11-v1`. |
 | `created_at` | `timestamptz` | No | `now()` | Fecha de registro. |
 | `updated_at` | `timestamptz` | No | `now()` | Última modificación. |
 
@@ -172,10 +174,16 @@ Cuenta de un estudiante. Nunca se elimina físicamente (RF-USR-09).
 - `CHECK (char_length(trim(full_name)) > 0)`
 - `CHECK (telegram_user_id > 0)`
 - `CHECK ((telegram_user_id IS NULL) = (telegram_linked_at IS NULL))`
+- `CHECK ((consent_accepted_at IS NULL) = (consent_policy_version IS NULL))`: la constancia de
+  aceptación va completa o no va.
 
 **Reglas**
 - Al desactivar la cuenta se desvincula Telegram: `telegram_user_id` y `telegram_linked_at` pasan a `NULL`.
 - La reactivación (D-11) pone `deactivated_at` en `NULL`.
+- El registro (RF-USR-10) escribe `consent_accepted_at` y `consent_policy_version` en la misma
+  transacción que crea la cuenta. Sin aceptación no hay fila.
+- Las cuentas anteriores a RF-USR-10 quedan con ambas columnas en `NULL`: no se inventa una
+  aceptación que no ocurrió.
 
 ### 5.2 `sessions`
 

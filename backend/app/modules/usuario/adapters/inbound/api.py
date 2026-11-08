@@ -54,6 +54,9 @@ class UserCreateRequest(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=100)
     email: str = Field(..., min_length=3)
     password: str = Field(..., min_length=8)
+    # RF-USR-10: sin aceptación explícita de la versión vigente no hay cuenta.
+    consent_accepted: bool
+    consent_policy_version: str = Field(..., min_length=1, max_length=20)
 
 
 class UserLoginRequest(BaseModel):
@@ -71,6 +74,8 @@ class UserResponse(BaseModel):
     email: str
     status: str
     telegram_linked: bool
+    consent_accepted_at: datetime | None
+    consent_policy_version: str | None
     created_at: datetime
 
     @classmethod
@@ -81,6 +86,8 @@ class UserResponse(BaseModel):
             email=str(user.email),
             status=user.status.value,
             telegram_linked=user.telegram_user_id is not None,
+            consent_accepted_at=user.consent_accepted_at,
+            consent_policy_version=user.consent_policy_version,
             created_at=user.created_at,
         )
 
@@ -117,6 +124,8 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
             full_name=payload.full_name,
             email=payload.email,
             password=payload.password,
+            consent_accepted=payload.consent_accepted,
+            consent_policy_version=payload.consent_policy_version,
         )
     except UserAlreadyExistsError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error

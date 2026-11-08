@@ -3,6 +3,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.helpers import CONSENT
 
 client = TestClient(app)
 
@@ -14,6 +15,7 @@ def test_register_user_returns_created_user_without_password():
             "full_name": "Ana",
             "email": "ana-normalizada@example.com",
             "password": "segura123",
+            **CONSENT,
         },
     )
 
@@ -29,7 +31,7 @@ def test_register_user_returns_created_user_without_password():
 
 def test_register_user_rejects_duplicate_email():
     email = "duplicado@example.com"
-    payload = {"full_name": "Uno", "email": email, "password": "segura123"}
+    payload = {"full_name": "Uno", "email": email, "password": "segura123", **CONSENT}
 
     assert client.post("/users", json=payload).status_code == 201
     assert client.post("/users", json=payload).status_code == 409
@@ -38,7 +40,7 @@ def test_register_user_rejects_duplicate_email():
 def test_register_user_rejects_short_password():
     response = client.post(
         "/users",
-        json={"full_name": "Ana", "email": "ana2@example.com", "password": "1234567"},
+        json={"full_name": "Ana", "email": "ana2@example.com", "password": "1234567", **CONSENT},
     )
 
     assert response.status_code == 422
@@ -51,6 +53,7 @@ def test_register_user_normalizes_email():
             "full_name": "Ana",
             "email": "  ANA-NORMALIZADA2@Example.COM  ",
             "password": "segura123",
+            **CONSENT,
         },
     )
 
@@ -64,7 +67,7 @@ def test_login_user_returns_bearer_token_for_valid_credentials():
 
     register_response = client.post(
         "/users",
-        json={"full_name": "Login", "email": email, "password": password},
+        json={"full_name": "Login", "email": email, "password": password, **CONSENT},
     )
     assert register_response.status_code == 201
 
@@ -83,7 +86,7 @@ def test_login_user_rejects_wrong_password():
     email = "wrong-password@example.com"
     client.post(
         "/users",
-        json={"full_name": "Login", "email": email, "password": "segura123"},
+        json={"full_name": "Login", "email": email, "password": "segura123", **CONSENT},
     )
 
     response = client.post(

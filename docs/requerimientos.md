@@ -239,7 +239,7 @@ El sistema debe permitir al usuario desactivar su cuenta. La cuenta no se borra 
 - Ningún recordatorio de esa cuenta genera notificaciones.
 
 ### RF-USR-10 · Autorización de tratamiento de datos personales
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe obtener del estudiante, al registrarse, la autorización previa, expresa e informada para tratar sus datos personales, como exige la Ley 1581 de 2012 y su decreto reglamentario 1377 de 2013.
 

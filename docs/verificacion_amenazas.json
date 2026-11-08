@@ -11,12 +11,10 @@
   },
   "por_estado": {
     "Aceptada": 2,
-    "Hecha": 12,
-    "Pendiente": 3
+    "Hecha": 15
   },
   "por_residual": {
-    "Alto": 1,
-    "Bajo": 13,
+    "Bajo": 14,
     "Medio": 3
   },
   "evidencias_inexistentes": [],
