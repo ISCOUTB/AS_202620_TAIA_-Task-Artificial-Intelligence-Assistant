@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../features/auth/options_screen.dart';
 import '../mascot/taia_mascot.dart';
 import '../splash/splash_background.dart';
 import '../theme/taia_colors.dart';
@@ -80,6 +81,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 ),
               ),
             ),
+            // El botón va anclado abajo, fuera de la columna, para que en
+            // pantallas bajas se superponga en vez de desbordar.
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                  child: _Reveal(
+                    parent: _enter,
+                    interval: const Interval(0.65, 1),
+                    child: const _StartButton(),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -113,6 +129,49 @@ class _Reveal extends StatelessWidget {
           end: Offset.zero,
         ).animate(curve),
         child: child,
+      ),
+    );
+  }
+}
+
+/// "Empezar →": lleva a la pantalla de registro / inicio de sesión.
+class _StartButton extends StatelessWidget {
+  const _StartButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: TaiaColors.ivoryMist,
+          foregroundColor: TaiaColors.fieryRose,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: () => Navigator.of(context).push(
+          PageRouteBuilder<void>(
+            transitionDuration: const Duration(milliseconds: 500),
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const OptionsScreen(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) => FadeTransition(opacity: animation, child: child),
+          ),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Empezar', style: TextStyle(fontWeight: FontWeight.w800)),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_rounded),
+          ],
+        ),
       ),
     );
   }
