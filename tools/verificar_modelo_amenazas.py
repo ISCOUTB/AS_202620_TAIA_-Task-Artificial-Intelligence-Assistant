@@ -36,7 +36,8 @@ SECCION_MITIGACIONES = "3. plan de mitigacion"
 # produccion" cuenta como "Hecha"; el matiz queda en el texto de la celda.
 ESTADOS = ("hecha", "pendiente", "aceptada", "en curso")
 
-COLUMNAS_AMENAZAS = ("id", "elemento c4", "stride", "owasp", "amenaza", "p", "i", "prio")
+COLUMNA_ELEMENTO = "elemento c4"
+COLUMNAS_AMENAZAS = ("id", COLUMNA_ELEMENTO, "stride", "owasp", "amenaza", "p", "i", "prio")
 COLUMNAS_MITIGACIONES = ("id", "mitigacion", "dueno", "estado", "evidencia", "residual")
 
 RESIDUALES = ("bajo", "medio", "alto")
@@ -221,7 +222,7 @@ def _leer_amenazas(
         identificador = valor("id")
         if not PATRON_ID.match(identificador):
             problemas.append("fila {} de la seccion 2: id invalido '{}'".format(numero, identificador))
-        for columna in ("elemento c4", "stride", "owasp", "amenaza"):
+        for columna in (COLUMNA_ELEMENTO, "stride", "owasp", "amenaza"):
             if not valor(columna):
                 problemas.append("{}: la columna '{}' esta vacia".format(identificador, columna))
 
@@ -254,7 +255,7 @@ def _leer_amenazas(
         amenazas.append(
             {
                 "id": identificador,
-                "elemento": valor("elemento c4"),
+                "elemento": valor(COLUMNA_ELEMENTO),
                 "stride": valor("stride"),
                 "owasp": valor("owasp"),
                 "amenaza": valor("amenaza"),

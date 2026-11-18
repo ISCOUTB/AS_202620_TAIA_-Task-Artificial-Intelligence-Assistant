@@ -86,9 +86,7 @@ def analizar_lock(texto: str) -> dict[str, dict]:
 
         clave, _, valor = contenido.partition(":")
         valor = _limpiar(valor)
-        if sangria == 4:
-            paquetes[actual][clave.strip()] = valor or None
-        elif sangria == 6:
+        if sangria in (4, 6):
             paquetes[actual][clave.strip()] = valor or None
 
     return paquetes

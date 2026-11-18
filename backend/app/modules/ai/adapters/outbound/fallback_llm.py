@@ -9,14 +9,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import datetime
-from typing import TypeVar
 
 from app.modules.ai.application.ports.llm import LLMError, LLMUsage, LLMPort
 from app.modules.ai.domain.messages import IncomingRequest, Interpretation
 
 logger = logging.getLogger("taia.ai")
-
-T = TypeVar("T")
 
 
 class FallbackLLM(LLMPort):
@@ -41,7 +38,7 @@ class FallbackLLM(LLMPort):
             if close is not None:
                 close()
 
-    def _first_answer(self, call: Callable[[LLMPort], T]) -> T:
+    def _first_answer[T](self, call: Callable[[LLMPort], T]) -> T:
         self._answered = None
         last_error: LLMError | None = None
         for position, provider in enumerate(self._providers):

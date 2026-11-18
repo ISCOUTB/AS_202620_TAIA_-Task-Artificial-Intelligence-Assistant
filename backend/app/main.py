@@ -113,8 +113,10 @@ async def lifespan(app: FastAPI):
     que el pool de conexiones se reutiliza y hay que cerrarlo explicitamente.
     """
 
-    yield
-    llm.close()
+    try:
+        yield
+    finally:
+        llm.close()
 
 
 app = FastAPI(
