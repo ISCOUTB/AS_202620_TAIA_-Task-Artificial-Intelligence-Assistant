@@ -331,13 +331,6 @@ def analizar(
     }
 
 
-def _ruta_en_repositorio(parser: argparse.ArgumentParser, valor: str) -> Path:
-    ruta = Path(valor).resolve()
-    if not ruta.is_relative_to(ROOT):
-        parser.error("La ruta debe estar dentro del repositorio: {}".format(valor))
-    return ruta
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--online", action="store_true", help="Consulta OSV por CVE en el ecosistema Pub.")
@@ -356,7 +349,10 @@ def main() -> int:
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
     if args.json:
-        _ruta_en_repositorio(parser, args.json).write_text(
+        destino = Path(args.json).resolve()
+        if not destino.is_relative_to(ROOT):
+            parser.error("La ruta debe estar dentro del repositorio: {}".format(args.json))
+        destino.write_text(
             json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print("escrito: {}".format(args.json))

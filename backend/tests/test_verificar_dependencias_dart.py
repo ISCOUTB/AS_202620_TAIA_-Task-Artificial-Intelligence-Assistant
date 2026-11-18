@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import urllib.error
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
@@ -201,3 +204,41 @@ def test_pubspec_y_lock_discrepan_en_la_version_de_dart():
 
     assert resultado["sdks"]["dart"] == ">=3.13.1 <4.0.0"
     assert any("pubspec.yaml exige Dart 3.20.0" in p for p in resultado["problemas"])
+
+
+def test_main_rechaza_ruta_fuera_del_repositorio(monkeypatch, tmp_path):
+    destino = tmp_path / "salida.json"
+    monkeypatch.setattr(sys, "argv", ["verificar_dependencias_dart.py", "--json", str(destino)])
+
+    with pytest.raises(SystemExit) as error:
+        verificador.main()
+
+    assert error.value.code == 2
+    assert not destino.exists()
+
+
+def test_main_rechaza_travesia_con_puntos_suspensivos(monkeypatch):
+    escape = verificador.ROOT / ".." / "escape.json"
+    monkeypatch.setattr(sys, "argv", ["verificar_dependencias_dart.py", "--json", str(escape)])
+
+    with pytest.raises(SystemExit) as error:
+        verificador.main()
+
+    assert error.value.code == 2
+
+
+def test_main_escribe_json_dentro_del_repositorio(monkeypatch, tmp_path):
+    lock = tmp_path / "pubspec.lock"
+    pubspec = tmp_path / "pubspec.yaml"
+    lock.write_text(LOCK, encoding="utf-8")
+    pubspec.write_text(PUBSPEC, encoding="utf-8")
+    monkeypatch.setattr(verificador, "ROOT", tmp_path)
+    monkeypatch.setattr(verificador, "LOCK", lock)
+    monkeypatch.setattr(verificador, "PUBSPEC", pubspec)
+    destino = tmp_path / "salida.json"
+    monkeypatch.setattr(sys, "argv", ["verificar_dependencias_dart.py", "--json", str(destino)])
+
+    codigo = verificador.main()
+
+    assert codigo == 0
+    assert json.loads(destino.read_text(encoding="utf-8"))["veredicto"] == "ok"
