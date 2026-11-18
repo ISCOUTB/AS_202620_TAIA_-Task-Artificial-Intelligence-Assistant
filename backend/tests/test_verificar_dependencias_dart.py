@@ -241,4 +241,6 @@ def test_main_escribe_json_dentro_del_repositorio(monkeypatch, tmp_path):
     codigo = verificador.main()
 
     assert codigo == 0
-    assert json.loads(destino.read_text(encoding="utf-8"))["veredicto"] == "ok"
+    resultado = json.loads(destino.read_text(encoding="utf-8"))
+    assert resultado["veredicto"] == "ok"
+    assert resultado["osv_consultado"] is False

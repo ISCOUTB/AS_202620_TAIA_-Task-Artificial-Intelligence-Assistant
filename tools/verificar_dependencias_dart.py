@@ -336,6 +336,7 @@ def main() -> int:
     parser.add_argument("--online", action="store_true", help="Consulta OSV por CVE en el ecosistema Pub.")
     parser.add_argument("--json", help="Ruta opcional para volcar el resultado.")
     args = parser.parse_args()
+    online = True if args.online else False
 
     for ruta in (LOCK, PUBSPEC):
         if not ruta.is_file():
@@ -344,7 +345,7 @@ def main() -> int:
     resultado = analizar(
         LOCK.read_text(encoding="utf-8"),
         PUBSPEC.read_text(encoding="utf-8"),
-        online=args.online,
+        online=online,
     )
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
