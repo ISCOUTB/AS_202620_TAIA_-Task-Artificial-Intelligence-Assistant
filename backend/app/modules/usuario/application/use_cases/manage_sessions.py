@@ -14,6 +14,7 @@ from app.shared.clock import Clock, now_bogota
 
 # RF-USR-03: el token de renovación dura 30 días; el de acceso, 30 minutos.
 REFRESH_TOKEN_LIFETIME = timedelta(days=30)
+MENSAJE_TOKEN_INVALIDO = "Token de renovación inválido o expirado."
 
 
 @dataclass(frozen=True)
@@ -73,21 +74,21 @@ class RefreshSessionUseCase:
         now = self._now()
         record = self._sessions.get_refresh_token(refresh_token)
         if record is None:
-            raise InvalidRefreshTokenError("Token de renovación inválido o expirado.")
+            raise InvalidRefreshTokenError(MENSAJE_TOKEN_INVALIDO)
 
         if record.used:
             # Un token ya rotado solo lo tiene quien lo robó (o el dueño tras el robo):
             # se cierran todas las sesiones del usuario.
             self._sessions.revoke_all(record.user_id, now)
-            raise InvalidRefreshTokenError("Token de renovación inválido o expirado.")
+            raise InvalidRefreshTokenError(MENSAJE_TOKEN_INVALIDO)
 
         if record.session_revoked or record.expires_at <= now:
-            raise InvalidRefreshTokenError("Token de renovación inválido o expirado.")
+            raise InvalidRefreshTokenError(MENSAJE_TOKEN_INVALIDO)
 
         user = self._repository.get_by_id(record.user_id)
         if user is None or user.status is not UserStatus.ACTIVE:
             self._sessions.revoke(record.session_id, now)
-            raise InvalidRefreshTokenError("Token de renovación inválido o expirado.")
+            raise InvalidRefreshTokenError(MENSAJE_TOKEN_INVALIDO)
 
         new_refresh_token = self._token_service.create_refresh_token()
         rotated = self._sessions.rotate_refresh_token(
@@ -96,7 +97,7 @@ class RefreshSessionUseCase:
         if not rotated:
             # Otra petición lo usó entre la lectura y la rotación: misma regla de reutilización.
             self._sessions.revoke_all(record.user_id, now)
-            raise InvalidRefreshTokenError("Token de renovación inválido o expirado.")
+            raise InvalidRefreshTokenError(MENSAJE_TOKEN_INVALIDO)
 
         return TokenPair(
             self._token_service.create_access_token(user, record.session_id),

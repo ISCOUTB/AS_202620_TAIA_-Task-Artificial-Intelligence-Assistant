@@ -83,8 +83,9 @@ def test_network_failure_raises_llm_error():
     def handler(request):
         raise httpx.ConnectTimeout("sin red")
 
+    llm = _groq(handler)
     with pytest.raises(LLMError):
-        _groq(handler).interpret(REQUEST, NOW)
+        llm.interpret(REQUEST, NOW)
 
 
 @pytest.mark.parametrize(
@@ -97,8 +98,9 @@ def test_network_failure_raises_llm_error():
     ],
 )
 def test_malformed_answers_raise_llm_error(response):
+    llm = _groq(lambda request: response)
     with pytest.raises(LLMError):
-        _groq(lambda request: response).interpret(REQUEST, NOW)
+        llm.interpret(REQUEST, NOW)
 
 
 def test_usage_is_recorded_and_length_counts_as_truncated():
@@ -117,8 +119,9 @@ def test_usage_is_recorded_and_length_counts_as_truncated():
 
 def test_answer_system_help_returns_text_and_rejects_empty():
     assert _groq(lambda request: _reply("  TAIA registra tareas.  ")).answer_system_help("que haces") == "TAIA registra tareas."
+    vacio = _groq(lambda request: _reply("   "))
     with pytest.raises(LLMError):
-        _groq(lambda request: _reply("   ")).answer_system_help("que haces")
+        vacio.answer_system_help("que haces")
 
 
 def test_all_from_env_builds_one_adapter_per_configured_key_in_order(monkeypatch):

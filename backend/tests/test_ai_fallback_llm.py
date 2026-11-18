@@ -96,7 +96,8 @@ def test_close_closes_every_provider():
 
     FallbackLLM([first, second]).close()
 
-    assert first.closed and second.closed
+    assert first.closed
+    assert second.closed
 
 
 def test_needs_at_least_one_provider():

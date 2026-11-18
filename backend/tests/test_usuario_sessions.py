@@ -202,7 +202,8 @@ def test_sqlalchemy_repository_stores_only_the_hash(clean_db):
 
     with clean_db() as db:
         stored = db.scalar(text("SELECT token_hash FROM refresh_tokens"))
-    assert stored != "token-en-claro" and len(stored) == 64
+    assert stored != "token-en-claro"
+    assert len(stored) == 64
 
     assert sessions.rotate_refresh_token("token-en-claro", "siguiente", START + timedelta(days=30), START)
     assert not sessions.rotate_refresh_token("token-en-claro", "otro", START + timedelta(days=30), START)
