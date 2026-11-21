@@ -90,7 +90,7 @@ PostgreSQL ordena los `ENUM` por el orden de declaración. Por eso `weekday` se 
 | Usuario | `users` | Cuenta del estudiante | RF-USR-01, 05, 06, 09, 10, RF-TEL-01, 03 | MVP |
 | Usuario | `sessions` | Sesión iniciada en un dispositivo | RF-USR-03, 04, RF-NOT-01 | MVP |
 | Usuario | `refresh_tokens` | Tokens de renovación de una sesión | RF-USR-03 | MVP |
-| Usuario | `password_reset_tokens` | Tokens de recuperación de contraseña | RF-USR-08 | MVP |
+| Usuario | `password_reset_tokens` | Códigos de recuperación de contraseña | RF-USR-08 | MVP |
 | Usuario | `telegram_link_codes` | Códigos temporales de vinculación con Telegram | RF-TEL-01 | MVP |
 | Usuario | `failed_login_attempts` | Intentos fallidos de inicio de sesión | RNF-03 | MVP |
 | Usuario | `password_reset_requests` | Solicitudes de "olvidé mi contraseña" | RF-USR-08, RNF-03 | MVP |
@@ -180,7 +180,7 @@ Cuenta de un estudiante. Nunca se elimina físicamente (RF-USR-09).
 
 **Reglas**
 - Al desactivar la cuenta se desvincula Telegram: `telegram_user_id` y `telegram_linked_at` pasan a `NULL`.
-- La reactivación (D-11) pone `deactivated_at` en `NULL`.
+- La reactivación (RF-USR-09) pone `deactivated_at` en `NULL`.
 - El registro (RF-USR-10) escribe `consent_accepted_at` y `consent_policy_version` en la misma
   transacción que crea la cuenta. Sin aceptación no hay fila.
 - Las cuentas anteriores a RF-USR-10 quedan con ambas columnas en `NULL`: no se inventa una
@@ -234,26 +234,31 @@ Tokens de renovación de una sesión, con rotación de un solo uso (RF-USR-03).
 
 ### 5.4 `password_reset_tokens`
 
-Tokens de recuperación de contraseña (RF-USR-08).
+Códigos de verificación para recuperar la contraseña (RF-USR-08). La tabla conserva el nombre de
+la versión con token.
 
 | Columna | Tipo | Nulo | Por defecto | Descripción |
 |---|---|---|---|---|
 | `id` | `uuid` | No | | Clave primaria. |
 | `user_id` | `uuid` | No | | FK a `users.id`. |
-| `token_hash` | `char(64)` | No | | SHA-256 del token. |
-| `created_at` | `timestamptz` | No | `now()` | Emisión. Se usa para limitar las solicitudes por hora (RNF-03). |
+| `token_hash` | `char(64)` | No | | SHA-256 del código de 6 dígitos. |
+| `failed_attempts` | `smallint` | No | `0` | Intentos con un código incorrecto mientras este código estaba vigente. |
+| `created_at` | `timestamptz` | No | `now()` | Emisión. |
 | `expires_at` | `timestamptz` | No | | Expiración (15 minutos después de la emisión). |
 | `used_at` | `timestamptz` | Sí | | Momento en que se usó. |
 
 **Restricciones**
 - `PRIMARY KEY (id)`
 - `FOREIGN KEY (user_id) REFERENCES users (id)`
-- `UNIQUE (token_hash)`
+- `CHECK (failed_attempts BETWEEN 0 AND 5)`
 - `CHECK (expires_at > created_at)`
 - Índice `(user_id, created_at)`
+- Sin `UNIQUE (token_hash)`: con 6 dígitos, dos usuarios pueden recibir el mismo código. El código
+  se busca siempre junto con el usuario del correo.
 
 **Reglas**
-- Al emitir un token nuevo, los anteriores no usados del mismo usuario se invalidan: su `expires_at` pasa a la hora actual.
+- Al emitir un código nuevo, los anteriores no usados del mismo usuario se invalidan: su `expires_at` pasa a la hora actual.
+- Cada intento con un código incorrecto suma 1 a `failed_attempts` del código vigente. Al llegar a 5, el código se invalida de la misma forma.
 - Retención: 24 horas.
 
 ### 5.5 `telegram_link_codes`
@@ -310,7 +315,7 @@ Solicitudes de "olvidé mi contraseña", para el límite de RNF-03 (RF-USR-08).
 **Reglas**
 - Se inserta una fila por solicitud, exista o no la cuenta. El límite cuenta las filas del correo de
   las últimas 24 horas. Por eso el `429` no revela si la cuenta existe.
-- No reemplaza a `password_reset_tokens`: allí solo hay tokens de cuentas existentes.
+- No reemplaza a `password_reset_tokens`: allí solo hay códigos de cuentas existentes.
 
 **Retención:** 24 horas.
 
@@ -582,7 +587,7 @@ Estado de la conversación con el agente. Hay una por usuario y se comparte entr
 ### 8.2 `conversation_messages`
 
 Mensajes recientes de la conversación. Sirven para dos cosas:
-- El contexto del agente: los últimos 10 mensajes o 4000 caracteres de los últimos 30 minutos (RF-AGT-15).
+- El contexto del agente: los últimos 10 mensajes o 4000 caracteres. Si el último mensaje tiene más de 30 minutos, el contexto empieza vacío (RF-AGT-15).
 - El límite de uso: los mensajes con rol `user` de la última hora y de las últimas 24 horas (RF-AGT-19).
 
 | Columna | Tipo | Nulo | Por defecto | Descripción |
@@ -608,7 +613,7 @@ Se calculan en el dominio o en la consulta y se exponen en la API con estos nomb
 
 | Campo en la API | Entidad | Regla de cálculo | Requerimiento |
 |---|---|---|---|
-| `status` (`active`, `inactive`) | Usuario | `inactive` si `deactivated_at` no es `NULL`. Si además pasaron más de 30 días, la cuenta no se puede reactivar. | RF-USR-09, D-11 |
+| `status` (`active`, `inactive`) | Usuario | `inactive` si `deactivated_at` no es `NULL`. Si además pasaron más de 30 días, la cuenta no se puede reactivar. | RF-USR-09 |
 | `telegram_linked` | Usuario | `telegram_user_id IS NOT NULL` | RF-USR-05 |
 | `status` (`pending`, `completed`, `overdue`) | Tarea | `completed` si `completed_at` no es `NULL`. Si no, `overdue` si `due_at` ya pasó. Si no, `pending`. | RF-TAR-09 |
 | `priority` (`high`, `medium`, `low`) | Tarea pendiente | Según el tiempo que falta para `due_at`: 48 horas o menos, 7 días o menos, o más de 7 días. | RF-TAR-03 |

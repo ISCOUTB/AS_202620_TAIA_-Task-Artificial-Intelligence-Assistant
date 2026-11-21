@@ -126,8 +126,8 @@ El sistema debe permitir registrar un usuario con **nombre completo** (nombres y
 El sistema debe permitir iniciar sesión con su **correo electrónico** y la contraseña. Devuelve un token de acceso y un token de renovación (RF-USR-03).
 
 **Reglas**
-- Si las credenciales no coinciden, el mensaje es genérico ("Credenciales incorrectas") y no revela si la cuenta existe.
-- Una cuenta desactivada no puede iniciar sesión.
+- Si las credenciales no coinciden, el mensaje es genérico (por ejemplo, "Credenciales incorrectas") y no revela si la cuenta existe.
+- Una cuenta desactivada hace más de 30 días no puede iniciar sesión. Dentro de ese plazo, iniciar sesión la reactiva (RF-USR-09).
 - Aplica límite de intentos (RNF-03).
 
 **Criterios de aceptación**
@@ -200,15 +200,18 @@ El sistema debe permitir cambiar la contraseña indicando la contraseña actual 
 ### RF-USR-08 · Recuperar contraseña ("Olvidé mi contraseña")
 **Prioridad:** MVP · **Estado:** Pendiente
 
-El sistema debe permitir restablecer la contraseña mediante un token de recuperación enviado al correo del usuario.
+El sistema debe permitir restablecer la contraseña mediante un código de verificación enviado al correo del usuario.
 
 **Reglas**
 - La solicitud recibe el correo y **siempre** responde lo mismo (`202`), exista o no la cuenta.
-- El token de recuperación:
-  - Es aleatorio y criptográficamente seguro, de al menos 32 bytes.
+- El código de verificación:
+  - Tiene 6 dígitos, generados de forma aleatoria y criptográficamente segura.
   - Es de un solo uso.
   - Expira en 15 minutos.
   - Se almacena solo como hash.
+  - Admite como máximo 5 intentos fallidos. Al quinto queda invalidado y hay que solicitar otro.
+- Para restablecer, el usuario envía su correo, el código y la nueva contraseña, que cumple las reglas de RF-USR-01.
+- Un correo inexistente y un código incorrecto, vencido, usado o invalidado reciben el mismo `400`, sin indicar la causa.
 - Solicitar uno nuevo invalida los anteriores.
 - Al restablecer la contraseña se revocan todas las sesiones del usuario.
 - Aplica el límite de solicitudes por correo de RNF-03: 3 en las últimas 24 horas.
@@ -221,8 +224,9 @@ El sistema debe permitir restablecer la contraseña mediante un token de recuper
 **Criterios de aceptación**
 - Solicitud con un correo inexistente → `202`, igual que con un correo existente, y no se envía nada.
 - Cuarta solicitud con el mismo correo en 24 horas → `429`, exista o no la cuenta.
-- Restablecer con un token válido → `200`. Reutilizar ese token → `400`.
-- Restablecer con un token expirado → `400`.
+- Restablecer con un código válido → `200`. Reutilizar ese código → `400`.
+- Restablecer con un código expirado → `400`.
+- Después de 5 intentos con un código incorrecto, el código correcto también → `400`.
 
 ### RF-USR-09 · Desactivar cuenta
 **Prioridad:** MVP · **Estado:** Pendiente
@@ -237,7 +241,8 @@ El sistema debe permitir al usuario desactivar su cuenta. La cuenta no se borra 
   - Se eliminan los tokens de dispositivo.
   - Se cancelan los recordatorios pendientes.
 - Los datos de una cuenta inactiva no son accesibles por ningún canal (API, Telegram ni agente).
-- El correo sigue reservado (la reactivación se describe en D-11).
+- El correo sigue reservado.
+- Reactivación: iniciar sesión con la contraseña correcta dentro de los 30 días siguientes a la desactivación reactiva la cuenta (`deactivated_at` vuelve a `NULL`). Lo cancelado al desactivar no se restaura: Telegram se vuelve a vincular y los recordatorios cancelados no vuelven. Pasados 30 días, la cuenta ya no se reactiva.
 
 **Criterios de aceptación**
 - Después de desactivar, usar un token previo → `401`.
@@ -388,9 +393,13 @@ Al crear una actividad, el sistema debe preguntar al usuario si quiere recordato
 
 En la aplicación la opción por defecto preseleccionada es la política por defecto. Cuando la actividad se crea con el agente sin especificar nada, se aplica la política por defecto (RF-AGT-07).
 
+**Reglas**
+- Los personalizados admiten como máximo 10 fechas. Cada una cumple las reglas de RF-REC-01: futura y anterior a la fecha límite.
+
 **Criterios de aceptación**
 - Crear con la política por defecto → los recordatorios se generan en la misma operación.
 - Crear con "sin recordatorios" → no se genera ninguno.
+- Crear con 11 fechas personalizadas → `422`, y la actividad no se crea.
 
 ### RF-TAR-03 · Prioridad calculada por fecha límite
 **Prioridad:** MVP · **Estado:** Implementado
@@ -477,7 +486,7 @@ El sistema debe permitir eliminar una actividad propia. **Solo el usuario puede 
 
 **Reglas**
 - La eliminación es lógica (RT-04): la actividad deja de aparecer en listados, consultas del agente y estadísticas.
-- En la misma transacción se cancelan sus recordatorios pendientes y se descartan sus notificaciones sin enviar.
+- En la misma operación se cancelan sus recordatorios pendientes y se descartan sus notificaciones sin enviar. Si esa cancelación falla, el envío tampoco notifica, porque comprueba que la actividad no esté eliminada (RF-NOT-02).
 - La aplicación pide confirmación antes de enviar la solicitud.
 
 **Criterios de aceptación**
@@ -495,6 +504,12 @@ El sistema debe permitir consultar, para un rango de fechas (por ejemplo, un mes
 - Bloques de clase proyectados en cada fecha del rango.
 
 La aplicación usa esta consulta para la vista de calendario.
+
+**Reglas**
+- El rango incluye el día inicial y el final, y abarca como máximo 31 días.
+
+**Criterios de aceptación**
+- Un rango con el final antes del inicio, o de más de 31 días → `422`.
 
 ---
 
@@ -644,7 +659,7 @@ El sistema debe recibir los mensajes que el usuario escribe al bot y procesarlos
 **Reglas**
 - La identidad del usuario se resuelve por la vinculación (`telegram_user_id` → usuario TAIA).
 - Si la cuenta de Telegram no está vinculada, el bot responde únicamente con instrucciones para vincularla y no procesa la solicitud.
-- Si la cuenta TAIA está inactiva, el bot no da información.
+- Si la cuenta TAIA está inactiva, el bot responde con un mensaje fijo ("No puedo atender esta solicitud.") y no da información de la cuenta.
 
 ---
 
@@ -711,7 +726,7 @@ El agente debe extraer del mensaje, en **una sola llamada** al LLM, la asignatur
 **Reglas**
 - Las fechas relativas ("el próximo lunes", "mañana a las 8") se resuelven con la fecha y hora actual de Colombia (RT-03), que se envía al LLM.
 - Si no hay hora, se asume 23:59.
-- La asignatura se resuelve contra las asignaturas del usuario (RF-AGT-10). Si no se identifica ninguna, o hay varias candidatas, el agente pregunta mostrando las opciones (máximo 5).
+- La asignatura se resuelve contra las asignaturas del usuario (RF-AGT-10). Si no se identifica ninguna, o hay varias candidatas, el agente pregunta mostrando las opciones (máximo 5). No guarda la solicitud a medias: el usuario la escribe de nuevo con la asignatura.
 - Si falta la fecha límite, el agente la pide.
 - Las validaciones finales las hace el módulo académico (RT-06).
 
@@ -777,6 +792,8 @@ El agente responde "dame el resumen de tareas de este mes" o "¿cuántas tareas 
 
 **Reglas**
 - Los conteos los calcula el backend. El LLM no hace cálculos.
+- Una actividad pertenece al período por su fecha límite. La próxima por vencer es la primera actividad pendiente del período.
+- Si el mensaje no indica el período, el agente lo pregunta.
 - Se usa una plantilla fija para la respuesta.
 - No incluye gráficos ni análisis de rendimiento, que pertenecen al perfil (RF-PRF-01).
 
@@ -784,6 +801,11 @@ El agente responde "dame el resumen de tareas de este mes" o "¿cuántas tareas 
 **Prioridad:** MVP · **Estado:** Pendiente
 
 El agente responde "¿qué clases tengo mañana?" o "¿a qué hora tengo Física el jueves?" usando el horario registrado (RF-ASG-06).
+
+**Reglas**
+- Si el mensaje no indica el período, el agente lo pregunta.
+- La respuesta lista como máximo 10 clases ordenadas por hora de inicio. Si hay más, indica cuántas faltan ("…y 4 más").
+- La respuesta se arma con plantillas fijas, sin una segunda llamada al LLM.
 
 ### RF-AGT-14 · Ayuda sobre TAIA
 **Prioridad:** MVP · **Estado:** Parcial
@@ -906,6 +928,11 @@ El perfil del usuario muestra gráficos simples de un período seleccionable (se
 - El backend expone los datos ya agregados. El cliente no calcula estadísticas a partir de listados completos.
 - "A tiempo" significa que `completed_at` es igual o anterior a la fecha límite.
 - Las actividades eliminadas no cuentan. Las de asignaturas archivadas sí.
+- Estado, cumplimiento a tiempo y carga cuentan las actividades cuya fecha límite cae en el período. El estado se calcula en el momento de la consulta.
+- "Completadas por semana" cuenta por `completed_at`, en las 8 semanas de lunes a domingo que terminan en la actual, sin importar el período elegido.
+- La carga por asignatura cuenta las no completadas: pendientes y vencidas.
+- El porcentaje de cumplimiento se redondea a un decimal. Sin actividades completadas, no hay porcentaje.
+- Próximos vencimientos: las no completadas cuya fecha límite cae en los 7 días siguientes a la consulta.
 - Cada gráfico tiene un título en forma de pregunta o afirmación clara, ejes y leyendas legibles, y un estado vacío con un mensaje ("Aún no has completado tareas este mes").
 
 ---
@@ -916,7 +943,7 @@ Mínimos iniciales. Los escenarios de calidad detallados están en `docs/calidad
 
 | ID | Categoría | Requerimiento |
 |---|---|---|
-| RNF-01 | Seguridad | Contraseñas con hash y sal (PBKDF2-SHA256 con ≥310 000 iteraciones, o Argon2). Tokens de renovación, recuperación y vinculación almacenados solo como hash. |
+| RNF-01 | Seguridad | Contraseñas con hash y sal (PBKDF2-SHA256 con ≥310 000 iteraciones, o Argon2). Tokens de renovación y códigos de recuperación y de vinculación almacenados solo como hash. |
 | RNF-02 | Seguridad | Secretos (JWT, Gemini, Groq, Telegram, Firebase, base de datos) solo por variables de entorno. Si falta el secreto JWT en producción, el sistema no arranca (sin valor por defecto). |
 | RNF-03 | Seguridad | Límite de intentos: login 5 fallos por identificador cada 15 minutos; "olvidé mi contraseña" 3 por correo en las últimas 24 horas, contadas para cualquier correo (RF-USR-08). |
 | RNF-04 | Seguridad | Comunicación solo por HTTPS en despliegue. |
