@@ -6,6 +6,9 @@ Aceptado por el equipo el 2026-10-30; redactado con apoyo de IA a pedido del equ
 parcialmente a [ADR-0007](0007-comportamiento-ante-fallo-del-proveedor-llm.md)** en su punto 4
 ("sin reintentos automáticos ni respaldo"). El resto de ADR-0007 sigue vigente.
 
+**Reemplazado por [ADR-0013](0013-usar-groq-como-proveedor-llm-principal.md)** el 2026-11-20, solo
+en el orden de los proveedores: Groq pasa a ser el principal y Gemini, el respaldo.
+
 Implementación pendiente; dueño: dei0811 (amenaza T-15 de [modelo_amenazas.md](../modelo_amenazas.md)).
 
 ## Contexto
