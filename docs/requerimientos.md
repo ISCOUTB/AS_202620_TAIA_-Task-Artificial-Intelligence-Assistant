@@ -213,13 +213,15 @@ El sistema debe permitir restablecer la contraseña mediante un código de verif
 - Para restablecer, el usuario envía su correo, el código y la nueva contraseña, que cumple las reglas de RF-USR-01.
 - Un correo inexistente y un código incorrecto, vencido, usado o invalidado reciben el mismo `400`, sin indicar la causa.
 - Solicitar uno nuevo invalida los anteriores.
+- El correo se envía después de responder, para que el tiempo de respuesta no revele si la cuenta existe. Si el envío falla, la respuesta sigue siendo `202` y el error queda en el log.
+- Una cuenta desactivada también puede restablecer su contraseña.
 - Al restablecer la contraseña se revocan todas las sesiones del usuario.
 - Aplica el límite de solicitudes por correo de RNF-03: 3 en las últimas 24 horas.
   - Se cuenta para cualquier correo escrito, exista o no la cuenta. Así, el aviso no revela qué
     correos están registrados.
   - Al superar el límite, la respuesta es `429` con un mensaje que avisa al usuario que agotó sus
     solicitudes por hoy. Es la misma respuesta para correos existentes e inexistentes, y no se
-    envía nada.
+    envía nada. Una solicitud rechazada con `429` no se cuenta.
 
 **Criterios de aceptación**
 - Solicitud con un correo inexistente → `202`, igual que con un correo existente, y no se envía nada.
@@ -347,6 +349,9 @@ El sistema debe permitir:
 **Prioridad:** Deseable · **Estado:** Parcial
 
 El sistema debería permitir definir la fecha de inicio y de fin del período académico (semestre), para que el horario solo se muestre y se use en el plan de estudio dentro de ese rango.
+
+**Reglas**
+- El período limita las vistas con fecha: el calendario (RF-TAR-11), las clases que consulta el agente (RF-AGT-13) y el plan de estudio. El horario semanal que el usuario edita (RF-ASG-07) no tiene fechas y se muestra completo.
 
 ### RF-ASG-09 · Alias de asignatura
 **Prioridad:** Deseable · **Estado:** Implementado
