@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "880272876928",
+    "project_id": "taia-f16e1",
+    "storage_bucket": "taia-f16e1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880272876928:android:75dbab84e66a039a9bcd65",
+        "android_client_info": {
+          "package_name": "com.taia.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4h_hDc4qmjZhtIp4k1rvknuHZnrwJjDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
