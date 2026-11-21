@@ -93,6 +93,7 @@ PostgreSQL ordena los `ENUM` por el orden de declaración. Por eso `weekday` se 
 | Usuario | `password_reset_tokens` | Tokens de recuperación de contraseña | RF-USR-08 | MVP |
 | Usuario | `telegram_link_codes` | Códigos temporales de vinculación con Telegram | RF-TEL-01 | MVP |
 | Usuario | `failed_login_attempts` | Intentos fallidos de inicio de sesión | RNF-03 | MVP |
+| Usuario | `password_reset_requests` | Solicitudes de "olvidé mi contraseña" | RF-USR-08, RNF-03 | MVP |
 | Academic | `subjects` | Asignaturas | RF-ASG-01…05 | MVP |
 | Academic | `subject_aliases` | Alias de asignaturas | RF-ASG-09 | Deseable |
 | Academic | `academic_periods` | Período académico del usuario | RF-ASG-08 | Deseable |
@@ -289,6 +290,27 @@ Intentos fallidos de inicio de sesión, para el límite de intentos (RNF-03).
 **Restricciones**
 - `PRIMARY KEY (id)`
 - Índice `(email, attempted_at)`
+
+**Retención:** 24 horas.
+
+### 5.7 `password_reset_requests`
+
+Solicitudes de "olvidé mi contraseña", para el límite de RNF-03 (RF-USR-08).
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `id` | `bigint` | No | identity | Clave primaria. |
+| `email` | `varchar(254)` | No | | Correo normalizado de la solicitud. No es FK: se registra también cuando el correo no existe. |
+| `requested_at` | `timestamptz` | No | `now()` | Momento de la solicitud. |
+
+**Restricciones**
+- `PRIMARY KEY (id)`
+- Índice `(email, requested_at)`
+
+**Reglas**
+- Se inserta una fila por solicitud, exista o no la cuenta. El límite cuenta las filas del correo de
+  las últimas 24 horas. Por eso el `429` no revela si la cuenta existe.
+- No reemplaza a `password_reset_tokens`: allí solo hay tokens de cuentas existentes.
 
 **Retención:** 24 horas.
 

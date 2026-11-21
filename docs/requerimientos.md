@@ -211,10 +211,16 @@ El sistema debe permitir restablecer la contraseña mediante un token de recuper
   - Se almacena solo como hash.
 - Solicitar uno nuevo invalida los anteriores.
 - Al restablecer la contraseña se revocan todas las sesiones del usuario.
-- Aplica límite de solicitudes por correo y por IP (RNF-03).
+- Aplica el límite de solicitudes por correo de RNF-03: 3 en las últimas 24 horas.
+  - Se cuenta para cualquier correo escrito, exista o no la cuenta. Así, el aviso no revela qué
+    correos están registrados.
+  - Al superar el límite, la respuesta es `429` con un mensaje que avisa al usuario que agotó sus
+    solicitudes por hoy. Es la misma respuesta para correos existentes e inexistentes, y no se
+    envía nada.
 
 **Criterios de aceptación**
 - Solicitud con un correo inexistente → `202`, igual que con un correo existente, y no se envía nada.
+- Cuarta solicitud con el mismo correo en 24 horas → `429`, exista o no la cuenta.
 - Restablecer con un token válido → `200`. Reutilizar ese token → `400`.
 - Restablecer con un token expirado → `400`.
 
@@ -912,7 +918,7 @@ Mínimos iniciales. Los escenarios de calidad detallados están en `docs/calidad
 |---|---|---|
 | RNF-01 | Seguridad | Contraseñas con hash y sal (PBKDF2-SHA256 con ≥310 000 iteraciones, o Argon2). Tokens de renovación, recuperación y vinculación almacenados solo como hash. |
 | RNF-02 | Seguridad | Secretos (JWT, Gemini, Groq, Telegram, Firebase, base de datos) solo por variables de entorno. Si falta el secreto JWT en producción, el sistema no arranca (sin valor por defecto). |
-| RNF-03 | Seguridad | Límite de intentos: login 5 fallos por identificador cada 15 minutos; "olvidé mi contraseña" 3 por correo cada hora. |
+| RNF-03 | Seguridad | Límite de intentos: login 5 fallos por identificador cada 15 minutos; "olvidé mi contraseña" 3 por correo en las últimas 24 horas, contadas para cualquier correo (RF-USR-08). |
 | RNF-04 | Seguridad | Comunicación solo por HTTPS en despliegue. |
 | RNF-05 | Privacidad | Los logs no contienen contraseñas, tokens ni mensajes completos del usuario al agente. Los identificadores de usuario sí se permiten. |
 | RNF-06 | Persistencia | Toda la información persiste en PostgreSQL con migraciones versionadas. Las relaciones tienen claves foráneas e índices por `user_id`, `subject_id` y fecha límite. |

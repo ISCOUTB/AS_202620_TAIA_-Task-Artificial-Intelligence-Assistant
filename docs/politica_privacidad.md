@@ -40,6 +40,7 @@ que no estén aquí.
 | Mensajes al agente | `conversation_messages`, 24 h | Interpretar la solicitud y responder | Sí para usar el chat |
 | Token de dispositivo (FCM) | `sessions.fcm_token` | Notificaciones push (RF-NOT, pendiente) | No: solo si se activan las notificaciones |
 | Correo de intentos fallidos | `failed_login_attempts`, 24 h | Frenar fuerza bruta (RNF-03) | Automático, por seguridad |
+| Correo de solicitudes de recuperación | `password_reset_requests`, 24 h | Limitar "olvidé mi contraseña" (RNF-03) | Automático, por seguridad |
 | `user_id` en los logs | stdout del contenedor | Operación y diagnóstico (RNF-05) | Automático |
 
 **No se recogen:** teléfono (D-09), dirección, ubicación, documentos de identidad, datos de salud,
@@ -93,6 +94,7 @@ envía con el `user_id` solo del lado de TAIA.
 | Cuenta, nombre, correo, contraseña y datos académicos | Mientras la cuenta esté activa. Desactivarla no la borra (RT-04, RF-USR-09) |
 | Mensajes al agente | 24 horas; después se borran físicamente |
 | Intentos fallidos de inicio de sesión | 24 horas |
+| Solicitudes de recuperación de contraseña | 24 horas |
 | Tokens de sesión, renovación y recuperación vencidos | Se revocan y se eliminan al vencer |
 | Logs de la aplicación | Los del contenedor, según la retención de Dokploy |
 

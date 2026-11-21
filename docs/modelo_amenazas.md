@@ -146,6 +146,7 @@ Pub no reporta avisos. El resultado queda en
 | Tareas, asignaturas, horario y período | Módulo Academic | Organizar la vida académica | Supabase; título de la tarea a Telegram en un recordatorio |
 | Mensajes al agente | `conversation_messages`, 24 h | Interpretar la solicitud | Proveedor LLM: solo el texto, sin identificadores |
 | Correo de intentos fallidos | `failed_login_attempts`, 24 h | Seguridad (RNF-03) | No sale |
+| Correo de solicitudes de recuperación | `password_reset_requests`, 24 h | Seguridad (RNF-03) | No sale |
 | `user_id` en los logs | stdout del contenedor | Operación (RNF-05) | Dokploy |
 
 **Base del tratamiento.** La Ley 1581 de 2012 y su decreto reglamentario 1377 de 2013 exigen la
