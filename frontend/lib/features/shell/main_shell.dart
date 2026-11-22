@@ -38,7 +38,21 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    _push?.onForegroundMessage = _showForegroundNotification;
     _push?.start();
+  }
+
+  /// Con la app abierta, Android no muestra la notificación: se avisa aquí.
+  void _showForegroundNotification(String message) {
+    if (!mounted || message.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: TaiaColors.fieryRose,
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   @override

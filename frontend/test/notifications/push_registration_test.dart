@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taia/features/notifications/notifications_service.dart';
 import 'package:taia/features/notifications/push_registration.dart';
 
 import '../support/fake_api.dart';
@@ -51,5 +52,27 @@ void main() {
     await push.stop();
 
     expect(api.requests, isEmpty);
+  });
+
+  test('RF-NOT-02 · una notificación con la app abierta se avisa y actualiza la campana', () async {
+    final api = FakeApi((_) => const FakeResponse(204));
+    final messages = StreamController<String>();
+    final shown = <String>[];
+    final before = inboxChanges.value;
+    final push = PushRegistration(
+      api.dio(),
+      getToken: () async => null,
+      onTokenRefresh: const Stream.empty(),
+      foregroundMessages: messages.stream,
+    )..onForegroundMessage = shown.add;
+
+    await push.start();
+    messages.add('Recuerda: Informe (Cálculo) vence el 23/11/2026 08:00');
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(shown, ['Recuerda: Informe (Cálculo) vence el 23/11/2026 08:00']);
+    expect(inboxChanges.value, before + 1);
+    await push.stop();
+    await messages.close();
   });
 }

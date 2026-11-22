@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/api_client.dart';
 import '../../core/api_error.dart';
@@ -69,3 +70,9 @@ class NotificationsService {
 }
 
 final NotificationsService notificationsService = NotificationsService(apiDio);
+
+/// Cambia cada vez que llega una notificación con la app abierta; las campanas
+/// lo escuchan para actualizar el contador (RF-NOT-03).
+final ValueNotifier<int> inboxChanges = ValueNotifier<int>(0);
+
+void notifyInboxChanged() => inboxChanges.value++;

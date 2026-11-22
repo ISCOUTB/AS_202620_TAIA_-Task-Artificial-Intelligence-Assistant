@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/api_client.dart';
+import 'notifications_service.dart';
 
 /// Registra el token FCM del dispositivo en la sesión actual (RF-NOT-01) y lo
 /// vuelve a enviar si Firebase lo renueva. Al cerrar sesión el servidor lo
@@ -16,6 +17,7 @@ class PushRegistration {
     required this.getToken,
     required this.onTokenRefresh,
     this.requestPermission,
+    this.foregroundMessages,
   });
 
   final Dio _dio;
@@ -25,7 +27,15 @@ class PushRegistration {
   /// En Android 13 o superior pide el permiso de notificaciones.
   final Future<void> Function()? requestPermission;
 
+  /// Texto de las notificaciones que llegan con la app abierta. Android no las
+  /// muestra solo en ese caso, así que la app las avisa ([onForegroundMessage]).
+  final Stream<String>? foregroundMessages;
+
+  /// Lo asigna la pantalla principal para mostrar el aviso.
+  void Function(String message)? onForegroundMessage;
+
   StreamSubscription<String>? _subscription;
+  StreamSubscription<String>? _foreground;
 
   /// Sin token o sin red, la app sigue funcionando: solo no habrá push y las
   /// notificaciones quedan en la bandeja (RF-NOT-04).
@@ -38,11 +48,18 @@ class PushRegistration {
       debugPrint('push_registration_failed: $error');
     }
     _subscription ??= onTokenRefresh.listen(_send);
+    _foreground ??= foregroundMessages?.listen((message) {
+      // La bandeja ya tiene la notificación: la campana vuelve a contar.
+      notifyInboxChanged();
+      onForegroundMessage?.call(message);
+    });
   }
 
   Future<void> stop() async {
     await _subscription?.cancel();
+    await _foreground?.cancel();
     _subscription = null;
+    _foreground = null;
   }
 
   Future<void> _send(String token) async {
@@ -74,5 +91,8 @@ PushRegistration? buildPushRegistration() {
     // ignore: deprecated_member_use
     onTokenRefresh: messaging.onTokenRefresh,
     requestPermission: () => messaging.requestPermission(),
+    foregroundMessages: FirebaseMessaging.onMessage.map(
+      (message) => message.notification?.body ?? '',
+    ),
   );
 }

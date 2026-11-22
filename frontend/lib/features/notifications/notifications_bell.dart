@@ -25,7 +25,14 @@ class _NotificationsBellState extends State<NotificationsBell> {
   @override
   void initState() {
     super.initState();
+    inboxChanges.addListener(_loadCount);
     _loadCount();
+  }
+
+  @override
+  void dispose() {
+    inboxChanges.removeListener(_loadCount);
+    super.dispose();
   }
 
   /// Si el contador no carga, la campana se muestra sin número.
