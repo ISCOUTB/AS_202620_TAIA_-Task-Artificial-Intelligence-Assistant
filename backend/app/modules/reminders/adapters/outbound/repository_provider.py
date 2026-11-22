@@ -1,7 +1,15 @@
-from app.modules.reminders.application.ports.outbound.reminder_repository import ReminderRepository
-from app.modules.reminders.adapters.outbound.sqlalchemy_reminder_repository import SQLAlchemyReminderRepository
+"""Repositorios de Reminders sobre la conexión compartida; los compone `main.py`."""
+
+from app.modules.reminders.adapters.outbound.sqlalchemy_reminder_repository import (
+    SQLAlchemyNotificationRepository,
+    SQLAlchemyReminderRepository,
+)
 from app.shared.adapters.outbound.database import get_session_factory
 
-_repository: ReminderRepository = SQLAlchemyReminderRepository(get_session_factory())
-def get_reminder_repository() -> ReminderRepository:
-    return _repository
+
+def get_reminder_repository() -> SQLAlchemyReminderRepository:
+    return SQLAlchemyReminderRepository(get_session_factory())
+
+
+def get_notification_repository() -> SQLAlchemyNotificationRepository:
+    return SQLAlchemyNotificationRepository(get_session_factory())

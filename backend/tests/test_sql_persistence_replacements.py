@@ -9,15 +9,12 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from sqlalchemy import text
 
 from app.modules.ai.adapters.outbound import sqlalchemy_conversation_store
 from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import SqlAlchemyConversationStore
 from app.modules.ai.domain.conversation import Conversation
 from app.modules.ai.domain.messages import ActionKind, ExtractedTaskData, PendingAction
-from app.modules.reminders.adapters.outbound.sqlalchemy_reminder_repository import SQLAlchemyReminderRepository
-from app.modules.reminders.domain.entities import Notification, Reminder
 from app.modules.usuario.adapters.outbound.sqlalchemy_telegram_link_repository import SqlAlchemyTelegramLinkRepository
 from app.modules.usuario.adapters.outbound.sqlalchemy_user_repository import UserModel
 from app.modules.usuario.application.ports.outbound.telegram_link_repository import TelegramLinkToken
@@ -42,38 +39,6 @@ def test_telegram_link_token_round_trip_uses_hash(clean_db):
 
     repository.mark_used("secret-code")
     assert repository.get("secret-code").used is True
-
-
-def test_reminders_and_notifications_round_trip(clean_db):
-    repository = SQLAlchemyReminderRepository(clean_db)
-    reminder = Reminder(
-        id=repository.next_id(),
-        user_id=uuid.uuid4(),
-        task_id=uuid.uuid4(),
-        message="Entregar informe",
-        scheduled_at=datetime.now(timezone.utc) + timedelta(days=1),
-    )
-    repository.create(reminder)
-    assert repository.get_by_id(reminder.id).message == "Entregar informe"
-    assert repository.list_by_user(reminder.user_id)[0].id == reminder.id
-
-    repository.update(reminder.mark_completed())
-    assert repository.get_by_id(reminder.id).is_completed is True
-
-    notification = Notification(
-        reminder_id=reminder.id,
-        message=reminder.message,
-        date_send=datetime.now(timezone.utc),
-    )
-    repository.create_notification(notification)
-    repository.record_notification_attempt(notification, sent=True)
-    with clean_db() as session:
-        assert session.scalar(text("SELECT count(*) FROM notifications")) == 1
-        assert session.scalar(text("SELECT status FROM reminders")) == "sent"
-        assert session.scalar(text("SELECT push_attempts FROM notifications")) == 1
-
-    with pytest.raises(ValueError, match="enviado"):
-        repository.delete(reminder.id)
 
 
 def test_conversation_and_pending_action_round_trip(clean_db):

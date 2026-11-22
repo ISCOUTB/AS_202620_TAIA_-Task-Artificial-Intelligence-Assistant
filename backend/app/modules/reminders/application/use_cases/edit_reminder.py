@@ -1,50 +1,57 @@
+"""RF-REC-04 · Editar un recordatorio pendiente."""
+
+from __future__ import annotations
+
+from dataclasses import replace
 from datetime import datetime
 from uuid import UUID
 
-from app.modules.reminders.application.errors import ReminderNotFoundError
-from app.modules.reminders.application.ports.inbound.reminder_ports import (
-    EditReminderPort,
+from app.modules.reminders.application.errors import ReminderStateError
+from app.modules.reminders.application.ports.inbound.reminder_ports import EditReminderPort
+from app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup
+from app.modules.reminders.application.ports.outbound.reminder_repository import ReminderRepository
+from app.modules.reminders.application.reminder_rules import (
+    clean_message,
+    require_open_task,
+    validate_schedule,
 )
-from app.modules.reminders.application.ports.outbound.reminder_repository import (
-    ReminderRepository,
-)
-from app.modules.reminders.domain.entities import Reminder
-from app.shared.clock import Clock, as_bogota, now_bogota
+from app.modules.reminders.application.use_cases.get_reminder import get_owned
+from app.modules.reminders.domain.entities import Reminder, ReminderOrigin
+from app.shared.clock import Clock, now_bogota
+
+NOT_PENDING = "Solo se puede editar un recordatorio pendiente."
 
 
 class EditReminderUseCase(EditReminderPort):
-    """Edits the message and/or scheduled date of an existing reminder."""
+    """Aplican las reglas de RF-REC-01. Un automático editado pasa a `custom`."""
 
-    def __init__(self, repository: ReminderRepository, now_provider: Clock | None = None):
+    def __init__(
+        self, repository: ReminderRepository, tasks: AcademicTaskLookup, clock: Clock = now_bogota
+    ) -> None:
         self._repository = repository
-        self._now_provider = now_provider or now_bogota
+        self._tasks = tasks
+        self._clock = clock
 
     def execute(
         self,
         reminder_id: UUID,
         user_id: UUID,
-        message: str | None = None,
-        scheduled_at: datetime | None = None,
+        scheduled_at: datetime | None,
+        custom_message: str | None,
     ) -> Reminder:
-        reminder = self._repository.get_by_id(reminder_id)
-        if reminder is None or reminder.user_id != user_id:
-            raise ReminderNotFoundError("Recordatorio no encontrado")
-
-        if reminder.is_completed:
-            raise ValueError("No se puede editar un recordatorio ya completado")
-
-        if message is not None and not message.strip():
-            raise ValueError("El mensaje no puede estar vacío")
-
-        if scheduled_at is not None:
-            scheduled_at = as_bogota(scheduled_at)
-            if scheduled_at <= self._now_provider():
-                raise ValueError("La fecha programada debe ser futura")
-
-        updated = reminder.model_copy(
-            update={
-                "message": message.strip() if message is not None else reminder.message,
-                "scheduled_at": scheduled_at if scheduled_at is not None else reminder.scheduled_at,
-            }
+        reminder = get_owned(self._repository, reminder_id, user_id)
+        if not reminder.is_pending:
+            raise ReminderStateError(NOT_PENDING)
+        if scheduled_at is None and custom_message is None:
+            return reminder
+        message = clean_message(custom_message)
+        task = require_open_task(self._tasks, reminder.task_id, user_id)
+        edited = replace(
+            reminder,
+            scheduled_at=validate_schedule(scheduled_at or reminder.scheduled_at, self._clock(), task.due_at),
+            custom_message=message if message is not None else reminder.custom_message,
+            origin=ReminderOrigin.CUSTOM,
         )
-        return self._repository.update(updated)
+        if not self._repository.update_pending(edited):
+            raise ReminderStateError(NOT_PENDING)
+        return edited
