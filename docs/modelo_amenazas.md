@@ -33,6 +33,7 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | T-08 | Usuario (sesiones) | Spoofing | A07 | Un JWT robado sigue válido y no se puede revocar | 2 | 2 | 4 |
 | T-14 | API TAIA (logs) | Repudiation | A09 | Ataques sin registro ni alerta | 2 | 2 | 4 |
 | T-16 | App Móvil | Info. disclosure | A02 | Respaldo de datos de la app y tráfico en claro en Android | 2 | 2 | 4 |
+| T-18 | App Móvil (configuración de Firebase) | Info. disclosure | A02 | La clave de cliente de Google que genera `flutterfire` está en el repositorio y en el APK; sin restricciones serviría para llamar otras API del proyecto, como Gemini | 2 | 2 | 4 |
 | T-11 | API TAIA (`/metrics`, `/docs`) | Info. disclosure | A02 | Reconocimiento de rutas y tráfico sin sesión | 3 | 1 | 3 |
 | T-13 | Base de Datos (`users`) | Info. disclosure | A04 | Contraseñas legibles si se filtra la base | 1 | 3 | 3 |
 | T-03 | AI (contexto) | Tampering | LLM04 | Envenenamiento del contexto conversacional | 1 | 2 | 2 |
@@ -43,18 +44,19 @@ y las amenazas aceptadas en [arc42 §11.13](arc42/11-riesgos-y-deudas-tecnicas.m
 | ID | Mitigación | Dueño | Estado | Evidencia | Residual |
 |---|---|---|---|---|---|
 | T-06 | 30 mensajes por hora y 200 por día; `429` sin llamar al LLM (RF-AGT-19) | luis20072002 | Hecha | `1a3696a`, [prueba](../backend/tests/test_ai_usage_limit.py) | Bajo |
-| T-07 | 5 fallos por correo cada 15 min; `429` (RNF-03) | luis20072002 | Hecha | `14c487e`, [prueba](../backend/tests/test_usuario_login_rate_limit.py) | Bajo |
-| T-10 | Webhook con `X-Telegram-Bot-Api-Secret-Token`; el id sale del update (RF-TEL-02) | luis20072002 | Hecha | `2c69809`, [prueba](../backend/tests/test_usuario_telegram_link.py) | Bajo |
+| T-07 | 5 fallos por correo cada 15 min; `429` (RNF-03). Recuperación de contraseña: 3 solicitudes por correo en 24 horas para cualquier correo, código de 6 dígitos guardado como hash e invalidado tras 5 intentos (RF-USR-08) | luis20072002 | Hecha | `14c487e`, [prueba](../backend/tests/test_usuario_login_rate_limit.py), [prueba de recuperación](../backend/tests/test_usuario_password_reset.py) | Bajo |
+| T-10 | Webhook con `X-Telegram-Bot-Api-Secret-Token`, validado antes de leer el cuerpo; el id sale del update (RF-TEL-02). Al conversar, el usuario se resuelve por la vinculación: una cuenta sin vincular solo recibe instrucciones y una inactiva, un mensaje fijo sin datos (RF-TEL-04) | luis20072002 | Hecha | `2c69809`, [prueba](../backend/tests/test_usuario_telegram_link.py), [prueba del agente](../backend/tests/test_telegram_agent_chat.py) | Bajo |
 | T-01 | Reglas en `systemInstruction`, mensaje aparte y delimitado, marcas neutralizadas (RF-AGT-18) | luis20072002 | Hecha | `dbe5634`, [prueba](../backend/tests/test_ai_prompt_injection.py) | Bajo |
 | T-02 | Autorización previa, expresa e informada en el registro (RF-USR-10), con fecha y versión guardadas; el LLM solo recibe el texto, sin identificadores | val | Hecha | [política](politica_privacidad.md), [flujo](flujo_consentimiento.md), [prueba](../backend/tests/test_usuario_consent.py) | Medio |
 | T-04 | Lista cerrada de intenciones y confirmación antes de escribir (ADR-0005, RF-AGT-04) | mark | Hecha | [prueba](../backend/tests/test_ai_create_task_confirmation.py) | Bajo |
 | T-09 | El usuario sale del token y lo ajeno responde `404` (RT-02) | dei0811 | Hecha | [prueba](../backend/tests/test_academic_subjects_api.py) | Bajo |
 | T-12 | Locks con hash, pip-audit en CI, `pubspec.lock` verificado contra OSV y PyJWT/certifi actualizados | luis20072002 | Hecha | `41aa1d2`, [§5](#5-análisis-de-dependencias) | Bajo |
-| T-15 | Respaldo Groq tras Gemini ([ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) | Medio |
+| T-15 | Groq como principal y Gemini como respaldo ([ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md), que reemplaza a ADR-0011); si fallan todos, falla cerrado (ADR-0007) | luis20072002 | Hecha y activa en producción | [prueba](../backend/tests/test_ai_fallback_llm.py), [§4](#4-riesgos-del-componente-generativo) | Medio |
 | T-17 | TLS en Traefik; HTTP responde 301 a HTTPS (RNF-04) | mark | Hecha | [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md): TLS en *Domains* de Dokploy; `curl` del 2026-10-30: 200 y 301 | Bajo |
 | T-08 | JWT de 30 min con `sid`; cada petición comprueba que la sesión siga activa; renovación con rotación de un solo uso y revocación de todas las sesiones ante reutilización; `POST /users/logout` revoca la sesión (RF-USR-03, 04) | dei0811 | Hecha | [servicio JWT](../backend/app/modules/usuario/adapters/outbound/jwt_token_service.py), [prueba](../backend/tests/test_usuario_sessions.py) | Bajo |
 | T-14 | Logs JSON sin datos sensibles y seis alertas sobre la misma ventana (RNF-05); transiciones en `alert_triggered`/`alert_cleared` | mark | Hecha | [observability.py](../backend/app/shared/adapters/inbound/observability.py), [prueba](../backend/tests/test_alertas.py), [runbook](runbook_alertas.md) | Medio |
 | T-16 | `allowBackup` y `usesCleartextTraffic` en `false`, R8 en release | luis20072002 | Hecha | `1cf3d03` | Bajo |
+| T-18 | Riesgo aceptado: la clave es pública por diseño. Se restringe en Google Cloud a las API de Firebase y a la app Android, y el escaneo de credenciales omite solo el patrón de Gemini en los dos archivos generados | luis20072002 | En curso: falta restringir la clave en Google Cloud | [escaneo](../tools/verificar_dependencias.py), [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Medio |
 | T-11 | `/metrics` exige JWT (RT-01); `/docs` se acepta como riesgo | luis20072002 | Hecha | `15ecb9b`, [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
 | T-13 | PBKDF2-SHA256 con 310 000 iteraciones y sal (RNF-01) | dei0811 | Hecha | [hasher](../backend/app/modules/usuario/adapters/outbound/pbkdf2_password_hasher.py) | Bajo |
 | T-03 | Riesgo aceptado: el LLM no recibe el historial | val | Aceptada | [§11.13](arc42/11-riesgos-y-deudas-tecnicas.md#1113-amenazas-aceptadas) | Bajo |
@@ -141,12 +143,13 @@ Pub no reporta avisos. El resultado queda en
 |---|---|---|---|
 | Nombre completo y correo | `users` | Identificar la cuenta e iniciar sesión | Supabase (base de datos) |
 | Hash de contraseña | `users` | Autenticar | No sale |
-| `telegram_user_id` | `users` | Vincular la cuenta y enviar recordatorios | Telegram |
-| `fcm_token` | `sessions` | Notificaciones push (RF-NOT, pendiente) | Firebase, cuando exista |
-| Tareas, asignaturas, horario y período | Módulo Academic | Organizar la vida académica | Supabase; título de la tarea a Telegram en un recordatorio |
+| `telegram_user_id` | `users` | Vincular la cuenta y conversar con el agente (RF-TEL-04) | Telegram |
+| `fcm_token` | `sessions` | Notificaciones push (RF-NOT-01, RF-NOT-02) | Firebase Cloud Messaging |
+| Tareas, asignaturas, horario y período | Módulo Academic | Organizar la vida académica | Supabase; título de la tarea a Firebase en una notificación push |
 | Mensajes al agente | `conversation_messages`, 24 h | Interpretar la solicitud | Proveedor LLM: solo el texto, sin identificadores |
 | Correo de intentos fallidos | `failed_login_attempts`, 24 h | Seguridad (RNF-03) | No sale |
 | Correo de solicitudes de recuperación | `password_reset_requests`, 24 h | Seguridad (RNF-03) | No sale |
+| Correo y código de recuperación | Correo enviado por Resend | Restablecer la contraseña (RF-USR-08) | Resend |
 | `user_id` en los logs | stdout del contenedor | Operación (RNF-05) | Dokploy |
 
 **Base del tratamiento.** La Ley 1581 de 2012 y su decreto reglamentario 1377 de 2013 exigen la
@@ -170,6 +173,11 @@ de variables. `git log -S'BEGIN PRIVATE KEY'` encuentra `a3f4d82` y `-S'AIza'` e
 `c57f10b`, pero ambos son texto de documentación que cita el patrón, no una clave. No hay `.env`
 versionado. Los secretos viven en el Environment de Dokploy (RNF-02).
 
+S16 agregó dos secretos, que entran solo por variable de entorno y sin valor por defecto:
+`RESEND_API` (correo de recuperación) y `FIREBASE_CREDENTIALS_JSON` (cuenta de servicio de FCM;
+una credencial inválida desactiva el push sin registrarla). La clave de cliente de Firebase de
+`google-services.json` y `firebase_options.dart` no es un secreto: es T-18.
+
 ## 8. Revisión y cadencia
 
 **Cómo se comprueba.** `python tools/verificar_modelo_amenazas.py` recorre §2 y §3 y falla si una
@@ -185,8 +193,10 @@ documento, así que la tabla no puede degradarse sin que el pipeline lo note.
 - pip-audit reporta una CVE que afecte un paquete en uso;
 - ocurre un incidente o una alerta de §3 que no estaba prevista.
 
-**Última revisión:** 2026-11-01. La revisión de fondo se hizo sobre `2c69809`; después se
-agregaron las alertas de T-14, la verificación de dependencias Dart, las sesiones de T-08 y la
-autorización de tratamiento de T-02. **Próxima revisión obligatoria:** al cerrar el semestre, o
-antes si se dispara alguno de los puntos anteriores. No quedan amenazas pendientes: todas están en
-la columna *Estado* de §3 con su evidencia.
+**Última revisión:** 2026-11-21, con el cierre funcional S16: recuperación de contraseña (T-07),
+conversación por Telegram (T-10), Groq como principal (T-15), notificaciones push y la clave de
+cliente de Firebase (T-18). La revisión de fondo se hizo sobre `2c69809`; después se agregaron las
+alertas de T-14, la verificación de dependencias Dart, las sesiones de T-08 y la autorización de
+tratamiento de T-02. **Próxima revisión obligatoria:** al cerrar el semestre, o
+antes si se dispara alguno de los puntos anteriores. Todas las amenazas tienen su estado y su
+evidencia en §3; solo T-18 sigue en curso, hasta que se restrinja la clave en Google Cloud.

@@ -1,21 +1,22 @@
 {
   "documento": "docs/modelo_amenazas.md",
-  "amenazas": 17,
-  "mitigaciones": 17,
+  "amenazas": 18,
+  "mitigaciones": 18,
   "por_prioridad": {
     "2": 2,
     "3": 2,
-    "4": 3,
+    "4": 4,
     "6": 7,
     "9": 3
   },
   "por_estado": {
     "Aceptada": 2,
+    "En": 1,
     "Hecha": 15
   },
   "por_residual": {
     "Bajo": 14,
-    "Medio": 3
+    "Medio": 4
   },
   "evidencias_inexistentes": [],
   "problemas": [],

@@ -271,12 +271,14 @@ Resultado del modelado STRIDE de S13. Las amenazas, su prioridad, sus dueños y 
 |---|---|---|---|
 | Transporte | TLS en Traefik; HTTP redirige a HTTPS (RNF-04) | Dokploy ([§7](07-vista-de-despliegue.md)) | T-17 |
 | Identidad | JWT HS256 de 30 min, secreto solo por entorno (RT-01, RNF-02); PBKDF2-SHA256 con 310 000 iteraciones (RNF-01) | Módulo Usuario | T-08, T-13 |
-| Canal Telegram | Webhook con `X-Telegram-Bot-Api-Secret-Token` comparado en tiempo constante; el id sale del update (RF-TEL-02) | `telegram_webhook.py` | T-10 |
+| Canal Telegram | Webhook con `X-Telegram-Bot-Api-Secret-Token` comparado en tiempo constante y validado antes de leer el cuerpo; el id sale del update (RF-TEL-02). El usuario se resuelve por la vinculación: una cuenta sin vincular solo recibe instrucciones y una inactiva, un mensaje fijo sin datos (RF-TEL-04) | `telegram_webhook.py` | T-10 |
 | Autorización | El usuario sale del token, nunca del cuerpo ni del LLM; lo ajeno responde `404` (RT-02) | `shared/adapters/inbound/auth.py` y cada módulo | T-09 |
-| Límites de uso | 5 fallos de login por correo cada 15 min (RNF-03); 30 mensajes por hora y 200 por día al agente (RF-AGT-19) | `login_user.py`, `handle_message.py` | T-06, T-07 |
-| Componente generativo | Reglas en `systemInstruction` y texto delimitado como dato; JSON con esquema; lista cerrada de intenciones; confirmación antes de escribir; el LLM solo recibe el texto | Módulo AI ([ADR-0005](../adr/0005-normalizacion-confirmacion-espanol.md), [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md), [ADR-0011](../adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md)) | T-01 a T-05, T-15 |
+| Límites de uso | 5 fallos de login por correo cada 15 min y 3 solicitudes de recuperación por correo en 24 horas (RNF-03); 30 mensajes por hora y 200 por día al agente (RF-AGT-19) | `login_user.py`, `reset_password.py`, `handle_message.py` | T-06, T-07 |
+| Recuperación de contraseña | Código de 6 dígitos guardado como SHA-256, comparado en tiempo constante, de un solo uso, 15 min y 5 intentos; la respuesta es igual exista o no la cuenta y el correo sale después de responder (RF-USR-08) | `reset_password.py` | T-07 |
+| Componente generativo | Reglas en `systemInstruction` y texto delimitado como dato; JSON con esquema; lista cerrada de intenciones; confirmación antes de escribir; el LLM solo recibe el texto | Módulo AI ([ADR-0005](../adr/0005-normalizacion-confirmacion-espanol.md), [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md), [ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md)) | T-01 a T-05, T-15 |
 | Operación | `/metrics` exige JWT; logs JSON sin cuerpos ni tokens (RNF-05) | `observability.py` | T-11, T-14 |
 | Cadena de suministro | Locks con hash (`--require-hashes`), pip-audit y Quality Gate de SonarCloud en el CI | [ci.yml](../../.github/workflows/ci.yml) | T-12, T-16 |
+| Secretos de integraciones | `RESEND_API` y `FIREBASE_CREDENTIALS_JSON` solo por entorno, sin valor por defecto y sin registrarse; la clave de cliente de Firebase es pública y se restringe en Google Cloud | Usuario y Reminders, [verificar_dependencias.py](../../tools/verificar_dependencias.py) | T-18 |
 
 Reglas que se mantienen al cambiar el código:
 

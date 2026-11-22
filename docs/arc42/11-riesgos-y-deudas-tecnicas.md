@@ -170,9 +170,10 @@ Amenazas del [modelo de amenazas](../modelo_amenazas.md) que el equipo acepta si
 | T-03 | Envenenamiento del contexto conversacional (LLM04) | El historial se guarda, pero no se envía al LLM: cada interpretación ve solo el mensaje actual. La acción pendiente expira a los 10 min y exige confirmación | El contexto empieza a enviarse al modelo (RF-AGT-15) |
 | T-05 | Fuga del prompt de sistema (LLM07) | El prompt no contiene secretos, claves ni datos de usuarios, y ya es público en el repositorio (`gemini_llm.py`) | Se agrega al prompt información que no sea pública |
 | T-11 (parte) | `/docs` y `/openapi.json` sin sesión (A02) | Publican el mismo contrato que ya está en el repositorio público (`docs/api/openapi.json`); ocultarlos no reduce la superficie. `/metrics` sí se protegió | El contrato incluye rutas internas que no estén en el repositorio |
+| T-18 | Clave de cliente de Firebase en el repositorio y en el APK (A02) | Google la diseña para viajar dentro de la app: cualquiera la saca del APK, así que quitarla del repositorio no la protege. Se restringe en Google Cloud a las API de Firebase y a la app Android, y el escaneo de credenciales omite solo el patrón de Gemini en `google-services.json` y `firebase_options.dart` | La clave pierde sus restricciones o la app usa otra API de Google con esa clave |
 | LLM09 | Respuesta de ayuda incorrecta | Solo afecta a `system_help`, que no escribe datos, está limitada a una descripción fija de TAIA y a 3 frases | La ayuda empieza a ejecutar acciones o a usar datos del usuario |
 
-**Estado:** Aceptadas el 2026-10-30. Seguimiento: val (T-03, T-05 y LLM09) y luis20072002 (T-11).
+**Estado:** Aceptadas el 2026-10-30; T-18, el 2026-11-21. Seguimiento: val (T-03, T-05 y LLM09) y luis20072002 (T-11 y T-18).
 
 ## 11.14. Latencia del asistente cuando responde el respaldo
 

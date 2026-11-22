@@ -57,6 +57,15 @@ PATRONES_CREDENCIAL = {
 
 ESTE_ARCHIVO = "tools/verificar_dependencias.py"
 
+# Configuracion de cliente que genera `flutterfire configure`. Su clave de Google
+# es publica por diseño (viaja dentro del APK) y tiene el mismo formato que una de
+# Gemini; se acepta restringida a Firebase y a la app (modelo de amenazas, T-18).
+# En estos archivos solo se omite ese patron: los demas se siguen buscando.
+CLAVE_PUBLICA_FIREBASE = {
+    "frontend/android/app/google-services.json",
+    "frontend/lib/firebase_options.dart",
+}
+
 RUTAS_EXCLUIDAS = {
     ".venv",
     "node_modules",
@@ -141,6 +150,8 @@ def buscar_credenciales() -> list[dict]:
         except OSError:
             continue
         for nombre, patron in PATRONES_CREDENCIAL.items():
+            if nombre == "api key de Gemini" and relativo.replace("\\", "/") in CLAVE_PUBLICA_FIREBASE:
+                continue
             for coincidencia in patron.finditer(texto):
                 hallazgos.append(
                     {
