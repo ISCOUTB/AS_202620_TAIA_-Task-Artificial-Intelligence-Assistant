@@ -1871,6 +1871,26 @@
               }
             }
           },
+          "404": {
+            "description": "El recordatorio o la actividad no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El estado del recordatorio o de la actividad no permite la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Los datos del recordatorio no son válidos.",
             "content": {
@@ -1925,7 +1945,7 @@
             }
           },
           "404": {
-            "description": "El recordatorio no existe o no pertenece al usuario.",
+            "description": "El recordatorio o la actividad no existe o no pertenece al usuario.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1991,7 +2011,17 @@
             }
           },
           "404": {
-            "description": "El recordatorio no existe o no pertenece al usuario.",
+            "description": "El recordatorio o la actividad no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El estado del recordatorio o de la actividad no permite la operación.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2040,7 +2070,17 @@
             "description": "Successful Response"
           },
           "404": {
-            "description": "El recordatorio no existe o no pertenece al usuario.",
+            "description": "El recordatorio o la actividad no existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El estado del recordatorio o de la actividad no permite la operación.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2062,13 +2102,14 @@
         }
       }
     },
-    "/reminders/{reminder_id}/complete": {
-      "post": {
+    "/notifications": {
+      "get": {
         "tags": [
-          "reminders"
+          "notifications"
         ],
-        "summary": "Mark Reminder Completed",
-        "operationId": "mark_reminder_completed_reminders__reminder_id__complete_post",
+        "summary": "List Notifications",
+        "description": "De la más reciente a la más antigua.",
+        "operationId": "list_notifications_notifications_get",
         "security": [
           {
             "HTTPBearer": []
@@ -2076,13 +2117,26 @@
         ],
         "parameters": [
           {
-            "name": "reminder_id",
-            "in": "path",
-            "required": true,
+            "name": "limit",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Reminder Id"
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
@@ -2092,17 +2146,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReminderResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "El recordatorio no existe o no pertenece al usuario.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/NotificationPageResponse"
                 }
               }
             }
@@ -2120,13 +2164,58 @@
         }
       }
     },
-    "/reminders/{reminder_id}/notify": {
-      "post": {
+    "/notifications/unread-count": {
+      "get": {
         "tags": [
-          "reminders"
+          "notifications"
         ],
-        "summary": "Notify Reminder",
-        "operationId": "notify_reminder_reminders__reminder_id__notify_post",
+        "summary": "Count Unread Notifications",
+        "operationId": "count_unread_notifications_notifications_unread_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/notifications/read-all": {
+      "patch": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Mark All Notifications Read",
+        "operationId": "mark_all_notifications_read_notifications_read_all_patch",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/notifications/{notification_id}/read": {
+      "patch": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Mark Notification Read",
+        "operationId": "mark_notification_read_notifications__notification_id__read_patch",
         "security": [
           {
             "HTTPBearer": []
@@ -2134,13 +2223,13 @@
         ],
         "parameters": [
           {
-            "name": "reminder_id",
+            "name": "notification_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Reminder Id"
+              "title": "Notification Id"
             }
           }
         ],
@@ -2156,17 +2245,7 @@
             }
           },
           "404": {
-            "description": "El recordatorio no existe o no pertenece al usuario.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "No se pudo entregar la notificación por Telegram.",
+            "description": "La notificación no existe o no pertenece al usuario.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2348,34 +2427,18 @@
       },
       "CreateReminderRequest": {
         "properties": {
-          "message": {
-            "type": "string",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Message"
-          },
-          "scheduled_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Scheduled At"
-          },
           "task_id": {
             "type": "string",
             "format": "uuid",
             "title": "Task Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message",
-          "scheduled_at",
-          "task_id"
-        ],
-        "title": "CreateReminderRequest"
-      },
-      "EditReminderRequest": {
-        "properties": {
-          "message": {
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled At",
+            "description": "Momento del aviso. Sin zona horaria, se interpreta como hora de Colombia (RT-03)."
+          },
+          "custom_message": {
             "anyOf": [
               {
                 "type": "string",
@@ -2386,23 +2449,50 @@
                 "type": "null"
               }
             ],
-            "title": "Message"
-          },
+            "title": "Custom Message",
+            "description": "Mensaje propio. Sin mensaje, se usa el mensaje por defecto (RF-REC-01)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "scheduled_at"
+        ],
+        "title": "CreateReminderRequest"
+      },
+      "EditReminderRequest": {
+        "properties": {
           "scheduled_at": {
             "anyOf": [
               {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "description": "Momento del aviso. Sin zona horaria, se interpreta como hora de Colombia (RT-03)."
               },
               {
                 "type": "null"
               }
             ],
             "title": "Scheduled At"
+          },
+          "custom_message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Message",
+            "description": "Mensaje propio. Sin mensaje, se usa el mensaje por defecto (RF-REC-01)."
           }
         },
         "type": "object",
-        "title": "EditReminderRequest"
+        "title": "EditReminderRequest",
+        "description": "Los campos ausentes no cambian."
       },
       "ErrorResponse": {
         "properties": {
@@ -2454,30 +2544,86 @@
         ],
         "title": "LoginResponse"
       },
+      "NotificationPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "NotificationPageResponse"
+      },
       "NotificationResponse": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
           "reminder_id": {
             "type": "string",
             "format": "uuid",
             "title": "Reminder Id"
           },
-          "sent": {
-            "type": "boolean",
-            "title": "Sent"
+          "message": {
+            "type": "string",
+            "title": "Message"
           },
-          "scheduled_at": {
+          "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Scheduled At"
+            "title": "Created At"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
           }
         },
         "type": "object",
         "required": [
+          "id",
           "reminder_id",
-          "sent",
-          "scheduled_at"
+          "message",
+          "created_at",
+          "read_at",
+          "read"
         ],
-        "title": "NotificationResponse"
+        "title": "NotificationResponse",
+        "description": "Notificación con los nombres de `notifications` y el campo derivado `read`."
       },
       "RefreshTokenRequest": {
         "properties": {
@@ -2493,6 +2639,15 @@
         ],
         "title": "RefreshTokenRequest"
       },
+      "ReminderOrigin": {
+        "type": "string",
+        "enum": [
+          "automatic",
+          "custom"
+        ],
+        "title": "ReminderOrigin",
+        "description": "Valores del ENUM `reminder_origin`."
+      },
       "ReminderResponse": {
         "properties": {
           "id": {
@@ -2500,40 +2655,55 @@
             "format": "uuid",
             "title": "Id"
           },
-          "user_id": {
+          "task_id": {
             "type": "string",
             "format": "uuid",
-            "title": "User Id"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
+            "title": "Task Id"
           },
           "scheduled_at": {
             "type": "string",
             "format": "date-time",
             "title": "Scheduled At"
           },
-          "is_completed": {
-            "type": "boolean",
-            "title": "Is Completed"
+          "custom_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Message"
           },
-          "task_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Task Id"
+          "origin": {
+            "$ref": "#/components/schemas/ReminderOrigin"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReminderStatus"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "user_id",
-          "message",
+          "task_id",
           "scheduled_at",
-          "is_completed",
-          "task_id"
+          "custom_message",
+          "origin",
+          "status"
         ],
-        "title": "ReminderResponse"
+        "title": "ReminderResponse",
+        "description": "Recordatorio con los nombres de `reminders` (diccionario de datos §7.1)."
+      },
+      "ReminderStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "sent",
+          "cancelled"
+        ],
+        "title": "ReminderStatus",
+        "description": "Valores del ENUM `reminder_status`."
       },
       "ScheduleBlockCreateRequest": {
         "properties": {
@@ -3086,6 +3256,19 @@
           "expires_at"
         ],
         "title": "TelegramLinkResponse"
+      },
+      "UnreadCountResponse": {
+        "properties": {
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unread_count"
+        ],
+        "title": "UnreadCountResponse"
       },
       "UserCreateRequest": {
         "properties": {

@@ -1,23 +1,50 @@
-"""Reminder domain entity."""
+"""Recordatorio de una actividad (diccionario de datos §7.1, RF-REC-01…07)."""
 
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from app.shared.clock import as_bogota
+
+MAX_MESSAGE_LENGTH = 500
 
 
-class Reminder(BaseModel):
-    """Reminder linked to an academic task."""
+class ReminderOrigin(str, Enum):
+    """Valores del ENUM `reminder_origin`."""
 
-    model_config = ConfigDict(validate_assignment=True)
+    AUTOMATIC = "automatic"
+    CUSTOM = "custom"
+
+
+class ReminderStatus(str, Enum):
+    """Valores del ENUM `reminder_status`."""
+
+    PENDING = "pending"
+    SENT = "sent"
+    CANCELLED = "cancelled"
+
+
+@dataclass(frozen=True)
+class Reminder:
+    """Fila de `reminders`. `custom_message` en `None` usa el mensaje por defecto."""
 
     id: UUID
     user_id: UUID
-    message: str = Field(min_length=1)
-    scheduled_at: datetime
-    is_completed: bool = False
     task_id: UUID
+    scheduled_at: datetime
+    origin: ReminderOrigin
+    status: ReminderStatus = ReminderStatus.PENDING
+    custom_message: str | None = None
 
-    def mark_completed(self) -> "Reminder":
-        """Return a completed copy of this reminder."""
-        return self.model_copy(update={"is_completed": True})
+    @property
+    def is_pending(self) -> bool:
+        return self.status is ReminderStatus.PENDING
+
+
+def default_message(title: str, subject_name: str, due_at: datetime) -> str:
+    """Mensaje por defecto de RF-REC-01 y del diccionario §9, en hora de Colombia (RT-03)."""
+
+    return f"Recuerda: {title} ({subject_name}) vence el {as_bogota(due_at):%d/%m/%Y %H:%M}"

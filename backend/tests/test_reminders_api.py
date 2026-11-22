@@ -1,106 +1,159 @@
-from datetime import datetime, timedelta, timezone
+"""API de recordatorios: RF-REC-01, 03, 04 y 05, RT-01, RT-02 y RT-05."""
+
+import uuid
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
+
+from app import main
 from app.main import app
+from app.modules.reminders.domain.entities import Notification
+from app.shared.clock import now_bogota
 from tests import helpers
-from tests.helpers import CONSENT, TEST_PASSWORD
 
 client = TestClient(app)
 
 
-def register_and_login(email: str) -> dict[str, str]:
-    created = client.post(
-        '/users',
-        json={'full_name': 'Estudiante', 'email': email, 'password': TEST_PASSWORD, **CONSENT},
-    )
+def future_iso(hours: float = 2) -> str:
+    return (now_bogota() + timedelta(hours=hours)).isoformat()
+
+
+def _owner_with_task(title: str = "Informe") -> tuple[dict[str, str], str]:
+    headers = helpers.register_and_login(client)
+    return headers, helpers.create_task(client, headers, title)
+
+
+def _create(headers, task_id, **extra):
+    return client.post("/reminders", headers=headers,
+                       json={"task_id": task_id, "scheduled_at": future_iso(), **extra})
+
+
+def test_reminders_require_authentication_rt_01():
+    assert client.get("/reminders").status_code == 401
+    assert client.post("/reminders", json={}).status_code == 401
+
+
+def test_create_list_edit_and_delete_rf_rec_01_03_04_05():
+    headers, task_id = _owner_with_task()
+
+    created = _create(headers, task_id, custom_message="Revisar entrega")
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert set(body) == {"id", "task_id", "scheduled_at", "custom_message", "origin", "status"}
+    assert (body["task_id"], body["custom_message"], body["origin"], body["status"]) == (
+        task_id, "Revisar entrega", "custom", "pending")
+    reminder_id = body["id"]
+
+    listed = client.get("/reminders", headers=headers)
+    assert [item["id"] for item in listed.json()] == [reminder_id]
+
+    edited = client.patch(f"/reminders/{reminder_id}", headers=headers,
+                          json={"custom_message": "Revisar entrega final", "scheduled_at": future_iso(3)})
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["custom_message"] == "Revisar entrega final"
+
+    assert client.delete(f"/reminders/{reminder_id}", headers=headers).status_code == 204
+    assert client.get(f"/reminders/{reminder_id}", headers=headers).status_code == 404
+
+
+def test_message_is_optional_rf_rec_01():
+    headers, task_id = _owner_with_task()
+
+    created = _create(headers, task_id)
+
     assert created.status_code == 201
-    login = client.post('/users/login', json={'email': email, 'password': TEST_PASSWORD})
-    assert login.status_code == 200
-    return {'Authorization': f"Bearer {login.json()['access_token']}"}
+    assert created.json()["custom_message"] is None
 
 
-def create_task(headers, title='Tarea vinculada'):
-    return helpers.create_task(client, headers, title)
+def test_naive_date_is_colombian_time_rf_rec_01_rt_03():
+    headers, task_id = _owner_with_task()
+    naive = (now_bogota() + timedelta(hours=2)).replace(tzinfo=None, microsecond=0)
 
+    created = client.post("/reminders", headers=headers, json={"task_id": task_id, "scheduled_at": naive.isoformat()})
 
-def future_iso(minutes=30):
-    return (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat()
-
-
-def test_reminders_require_authentication():
-    response = client.get('/reminders')
-    assert response.status_code == 401
-
-
-def test_create_list_edit_complete_and_delete_reminder():
-    headers = register_and_login('reminders-crud@example.com')
-    task_id = create_task(headers)
-
-    created = client.post('/reminders', headers=headers, json={
-        'message': 'Revisar entrega',
-        'scheduled_at': future_iso(),
-        'task_id': task_id,
-    })
     assert created.status_code == 201
-    reminder = created.json()
-    assert reminder['message'] == 'Revisar entrega'
-    assert reminder['task_id'] == task_id
-    reminder_id = reminder['id']
-
-    listed = client.get('/reminders', headers=headers)
-    assert listed.status_code == 200
-    assert any(item['id'] == reminder_id for item in listed.json())
-
-    edited = client.patch(f'/reminders/{reminder_id}', headers=headers, json={'message': 'Revisar entrega final', 'scheduled_at': future_iso(60)})
-    assert edited.status_code == 200
-    assert edited.json()['message'] == 'Revisar entrega final'
-
-    completed = client.post(f'/reminders/{reminder_id}/complete', headers=headers)
-    assert completed.status_code == 200
-    assert completed.json()['is_completed'] is True
-
-    deleted = client.delete(f'/reminders/{reminder_id}', headers=headers)
-    assert deleted.status_code == 204
-
-    missing = client.get(f'/reminders/{reminder_id}', headers=headers)
-    assert missing.status_code == 404
+    assert created.json()["scheduled_at"] == naive.isoformat() + "-05:00"
 
 
-def test_reminder_cannot_reference_another_users_task():
-    owner = register_and_login('reminders-owner@example.com')
-    other = register_and_login('reminders-other@example.com')
-    task_id = create_task(owner, 'Tarea privada')
+def test_past_date_is_rejected_rf_rec_01_rt_05():
+    headers, task_id = _owner_with_task()
 
-    response = client.post('/reminders', headers=other, json={
-        'message': 'No debería poder vincularla',
-        'scheduled_at': future_iso(),
-        'task_id': task_id,
-    })
+    response = _create(headers, task_id, scheduled_at=future_iso(-1))
+
     assert response.status_code == 422
-    assert 'no existe o no pertenece' in response.json()['detail']
+    assert "futura" in response.json()["detail"]
 
 
-def test_reminder_cannot_be_accessed_by_another_user():
-    owner = register_and_login('reminders-owner-access@example.com')
-    other = register_and_login('reminders-other-access@example.com')
-    task_id = create_task(owner)
-    created = client.post('/reminders', headers=owner, json={
-        'message': 'Privado', 'scheduled_at': future_iso(), 'task_id': task_id,
-    })
-    assert created.status_code == 201
-    reminder_id = created.json()['id']
+def test_date_after_due_is_rejected_rf_rec_01_rt_05():
+    headers, task_id = _owner_with_task()
 
-    response = client.get(f'/reminders/{reminder_id}', headers=other)
+    response = _create(headers, task_id, scheduled_at=future_iso(24 * 30))
+
+    assert response.status_code == 422
+
+
+def test_completed_task_does_not_accept_reminders_rf_rec_01_rt_05():
+    headers, task_id = _owner_with_task()
+    assert client.patch(f"/academic/tasks/{task_id}/complete", headers=headers).status_code == 200
+
+    response = _create(headers, task_id)
+
+    assert response.status_code == 409
+
+
+def test_another_users_task_is_not_found_rf_rec_01_rt_02():
+    _, task_id = _owner_with_task("Tarea privada")
+    other = helpers.register_and_login(client)
+
+    response = _create(other, task_id)
+
     assert response.status_code == 404
 
 
-def test_completed_reminder_cannot_be_edited():
-    headers = register_and_login('reminders-completed@example.com')
-    task_id = create_task(headers)
-    created = client.post('/reminders', headers=headers, json={
-        'message': 'No editar después', 'scheduled_at': future_iso(), 'task_id': task_id,
-    })
-    reminder_id = created.json()['id']
-    assert client.post(f'/reminders/{reminder_id}/complete', headers=headers).status_code == 200
+def test_another_users_reminder_is_not_found_rt_02():
+    owner, task_id = _owner_with_task()
+    reminder_id = _create(owner, task_id).json()["id"]
+    other = helpers.register_and_login(client)
 
-    edited = client.patch(f'/reminders/{reminder_id}', headers=headers, json={'message': 'Cambio'})
-    assert edited.status_code == 422
+    assert client.get(f"/reminders/{reminder_id}", headers=other).status_code == 404
+    assert client.patch(f"/reminders/{reminder_id}", headers=other, json={"custom_message": "x"}).status_code == 404
+    assert client.delete(f"/reminders/{reminder_id}", headers=other).status_code == 404
+    assert client.get("/reminders", headers=other).json() == []
+
+
+def _mark_sent(reminder_id: str) -> None:
+    reminder_uuid = uuid.UUID(reminder_id)
+    claimed = main.reminder_repository.claim(
+        reminder_uuid,
+        Notification(id=uuid.uuid4(), reminder_id=reminder_uuid, message="Recuerda", created_at=now_bogota()),
+    )
+    assert claimed
+
+
+def test_sent_reminder_cannot_be_edited_rf_rec_04():
+    headers, task_id = _owner_with_task()
+    reminder_id = _create(headers, task_id).json()["id"]
+    _mark_sent(reminder_id)
+
+    response = client.patch(f"/reminders/{reminder_id}", headers=headers, json={"custom_message": "Cambio"})
+
+    assert response.status_code == 409
+
+
+def test_sent_reminder_cannot_be_deleted_rf_rec_05():
+    headers, task_id = _owner_with_task()
+    reminder_id = _create(headers, task_id).json()["id"]
+    _mark_sent(reminder_id)
+
+    response = client.delete(f"/reminders/{reminder_id}", headers=headers)
+
+    assert response.status_code == 409
+    assert client.get(f"/reminders/{reminder_id}", headers=headers).json()["status"] == "sent"
+
+
+def test_complete_and_notify_routes_no_longer_exist_d_10():
+    headers, task_id = _owner_with_task()
+    reminder_id = _create(headers, task_id).json()["id"]
+
+    assert client.post(f"/reminders/{reminder_id}/complete", headers=headers).status_code == 404
+    assert client.post(f"/reminders/{reminder_id}/notify", headers=headers).status_code == 404

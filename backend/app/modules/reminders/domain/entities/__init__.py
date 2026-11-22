@@ -1,7 +1,6 @@
-"""Domain entities for the reminders bounded context."""
+"""Entidades del módulo Reminders."""
 
 from .notification import Notification
-from .reminder import Reminder
-from .reminder_schedule import ReminderSchedule
+from .reminder import Reminder, ReminderOrigin, ReminderStatus, default_message
 
-__all__ = ["Notification", "Reminder", "ReminderSchedule"]
+__all__ = ["Notification", "Reminder", "ReminderOrigin", "ReminderStatus", "default_message"]

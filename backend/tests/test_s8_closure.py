@@ -1,6 +1,7 @@
 """Regresiones de E-02 y E-05, con repositorios en memoria y sin red."""
 
 import ast
+import dataclasses
 import uuid
 from datetime import timedelta
 from pathlib import Path
@@ -35,7 +36,7 @@ def test_reminder_dependencies_are_injected(monkeypatch):
     monkeypatch.setattr(api, "_use_cases", None)
     with pytest.raises(RuntimeError):
         api.get_create_use_case()
-    services = api.ReminderUseCases(*(object() for _ in range(8)))
+    services = api.ReminderUseCases(*(object() for _ in range(len(dataclasses.fields(api.ReminderUseCases)))))
     api.configure_reminder_use_cases(services)
     for name in services.__dataclass_fields__:
         assert getattr(api, f"get_{name}_use_case")() is getattr(services, name)

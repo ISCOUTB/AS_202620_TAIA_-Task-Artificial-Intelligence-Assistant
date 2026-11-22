@@ -1,17 +1,31 @@
+"""Lee las actividades mediante el puerto público de Academic (P-B-02)."""
+
+from __future__ import annotations
+
 from uuid import UUID
-from app.modules.reminders.application.ports.outbound.academic_task_lookup import AcademicTaskLookup, TaskSummary
+
+from app.modules.academic.application.ports.inbound.task_management import AcademicTaskManagement
+from app.modules.reminders.application.ports.outbound.academic_task_lookup import (
+    AcademicTaskLookup,
+    TaskInfo,
+)
+
 
 class AcademicTaskLookupAdapter(AcademicTaskLookup):
-    def __init__(self, get_summary):
-        self._get_summary = get_summary
+    def __init__(self, academic: AcademicTaskManagement) -> None:
+        self._academic = academic
 
-    def get_summary(self, task_id: UUID, user_id: UUID) -> TaskSummary | None:
-        task = self._get_summary(task_id, user_id)
-        if task is None:
+    def get(self, task_id: UUID, user_id: UUID) -> TaskInfo | None:
+        try:
+            task = self._academic.get_task(task_id, user_id)
+        except ValueError:
+            # Academic lanza TaskNotFoundError (un ValueError) si no existe, está
+            # eliminada o es de otro usuario.
             return None
-        return TaskSummary(
+        return TaskInfo(
             task_id=task.task_id,
-            owner_user_id=task.owner_user_id,
             title=task.title,
+            subject_name=task.subject_name,
             due_at=task.due_at,
+            completed=task.completed_at is not None,
         )

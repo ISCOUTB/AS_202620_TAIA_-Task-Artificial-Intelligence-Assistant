@@ -165,11 +165,17 @@ class TaiaApiClient:
     def delete_reminder_reminders__reminder_id__delete(self, body: object | None = None, reminder_id: object | None = None) -> object:
         return self._request("DELETE", PATH_REMINDERS_REMINDER_ID, body, **{'reminder_id': reminder_id})
 
-    def mark_reminder_completed_reminders__reminder_id__complete_post(self, body: object | None = None, reminder_id: object | None = None) -> object:
-        return self._request("POST", "/reminders/{reminder_id}/complete", body, **{'reminder_id': reminder_id})
+    def list_notifications_notifications_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/notifications", body, **{})
 
-    def notify_reminder_reminders__reminder_id__notify_post(self, body: object | None = None, reminder_id: object | None = None) -> object:
-        return self._request("POST", "/reminders/{reminder_id}/notify", body, **{'reminder_id': reminder_id})
+    def count_unread_notifications_notifications_unread_count_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/notifications/unread-count", body, **{})
+
+    def mark_all_notifications_read_notifications_read_all_patch(self, body: object | None = None) -> object:
+        return self._request("PATCH", "/notifications/read-all", body, **{})
+
+    def mark_notification_read_notifications__notification_id__read_patch(self, body: object | None = None, notification_id: object | None = None) -> object:
+        return self._request("PATCH", "/notifications/{notification_id}/read", body, **{'notification_id': notification_id})
 
     def health_health_get(self, body: object | None = None) -> object:
         return self._request("GET", "/health", body, **{})
