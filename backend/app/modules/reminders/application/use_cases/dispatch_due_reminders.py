@@ -79,6 +79,7 @@ class DispatchDueRemindersUseCase:
         if task is None or task.completed:
             # Actividad completada o eliminada, o cuenta inactiva: no se notifica.
             self._reminders.cancel([reminder.id])
+            _log("reminder_cancelled_at_dispatch", reminder, reason="inactive" if not active else "task_closed")
             return False
         notification = Notification(
             id=uuid.uuid4(),
@@ -95,7 +96,9 @@ class DispatchDueRemindersUseCase:
         tokens = list(dict.fromkeys(self._devices.get_fcm_tokens(reminder.user_id)))
         if not tokens or self._push_sender is None:
             # RF-NOT-04: sin dispositivos (o sin FCM configurado) queda en la bandeja.
+            _log("reminder_notified", reminder, push="disabled" if self._push_sender is None else "no_devices")
             return
+        devices = len(tokens)
         attempts, sent_at = 0, None
         for delay in (0.0, *self._retry_delays):
             if delay:
@@ -107,6 +110,10 @@ class DispatchDueRemindersUseCase:
             if not tokens:
                 break
         self._notifications.record_push(notification.id, attempts, sent_at)
+        _log(
+            "reminder_notified", reminder, push="sent" if sent_at else "failed",
+            devices=devices, attempts=attempts,
+        )
 
     def _send_once(self, tokens: list[str], message: str) -> tuple[list[str], bool]:
         """Envía a cada token. Devuelve los que hay que reintentar y si alguno recibió."""
@@ -122,3 +129,16 @@ class DispatchDueRemindersUseCase:
             else:
                 delivered = True
         return retry, delivered
+
+
+def _log(event: str, reminder: Reminder, **fields) -> None:
+    """Rastro de cada recordatorio procesado, sin mensajes ni tokens (RNF-05).
+
+    Sin él, un recordatorio que no llegaba no dejaba ninguna línea en el log y
+    no se podía saber si faltaba el dispositivo, FCM o el recordatorio mismo.
+    """
+
+    logger.info(
+        event,
+        extra={"fields": {"reminder_id": str(reminder.id), "user_id": str(reminder.user_id), **fields}},
+    )

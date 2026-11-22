@@ -179,3 +179,30 @@ def test_invalid_token_is_removed_rf_not_02():
     assert env.devices.invalidated == ["token-a"]
     assert env.sleeps == []
     assert env.notifications()[0].push_sent_at is None
+
+
+def _events(caplog, name):
+    return [r.fields for r in caplog.records if r.getMessage() == name]
+
+
+def test_each_notified_reminder_leaves_a_log_line_rf_not_02(env, caplog):
+    caplog.set_level("INFO", logger="taia.reminders")
+    reminder = env.reminder()
+
+    env.use_case.execute(SIX_PM)
+
+    [fields] = _events(caplog, "reminder_notified")
+    assert fields == {
+        "reminder_id": str(reminder.id), "user_id": str(USER), "push": "sent", "devices": 1, "attempts": 1,
+    }
+
+
+def test_log_says_why_no_push_was_sent_rf_not_04(env, caplog):
+    caplog.set_level("INFO", logger="taia.reminders")
+    env.devices.tokens[USER] = []
+    env.reminder()
+
+    env.use_case.execute(SIX_PM)
+
+    assert [f["push"] for f in _events(caplog, "reminder_notified")] == ["no_devices"]
+    assert "Recuerda" not in caplog.text

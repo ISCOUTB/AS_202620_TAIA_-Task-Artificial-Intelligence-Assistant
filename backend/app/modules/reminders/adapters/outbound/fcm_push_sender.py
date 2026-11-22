@@ -56,6 +56,7 @@ class FcmPushSender(PushSender):
             logger.warning("fcm_disabled", extra={"fields": {"reason": f"{CREDENTIALS_ENV} no es válida"}})
             return None
         app = firebase_admin.initialize_app(certificate, name=APP_NAME)
+        logger.info("fcm_enabled")
         return cls(partial(messaging.send, app=app))
 
     def send(self, token: str, message: str) -> None:
@@ -63,6 +64,8 @@ class FcmPushSender(PushSender):
         try:
             self._send(payload)
         except _INVALID_TOKEN_ERRORS as error:
+            logger.warning("fcm_invalid_token", extra={"fields": {"error": type(error).__name__}})
             raise InvalidPushTokenError() from error
         except exceptions.FirebaseError as error:
+            logger.warning("fcm_send_failed", extra={"fields": {"error": type(error).__name__}})
             raise PushDeliveryError() from error
