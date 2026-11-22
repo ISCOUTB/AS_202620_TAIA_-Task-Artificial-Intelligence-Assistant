@@ -36,6 +36,17 @@ Future<void> _write(WidgetTester tester, String text) async {
 }
 
 void main() {
+  testWidgets(
+    'RF-AGT-01 · el chat avisa que TAIA es una IA y que la conversación es temporal',
+    (tester) async {
+      await _pump(tester, _agent([]));
+
+      expect(find.text(agentDisclaimer), findsOneWidget);
+      expect(agentDisclaimer, contains('puede equivocarse'));
+      expect(agentDisclaimer, contains('se borra al salir del chat'));
+    },
+  );
+
   testWidgets('RF-AGT-01 · envía por el canal app y muestra la respuesta', (
     tester,
   ) async {

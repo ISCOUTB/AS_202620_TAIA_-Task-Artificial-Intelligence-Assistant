@@ -88,9 +88,9 @@ class _AgentScreenState extends State<AgentScreen> {
                       child: Align(
                         alignment: Alignment.topCenter,
                         child: EmptyStateCard(
-                          'Escríbeme, por ejemplo: «¿Qué clases tengo '
-                          'mañana?» o «Dame el resumen de tareas de este '
-                          'mes».',
+                          '¡Hola! Soy TAIA 🐙 Escríbeme, por ejemplo: '
+                          '«¿Qué clases tengo mañana?» o «Dame el resumen de '
+                          'tareas de este mes».',
                         ),
                       ),
                     )
@@ -175,12 +175,26 @@ class _AgentScreenState extends State<AgentScreen> {
                 ],
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+              child: Text(
+                agentDisclaimer,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0x993B2A2A), fontSize: 12),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+/// Aviso fijo bajo la barra de texto (RF-AGT-01). La lista de mensajes vive
+/// solo mientras la pantalla está abierta (`AgentConversation`).
+const String agentDisclaimer =
+    '🐙 TAIA es una IA y puede equivocarse: revisa lo que te propone antes de '
+    'confirmar. Esta conversación es temporal y se borra al salir del chat.';
 
 /// Burbuja de un mensaje: las del usuario a la derecha en rosa y las de TAIA a
 /// la izquierda en blanco.
