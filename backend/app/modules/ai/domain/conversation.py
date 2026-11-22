@@ -32,12 +32,19 @@ class Conversation:
     # agrega estos, asi que los anteriores conservan su fecha (RF-AGT-19).
     unsaved: list[Turn] = field(default_factory=list, repr=False, compare=False)
 
+    def __post_init__(self) -> None:
+        # Tambien al restaurarla desde el almacen: 10 mensajes o 4000 caracteres (RF-AGT-15).
+        self._trim()
+
     def record(self, role: str, text: str) -> None:
         """Agrega un mensaje y descarta los mas antiguos pasado el limite."""
 
         turn = Turn(role=role, text=text)
         self.turns.append(turn)
         self.unsaved.append(turn)
+        self._trim()
+
+    def _trim(self) -> None:
         while len(self.turns) > 1 and (
             len(self.turns) > HISTORY_LIMIT or self._size() > MAX_HISTORY_CHARS
         ):

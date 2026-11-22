@@ -1,9 +1,11 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.modules.ai.adapters.inbound.api import get_ai_use_case
+from app.modules.academic.application.ports.inbound.task_management import AcademicSubjectRef
 from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
 from app.modules.ai.adapters.outbound.in_memory_conversation_store import InMemoryConversationStore
 from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
@@ -34,6 +36,16 @@ def test_ai_endpoint_requires_authentication():
     assert response.status_code == 401
 
 
+class _OneSubject:
+    """Doble de AcademicInsights (frente C): devuelve la asignatura creada."""
+
+    def __init__(self, subject: dict) -> None:
+        self._subject = AcademicSubjectRef(subject_id=uuid.UUID(subject["id"]), name=subject["name"])
+
+    def match_subjects(self, user_id, text, limit=5):
+        return [self._subject]
+
+
 def test_ai_create_task_uses_real_academic_context(monkeypatch):
     headers = register_and_login("ai-api@example.com")
     subject = client.post("/academic/subjects", json={"name": "Arquitectura"}, headers=headers)
@@ -53,7 +65,7 @@ def test_ai_create_task_uses_real_academic_context(monkeypatch):
     )
     use_case = HandleUserMessageUseCase(
         llm=llm,
-        academic=AcademicGatewayAdapter(),
+        academic=AcademicGatewayAdapter(insights=_OneSubject(subject.json())),
         conversations=InMemoryConversationStore(),
     )
     app.dependency_overrides[get_ai_use_case] = lambda: use_case

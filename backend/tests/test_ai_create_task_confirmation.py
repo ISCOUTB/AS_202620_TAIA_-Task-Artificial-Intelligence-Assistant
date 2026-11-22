@@ -61,6 +61,7 @@ NO_CONFIRMAN = [
 
 def _montar(store=None):
     academic = InMemoryAcademicGateway()
+    academic.add_subject("u1", "Redes")
     store = store or InMemoryConversationStore()
     caso = HandleUserMessageUseCase(
         llm=FakeLLM(
@@ -68,7 +69,7 @@ def _montar(store=None):
                 Interpretation(
                     Intent.CREATE_TASK,
                     0.9,
-                    task=ExtractedTaskData(title="Taller", due_at=DUE),
+                    task=ExtractedTaskData(title="Taller", due_at=DUE, subject="Redes"),
                 )
             ]
         ),

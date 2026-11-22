@@ -1,4 +1,4 @@
-"""Respaldo entre proveedores LLM (RF-AGT-20, ADR-0011)."""
+"""Respaldo entre proveedores LLM (RF-AGT-20, ADR-0011 y ADR-0013)."""
 
 from datetime import datetime, timedelta, timezone
 
@@ -6,6 +6,8 @@ import pytest
 
 from app.modules.ai.adapters.outbound.fake_llm import FakeLLM
 from app.modules.ai.adapters.outbound.fallback_llm import FallbackLLM
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.adapters.outbound.groq_llm import GroqLLM
 from app.modules.ai.adapters.outbound.in_memory_academic_gateway import InMemoryAcademicGateway
 from app.modules.ai.adapters.outbound.in_memory_conversation_store import InMemoryConversationStore
 from app.modules.ai.application import replies
@@ -51,7 +53,7 @@ def test_uses_the_first_provider_when_it_answers():
 
 
 def test_falls_back_when_the_primary_fails_rf_agt_20():
-    """RF-AGT-20: Gemini falla y Groq responde -> se usa la respuesta de Groq."""
+    """RF-AGT-20 y ADR-0013: el principal falla y el respaldo responde -> se usa el respaldo."""
     primary, backup = _Failing(), _Answering([_answer()])
     llm = FallbackLLM([primary, backup])
 
@@ -103,3 +105,49 @@ def test_close_closes_every_provider():
 def test_needs_at_least_one_provider():
     with pytest.raises(ValueError):
         FallbackLLM([])
+
+
+def test_from_env_tries_groq_keys_first_and_gemini_last_adr_0013(monkeypatch):
+    """ADR-0013: Groq con cada clave configurada, en orden, y despues Gemini."""
+    monkeypatch.setenv("GEMINI_API_KEY", "clave-gemini")
+    monkeypatch.setenv("GROQ_API_KEY_1", "clave-1")
+    monkeypatch.setenv("GROQ_API_KEY_2", "clave-2")
+
+    llm = FallbackLLM.from_env()
+    try:
+        providers = llm._providers
+        assert [type(provider) for provider in providers] == [GroqLLM, GroqLLM, GeminiLLM]
+        assert [provider._api_key for provider in providers] == ["clave-1", "clave-2", "clave-gemini"]
+    finally:
+        llm.close()
+
+
+def test_from_env_without_groq_uses_only_gemini_adr_0013(monkeypatch):
+    """ADR-0013: sin claves de Groq el comportamiento es el de antes, solo Gemini."""
+    monkeypatch.setenv("GEMINI_API_KEY", "clave-gemini")
+    monkeypatch.setenv("GROQ_API_KEY_1", "")
+    monkeypatch.setenv("GROQ_API_KEY_2", "")
+
+    llm = FallbackLLM.from_env()
+    try:
+        assert [type(provider) for provider in llm._providers] == [GeminiLLM]
+    finally:
+        llm.close()
+
+
+def test_from_env_still_requires_gemini_key_adr_0013(monkeypatch):
+    """ADR-0013, punto abierto: GEMINI_API_KEY sigue siendo obligatoria para arrancar."""
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY_1", "clave-1")
+
+    with pytest.raises(ValueError):
+        FallbackLLM.from_env()
+
+
+def test_gemini_answers_when_every_groq_key_fails_adr_0013():
+    """ADR-0013: si fallan las claves de Groq, responde Gemini; si fallan todos, LLMError."""
+    groq_1, groq_2 = _Failing(), _Failing()
+    gemini = _Answering([_answer()])
+
+    assert FallbackLLM([groq_1, groq_2, gemini]).interpret(REQUEST, NOW).intent is Intent.QUERY_TASKS
+    assert (groq_1.calls, groq_2.calls) == (1, 1)

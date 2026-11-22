@@ -2253,7 +2253,7 @@
           "telegram"
         ],
         "summary": "Telegram Webhook",
-        "description": "Recibe los updates del bot y confirma la vinculación con `/start <código>`.",
+        "description": "Recibe los updates del bot: vincula con `/start <código>` y conversa con el agente.",
         "operationId": "telegram_webhook_telegram_webhook_post",
         "parameters": [
           {
@@ -2276,6 +2276,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "200": {
+            "description": "Respuesta del bot en el mismo chat (RF-TEL-04).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramSendMessage"
+                }
+              }
+            }
           },
           "401": {
             "description": "Falta el secreto del webhook o no es válido.",
@@ -4274,6 +4284,31 @@
           "expires_at"
         ],
         "title": "TelegramLinkResponse"
+      },
+      "TelegramSendMessage": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "const": "sendMessage",
+            "title": "Method",
+            "default": "sendMessage"
+          },
+          "chat_id": {
+            "type": "integer",
+            "title": "Chat Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chat_id",
+          "text"
+        ],
+        "title": "TelegramSendMessage",
+        "description": "Respuesta que Telegram ejecuta como `sendMessage` en el chat del update (RF-TEL-04)."
       },
       "UnreadCountResponse": {
         "properties": {

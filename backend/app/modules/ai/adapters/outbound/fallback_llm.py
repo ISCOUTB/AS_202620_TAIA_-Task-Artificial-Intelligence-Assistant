@@ -1,4 +1,4 @@
-"""Proveedor LLM con respaldo (ADR-0011).
+"""Proveedor LLM con respaldo (ADR-0011, ADR-0013).
 
 Intenta los proveedores en orden y usa el primero que responda. Si todos
 fallan, propaga LLMError y el caso de uso falla cerrado como en ADR-0007: el
@@ -10,6 +10,8 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
+from app.modules.ai.adapters.outbound.groq_llm import GroqLLM
 from app.modules.ai.application.ports.llm import LLMError, LLMUsage, LLMPort
 from app.modules.ai.domain.messages import IncomingRequest, Interpretation
 
@@ -22,6 +24,16 @@ class FallbackLLM(LLMPort):
             raise ValueError("se necesita al menos un proveedor")
         self._providers = providers
         self._answered: LLMPort | None = None
+
+    @classmethod
+    def from_env(cls) -> "FallbackLLM":
+        """ADR-0013: Groq primero, con cada clave configurada en orden, y Gemini al final.
+
+        Sin claves de Groq queda solo Gemini, como antes. `GEMINI_API_KEY` sigue
+        siendo obligatoria: si falta, el proceso no arranca (ADR-0007, punto 5).
+        """
+
+        return cls([*GroqLLM.all_from_env(), GeminiLLM.from_env()])
 
     def interpret(self, request: IncomingRequest, now: datetime) -> Interpretation:
         return self._first_answer(lambda provider: provider.interpret(request, now))

@@ -1,16 +1,18 @@
 """Caso de uso principal del asistente: recibe un mensaje y decide que hacer.
 
 Flujo: interpretar -> (si escribe: confirmar) -> pedir a academico -> responder.
-El modelo de lenguaje piensa; academico valida y persiste."""
+El modelo de lenguaje piensa; academico valida y persiste. Cada mensaje hace a
+lo sumo una llamada al modelo y las respuestas salen de plantillas (RNF-10)."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta
 import unicodedata
 
 from app.modules.ai.application import replies
-from app.modules.ai.application.dto import NewTask, TaskChanges, TaskFilters
+from app.modules.ai.application.dto import NewTask, SubjectOption, TaskChanges, TaskFilters
 from app.modules.ai.application.ports.academic_gateway import (
     AcademicError,
     AcademicGateway,
@@ -139,13 +141,22 @@ class HandleUserMessageUseCase:
         intent = interpretation.intent
         if intent is Intent.SYSTEM_HELP:
             return self._system_help(text)
-        if intent is Intent.QUERY_TASKS:
-            return self._query_tasks(request.user_id, interpretation)
-        if intent is Intent.CREATE_TASK:
-            return self._propose_create(interpretation, conversation)
-        if intent is Intent.UPDATE_TASK:
-            return self._propose_update(request.user_id, interpretation, conversation)
-        return AssistantReply(replies.not_understood())
+        handlers = {
+            Intent.QUERY_TASKS: self._query_tasks,
+            Intent.CREATE_TASK: self._propose_create,
+            Intent.UPDATE_TASK: self._propose_update,
+            Intent.COMPLETE_TASK: self._propose_complete,
+            Intent.SUMMARY: self._summary,
+            Intent.QUERY_SCHEDULE: self._schedule,
+        }
+        handler = handlers.get(intent)
+        if handler is None:
+            # RF-AGT-02: fuera de la lista cerrada, respuesta fija sin otra llamada.
+            return AssistantReply(replies.not_understood())
+        try:
+            return handler(request.user_id, interpretation, conversation)
+        except AcademicError:
+            return AssistantReply(replies.service_unavailable())
 
     # -- lectura (no requiere confirmacion) --------------------------------
 
@@ -153,31 +164,78 @@ class HandleUserMessageUseCase:
         try:
             answer = self._llm.answer_system_help(question)
             self._usage = self._llm.last_usage()
-            return AssistantReply(answer)
         except LLMError:
             return AssistantReply(replies.service_unavailable())
+        # RF-AGT-14: una respuesta cortada por el limite de tokens no se muestra.
+        if self._usage is not None and self._usage.truncated:
+            return AssistantReply(replies.help_truncated())
+        return AssistantReply(answer)
 
     def _query_tasks(
-        self, user_id: str, interpretation: Interpretation
+        self, user_id: str, interpretation: Interpretation, _conversation: Conversation
     ) -> AssistantReply:
         found = interpretation.filters
+        subject_id = None
+        if found and found.subject:
+            subject = self._resolve_subject(user_id, found.subject)
+            if isinstance(subject, AssistantReply):
+                return subject
+            subject_id = subject.id
         filters = TaskFilters(
             text=found.text if found else None,
-            subject=found.subject if found else None,
+            subject_id=subject_id,
             status=found.status if found else None,
             due_from=found.due_from if found else None,
             due_to=found.due_to if found else None,
+            type=found.type if found else None,
         )
-        try:
-            tasks = self._academic.list_tasks(user_id, filters)
-        except AcademicError:
-            return AssistantReply(replies.service_unavailable())
-        return AssistantReply(replies.task_list(tasks))
+        return AssistantReply(replies.task_list(self._academic.list_tasks(user_id, filters)))
+
+    def _summary(
+        self, user_id: str, interpretation: Interpretation, _conversation: Conversation
+    ) -> AssistantReply:
+        """RF-AGT-12: el modelo solo extrae el periodo; academico cuenta."""
+
+        if interpretation.period is None:
+            return AssistantReply(replies.missing_summary_period())
+        start, end = interpretation.period.bounds()
+        summary = self._academic.summarize_period(user_id, start, end)
+        return AssistantReply(replies.period_summary(summary))
+
+    def _schedule(
+        self, user_id: str, interpretation: Interpretation, _conversation: Conversation
+    ) -> AssistantReply:
+        """RF-AGT-13: clases del periodo, opcionalmente de una asignatura."""
+
+        if interpretation.period is None:
+            return AssistantReply(replies.missing_schedule_period())
+        subject_id = None
+        found = interpretation.filters
+        if found and found.subject:
+            subject = self._resolve_subject(user_id, found.subject)
+            if isinstance(subject, AssistantReply):
+                return subject
+            subject_id = subject.id
+        start, end = interpretation.period.bounds()
+        classes = self._academic.get_classes(user_id, start, end)
+        if subject_id is not None:
+            classes = [item for item in classes if item.subject_id == subject_id]
+        return AssistantReply(replies.class_list(classes))
+
+    def _resolve_subject(self, user_id: str, text: str) -> SubjectOption | AssistantReply:
+        """RF-AGT-10: una sola coincidencia da su identificador; si no, se pregunta."""
+
+        options = self._academic.match_subjects(user_id, text)
+        if not options:
+            return AssistantReply(replies.subject_not_found(text))
+        if len(options) > 1:
+            return AssistantReply(replies.subject_ambiguous(text, options))
+        return options[0]
 
     # -- escritura (propone y espera confirmacion) ------------------------
 
     def _propose_create(
-        self, interpretation: Interpretation, conversation: Conversation
+        self, user_id: str, interpretation: Interpretation, conversation: Conversation
     ) -> AssistantReply:
         task = interpretation.task or ExtractedTaskData()
         if interpretation.confidence < MIN_CONFIDENCE:
@@ -186,11 +244,18 @@ class HandleUserMessageUseCase:
             return AssistantReply(replies.missing_title())
         if task.due_at is None:
             return AssistantReply(replies.missing_due())
+        if not task.subject:
+            return AssistantReply(replies.missing_subject())
+        subject = self._resolve_subject(user_id, task.subject)
+        if isinstance(subject, AssistantReply):
+            return subject
 
+        task = replace(task, subject=subject.name, type=task.type or "task")
         action = PendingAction(
             kind=ActionKind.CREATE_TASK,
             task=task,
             summary=replies.confirm_create(task),
+            subject_id=subject.id,
         )
         conversation.set_pending(action)
         return AssistantReply(action.summary, awaiting_confirmation=True)
@@ -200,24 +265,59 @@ class HandleUserMessageUseCase:
     ) -> AssistantReply:
         changes = interpretation.task or ExtractedTaskData()
         hint = (interpretation.task_hint or "").strip()
-        if _no_changes(changes) or not hint:
+        if interpretation.confidence < MIN_CONFIDENCE or _no_changes(changes) or not hint:
             return AssistantReply(replies.rephrase())
 
-        try:
-            matches = self._academic.list_tasks(user_id, TaskFilters(text=hint))
-        except AcademicError:
-            return AssistantReply(replies.service_unavailable())
+        subject_id = None
+        if changes.subject:
+            subject = self._resolve_subject(user_id, changes.subject)
+            if isinstance(subject, AssistantReply):
+                return subject
+            changes = replace(changes, subject=subject.name)
+            subject_id = subject.id
 
+        matches = self._academic.list_tasks(user_id, TaskFilters(text=hint))
         if not matches:
-            return AssistantReply(replies.update_target_not_found(hint))
+            return AssistantReply(replies.task_not_found(hint))
         if len(matches) > 1:
-            return AssistantReply(replies.update_target_ambiguous(hint, len(matches)))
+            return AssistantReply(replies.task_ambiguous(hint, matches))
 
         target = matches[0]
         action = PendingAction(
             kind=ActionKind.UPDATE_TASK,
             task=changes,
             summary=replies.confirm_update(target.title, changes),
+            task_id=target.id,
+            task_hint=hint,
+            subject_id=subject_id,
+        )
+        conversation.set_pending(action)
+        return AssistantReply(action.summary, awaiting_confirmation=True)
+
+    def _propose_complete(
+        self, user_id: str, interpretation: Interpretation, conversation: Conversation
+    ) -> AssistantReply:
+        """RF-AGT-09: con varias candidatas pendientes no elige, las lista."""
+
+        hint = (interpretation.task_hint or "").strip()
+        if interpretation.confidence < MIN_CONFIDENCE or not hint:
+            return AssistantReply(replies.rephrase())
+
+        matches = [
+            task
+            for task in self._academic.list_tasks(user_id, TaskFilters(text=hint))
+            if task.status != "completed"
+        ]
+        if not matches:
+            return AssistantReply(replies.task_not_found(hint))
+        if len(matches) > 1:
+            return AssistantReply(replies.task_ambiguous(hint, matches))
+
+        target = matches[0]
+        action = PendingAction(
+            kind=ActionKind.COMPLETE_TASK,
+            task=ExtractedTaskData(),
+            summary=replies.confirm_complete(target),
             task_id=target.id,
             task_hint=hint,
         )
@@ -240,11 +340,14 @@ class HandleUserMessageUseCase:
     def _execute(self, user_id: str, action: PendingAction) -> AssistantReply:
         try:
             if action.kind is ActionKind.CREATE_TASK:
-                created = self._academic.create_task(user_id, _new_task(action.task))
+                created = self._academic.create_task(user_id, _new_task(action))
                 return AssistantReply(replies.task_created(created))
+            if action.kind is ActionKind.COMPLETE_TASK:
+                completed = self._academic.complete_task(user_id, action.task_id or "")
+                return AssistantReply(replies.task_completed(completed))
 
             updated = self._academic.update_task(
-                user_id, action.task_id or "", _task_changes(action.task)
+                user_id, action.task_id or "", _task_changes(action)
             )
             return AssistantReply(replies.task_updated(updated))
         except TaskDataRejected as error:
@@ -253,22 +356,27 @@ class HandleUserMessageUseCase:
             return AssistantReply(replies.service_unavailable())
 
 
-def _new_task(data: ExtractedTaskData) -> NewTask:
+def _new_task(action: PendingAction) -> NewTask:
+    data = action.task
     # due_at ya viene garantizado por _propose_create.
     return NewTask(
         title=data.title or "",
         due_at=data.due_at,  # type: ignore[arg-type]
         subject=data.subject,
         description=data.description,
+        subject_id=action.subject_id,
+        type=data.type or "task",
     )
 
 
-def _task_changes(data: ExtractedTaskData) -> TaskChanges:
+def _task_changes(action: PendingAction) -> TaskChanges:
+    data = action.task
     return TaskChanges(
         title=data.title,
         due_at=data.due_at,
         subject=data.subject,
         description=data.description,
+        subject_id=action.subject_id,
     )
 
 

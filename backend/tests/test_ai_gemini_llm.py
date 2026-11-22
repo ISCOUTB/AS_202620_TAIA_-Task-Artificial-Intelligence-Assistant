@@ -402,3 +402,49 @@ def test_boolean_in_usage_metadata_is_not_counted_as_a_token():
     assert usage is not None
     assert usage.prompt_tokens == 0
     assert usage.candidates_tokens == 0
+
+
+def _capture_body(answer):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _reply(answer)
+
+    return seen, handler
+
+
+def test_interpretation_schema_carries_type_generated_title_and_period_rf_agt_05_rf_agt_06():
+    seen, handler = _capture_body({"intent": "unknown", "confidence": 0.1})
+
+    _gemini(handler).interpret(REQUEST, NOW)
+
+    schema = seen["body"]["generationConfig"]["responseSchema"]["properties"]
+    assert {"complete_task", "summary", "query_schedule"} <= set(schema["intent"]["enum"])
+    assert {"type", "title_generated"} <= set(schema["task"]["properties"])
+    assert "type" in schema["filters"]["properties"]
+    assert set(schema["period"]["properties"]) == {"start", "end"}
+
+
+def test_help_limits_output_tokens_and_thinking_rf_agt_14():
+    seen, handler = _capture_body("TAIA registra tus tareas.")
+
+    _gemini(handler).answer_system_help("que puedes hacer?")
+
+    config = seen["body"]["generationConfig"]
+    assert config["maxOutputTokens"] == 1024
+    assert config["thinkingConfig"] == {"thinkingLevel": "minimal"}
+    assert "Ayuda de TAIA" in seen["body"]["systemInstruction"]["parts"][0]["text"]
+
+
+def test_help_output_limit_is_configurable_rf_agt_14():
+    seen, handler = _capture_body("TAIA registra tus tareas.")
+    llm = GeminiLLM(
+        api_key="test-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        help_max_tokens=300,
+    )
+
+    llm.answer_system_help("que puedes hacer?")
+
+    assert seen["body"]["generationConfig"]["maxOutputTokens"] == 300

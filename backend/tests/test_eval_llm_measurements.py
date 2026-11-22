@@ -63,3 +63,31 @@ def test_evaluation_excludes_empty_and_counts_provider_failure(monkeypatch):
     assert result["S3_latencia_ms"]["cumple_escenario"] is None
     assert result["S5_tokens"]["costo_usd"] is None
     assert "secret material" not in str(result)
+
+
+def test_s16_labels_are_scored_against_the_new_fields():
+    """D10: tipo, titulo generado (RF-AGT-06), periodo (RF-AGT-12/13) y asignatura del horario."""
+    from datetime import date
+
+    from app.modules.ai.domain.messages import ExtractedFilters, ExtractedPeriod
+
+    create = {"intent": "create_task", "type": "exam", "generated_title": True}
+    created = Interpretation(Intent.CREATE_TASK, 1, task=ExtractedTaskData(
+        title="Parcial de cálculo", type="exam", title_generated=True))
+    schedule = {"intent": "query_schedule", "subject": "Física",
+                "period_start": "2026-09-14", "period_end": "2026-09-14"}
+    scheduled = Interpretation(Intent.QUERY_SCHEDULE, 1, filters=ExtractedFilters(subject="física"),
+                               period=ExtractedPeriod(start=date(2026, 9, 14), end=date(2026, 9, 15)))
+
+    assert {f["campo"]: f["correcto"] for f in evaluator.comparar_campos(create, created)} == {
+        "task.type": True, "task.title_generated": True,
+    }
+    assert {f["campo"]: f["correcto"] for f in evaluator.comparar_campos(schedule, scheduled)} == {
+        "filters.subject": True, "period.start": True, "period.end": False,
+    }
+
+
+def test_missing_period_counts_as_wrong():
+    row = {"intent": "summary", "period_start": "2026-09-01", "period_end": "2026-09-30"}
+    fields = evaluator.comparar_campos(row, Interpretation(Intent.SUMMARY, 1))
+    assert [f["correcto"] for f in fields] == [False, False]

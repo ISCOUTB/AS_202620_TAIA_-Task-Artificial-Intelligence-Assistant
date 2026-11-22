@@ -45,12 +45,13 @@ def _use_case(interpretations, academic=None, store=None, help_answer=None):
 
 def test_create_task_asks_confirmation_before_writing():
     academic = InMemoryAcademicGateway()
+    academic.add_subject("u1", "Arquitectura")
     uc = _use_case(
         [
             Interpretation(
                 Intent.CREATE_TASK,
                 0.9,
-                task=ExtractedTaskData(title="Taller de arquitectura", due_at=DUE),
+                task=ExtractedTaskData(title="Taller de arquitectura", due_at=DUE, subject="arquitectura"),
             )
         ],
         academic=academic,
@@ -64,9 +65,10 @@ def test_create_task_asks_confirmation_before_writing():
 
 def test_create_task_executes_after_yes():
     academic = InMemoryAcademicGateway()
+    academic.add_subject("u1", "Redes")
     store = InMemoryConversationStore()
     uc = _use_case(
-        [Interpretation(Intent.CREATE_TASK, 0.9, task=ExtractedTaskData(title="Taller", due_at=DUE))],
+        [Interpretation(Intent.CREATE_TASK, 0.9, task=ExtractedTaskData(title="Taller", due_at=DUE, subject="Redes"))],
         academic=academic,
         store=store,
     )
