@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -26,8 +25,6 @@ from app.modules.reminders.application.ports.inbound.task_reminder_sync import (
     get_task_reminder_reader,
 )
 from app.shared.clock import Clock
-
-logger = logging.getLogger(__name__)
 
 
 class AcademicTaskManagementService(AcademicTaskManagement):
@@ -91,8 +88,8 @@ class AcademicTaskManagementService(AcademicTaskManagement):
         """Actividad propia con sus recordatorios, leídos por el puerto de Reminders (RF-TAR-05)."""
 
         task = self.get_task(task_id, user_id)
-        reader = self._reminder_reader or _configured_reminder_reader()
-        return task, reader.list_for_task(user_id, task_id) if reader is not None else []
+        reader = self._reminder_reader or get_task_reminder_reader()
+        return task, reader.list_for_task(user_id, task_id)
 
     def update_task(
         self,
@@ -134,16 +131,6 @@ class AcademicTaskManagementService(AcademicTaskManagement):
     def _to_data(self, task: Task, user_id: UUID) -> AcademicTaskData:
         subject = self._subjects.get(task.subject_id, user_id)
         return to_task_data(task, user_id, subject.name if subject else "", self._use_case.now())
-
-
-def _configured_reminder_reader() -> TaskReminderReader | None:
-    """Mientras Reminders no esté integrado, el detalle sale sin recordatorios (PREGUNTAS P-C-02)."""
-
-    try:
-        return get_task_reminder_reader()
-    except RuntimeError:
-        logger.warning("La lectura de recordatorios no está configurada.")
-        return None
 
 
 def to_task_data(task: Task, user_id: UUID, subject_name: str, now: datetime) -> AcademicTaskData:

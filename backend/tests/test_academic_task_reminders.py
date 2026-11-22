@@ -328,13 +328,12 @@ def test_delete_other_users_task_returns_404_without_sync_rf_tar_10(reminders):
     assert reminders.kinds(uuid.UUID(task_id)) == ["created"]
 
 
-def test_task_operations_work_while_reminders_port_is_not_configured(monkeypatch):
-    """Hasta integrar Reminders, el puerto puede faltar: la actividad se gestiona igual (P-C-02)."""
+def test_creating_a_task_fails_when_reminders_port_is_not_configured_h_12(monkeypatch):
+    """Sin el puerto de Reminders, crear una actividad falla con error (H-12, P-C-02)."""
 
-    monkeypatch.setattr(reminder_port, "_service", None)
     headers = register_and_login(client)
+    subject_id = create_subject(client, headers, f"Física {uuid.uuid4().hex[:6]}")
+    monkeypatch.setattr(reminder_port, "_service", None)
 
-    task_id = _create(headers).json()["id"]
-
-    assert client.patch(f"/academic/tasks/{task_id}/complete", headers=headers).status_code == 200
-    assert client.delete(f"/academic/tasks/{task_id}", headers=headers).status_code == 204
+    with pytest.raises(RuntimeError):
+        _create(headers, subject_id)

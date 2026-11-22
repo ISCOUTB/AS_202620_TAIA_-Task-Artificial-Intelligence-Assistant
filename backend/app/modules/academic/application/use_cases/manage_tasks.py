@@ -7,7 +7,6 @@ cambio del ciclo de vida mediante su puerto de entrada `TaskReminderSync`
 
 from __future__ import annotations
 
-import logging
 import uuid
 from dataclasses import replace
 from datetime import datetime
@@ -30,8 +29,6 @@ from app.shared.clock import Clock, as_bogota, now_bogota
 
 MAX_PAGE_SIZE = 100
 MAX_CUSTOM_REMINDERS = 10
-
-logger = logging.getLogger(__name__)
 
 
 class ManageTasksUseCase:
@@ -64,8 +61,7 @@ class ManageTasksUseCase:
         task = Task.create(subject_id, title, due_at, type, description, now=now)
         plan = _checked_plan(reminders or ReminderPlan(), task.due_at, now)
         self._tasks.add(task)
-        if (sync := self._sync()) is not None:
-            sync.on_task_created(user_id, task.id, task.due_at, plan)
+        self._sync().on_task_created(user_id, task.id, task.due_at, plan)
         return task
 
     def list(self, user_id: uuid.UUID, query: TaskQuery) -> tuple[list[Task], int]:
@@ -99,8 +95,8 @@ class ManageTasksUseCase:
         previous_due = task.due_at
         task.update(title, description, subject_id, type, due_at, now=self._now())
         self._tasks.save(task)
-        if task.due_at != previous_due and task.completed_at is None and (sync := self._sync()) is not None:
-            sync.on_due_changed(user_id, task.id, task.due_at)
+        if task.due_at != previous_due and task.completed_at is None:
+            self._sync().on_due_changed(user_id, task.id, task.due_at)
         return task
 
     def complete(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task:
@@ -109,8 +105,7 @@ class ManageTasksUseCase:
         task = self.get(task_id, user_id)
         task.complete(self._now())
         self._tasks.save(task)
-        if (sync := self._sync()) is not None:
-            sync.on_task_closed(user_id, task.id)
+        self._sync().on_task_closed(user_id, task.id)
         return task
 
     def reopen(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task:
@@ -120,8 +115,8 @@ class ManageTasksUseCase:
         was_completed = task.completed_at is not None
         task.reopen()
         self._tasks.save(task)
-        if was_completed and task.due_at > self._now() and (sync := self._sync()) is not None:
-            sync.on_task_reopened(user_id, task.id, task.due_at)
+        if was_completed and task.due_at > self._now():
+            self._sync().on_task_reopened(user_id, task.id, task.due_at)
         return task
 
     def delete(self, task_id: uuid.UUID, user_id: uuid.UUID) -> None:
@@ -130,8 +125,7 @@ class ManageTasksUseCase:
         task = self.get(task_id, user_id)
         task.delete(self._now())
         self._tasks.save(task)
-        if (sync := self._sync()) is not None:
-            sync.on_task_closed(user_id, task.id)
+        self._sync().on_task_closed(user_id, task.id)
 
     def now(self) -> datetime:
         return self._now()
@@ -143,22 +137,10 @@ class ManageTasksUseCase:
         if subject.archived:
             raise SubjectArchivedError("La asignatura está archivada y no acepta tareas nuevas.")
 
-    def _sync(self) -> TaskReminderSync | None:
-        return self._reminders or _configured_reminder_sync()
+    def _sync(self) -> TaskReminderSync:
+        """Puerto de Reminders; sin configurar falla con error (H-12)."""
 
-
-def _configured_reminder_sync() -> TaskReminderSync | None:
-    """Puerto de Reminders configurado en `main.py` por el frente B.
-
-    Mientras Reminders no esté integrado, el puerto puede no estar configurado:
-    se registra un aviso y la actividad queda sin sincronizar (PREGUNTAS P-C-02).
-    """
-
-    try:
-        return get_task_reminder_sync()
-    except RuntimeError:
-        logger.warning("La sincronización de recordatorios no está configurada.")
-        return None
+        return self._reminders or get_task_reminder_sync()
 
 
 def _checked_plan(plan: ReminderPlan, due_at: datetime, now: datetime) -> ReminderPlan:

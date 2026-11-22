@@ -39,7 +39,6 @@ class FakeReminderReader:
 def reader(monkeypatch) -> FakeReminderReader:
     double = FakeReminderReader()
     monkeypatch.setattr(reminder_port, "_reader", double)
-    monkeypatch.setattr(reminder_port, "_service", None)
     return double
 
 
@@ -97,13 +96,12 @@ def test_detail_of_other_users_task_is_404_and_reads_no_reminders_rt_02(reader):
     assert reader.asked == []
 
 
-def test_detail_without_reader_configured_has_no_reminders(monkeypatch):
-    """Hasta integrar Reminders, el detalle responde sin recordatorios (P-C-02)."""
+def test_detail_fails_when_reminder_reader_is_not_configured_h_12(monkeypatch):
+    """Sin el puerto de Reminders, el detalle falla con error en vez de omitir los recordatorios (H-12, P-C-02)."""
 
-    monkeypatch.setattr(reminder_port, "_reader", None)
     headers = register_and_login(client)
     task = _task(headers)
+    monkeypatch.setattr(reminder_port, "_reader", None)
 
-    body = client.get(f"/academic/tasks/{task['id']}", headers=headers).json()
-
-    assert body["reminders"] == []
+    with pytest.raises(RuntimeError):
+        client.get(f"/academic/tasks/{task['id']}", headers=headers)
