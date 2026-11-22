@@ -18,9 +18,11 @@ class FakeLLM(LLMPort):
         self._queue = list(interpretations or [])
         self._help_answer = help_answer
         self.seen: list[str] = []
+        self.requests: list[IncomingRequest] = []
 
     def interpret(self, request: IncomingRequest, now: datetime) -> Interpretation:
         self.seen.append(request.text)
+        self.requests.append(request)
         if not self._queue:
             raise LLMError("sin respuestas preparadas")
         return self._queue.pop(0)

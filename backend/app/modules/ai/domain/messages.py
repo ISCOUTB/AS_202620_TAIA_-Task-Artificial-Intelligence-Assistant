@@ -74,6 +74,10 @@ class IncomingRequest:
     user_id: str
     text: str
     channel: Channel
+    # Mensajes anteriores de la conversacion, del mas antiguo al mas reciente, como
+    # pares (rol, texto). Solo sirven de contexto al modelo (RF-AGT-15); nunca
+    # llevan identificadores (RF-AGT-17).
+    history: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)

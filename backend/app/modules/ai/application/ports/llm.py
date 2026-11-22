@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -54,3 +55,12 @@ class LLMPort(ABC):
     @abstractmethod
     def answer_system_help(self, question: str) -> str:
         """Responde una duda del estudiante sobre como funciona TAIA."""
+
+    def propose_study_sessions(self, slots: Sequence, items: Sequence) -> list[tuple[int, int]]:
+        """Sugiere pares (actividad, hueco) para el plan de estudio (RF-EST-02).
+
+        No es abstracto: un proveedor sin esta capacidad falla y Academic arma
+        el plan solo con sus reglas.
+        """
+
+        raise LLMError("el proveedor no sugiere planes de estudio")

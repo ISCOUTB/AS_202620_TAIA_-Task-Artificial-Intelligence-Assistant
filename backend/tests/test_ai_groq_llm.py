@@ -196,3 +196,13 @@ def test_help_cut_by_length_is_flagged_as_truncated_rf_agt_14():
     llm.answer_system_help("que haces")
 
     assert llm.last_usage().truncated is True
+
+
+def test_default_client_timeout_lets_the_chain_fit_the_app_wait_rf_agt_20():
+    """Tres proveedores en serie (dos claves de Groq y Gemini) caben en los 30 s de la app."""
+    llm = GroqLLM(api_key="test-key")
+    try:
+        assert llm._client.timeout == httpx.Timeout(8.0)
+        assert 3 * 8.0 < 30
+    finally:
+        llm.close()

@@ -17,6 +17,10 @@ from app.modules.ai.adapters.outbound.interpretation_contract import (
     HELP_INSTRUCTIONS,
     MAX_HELP_CHARS,
     as_data,
+    STUDY_PLAN_INSTRUCTIONS,
+    interpretation_message,
+    parse_study_sessions,
+    study_plan_message,
     interpretation_instructions,
     parse_interpretation,
 )
@@ -25,7 +29,10 @@ from app.modules.ai.domain.messages import IncomingRequest, Intent, Interpretati
 
 _URL = "https://api.groq.com/openai/v1/chat/completions"
 _DEFAULT_MODEL = "openai/gpt-oss-120b"
-_DEFAULT_TIMEOUT = 20.0
+# FallbackLLM prueba hasta tres proveedores en serie (ADR-0013) y la app espera
+# 30 s. Con 20 s por proveedor la cadena podia tardar 60 s y la app mostraba un
+# error mientras el backend seguia trabajando. Con 8 s, la cadena cabe en 30 s.
+_DEFAULT_TIMEOUT = 8.0
 # gpt-oss razona antes de responder y esos tokens cuentan contra
 # max_completion_tokens: con poco margen, la respuesta saldria cortada.
 _MAX_COMPLETION_TOKENS = 1024
@@ -62,6 +69,23 @@ _INTERPRETATION_SCHEMA: dict[str, Any] = {
     },
 }
 
+
+_STUDY_PLAN_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["sessions"],
+    "properties": {
+        "sessions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["item", "slot"],
+                "properties": {"item": {"type": "integer"}, "slot": {"type": "integer"}},
+            },
+        },
+    },
+}
 
 class GroqLLM(LLMPort):
     """Implementacion de LLMPort sobre la API de Groq."""
@@ -102,7 +126,7 @@ class GroqLLM(LLMPort):
     def interpret(self, request: IncomingRequest, now: datetime) -> Interpretation:
         content = self._complete(
             instructions=interpretation_instructions(now),
-            message=as_data("Mensaje del estudiante", request.text),
+            message=interpretation_message(request.text, request.history),
             temperature=0,
             response_format={
                 "type": "json_schema",
@@ -114,6 +138,21 @@ class GroqLLM(LLMPort):
             },
         )
         return parse_interpretation(content)
+
+    def propose_study_sessions(self, slots, items) -> list[tuple[int, int]]:
+        """RF-EST-02: una llamada que sugiere qué actividad va en cada hueco."""
+
+        content = self._complete(
+            instructions=STUDY_PLAN_INSTRUCTIONS,
+            message=study_plan_message(slots, items),
+            temperature=0,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "study_plan", "strict": True, "schema": _STUDY_PLAN_SCHEMA},
+            },
+            max_tokens=2048,
+        )
+        return parse_study_sessions(content)
 
     def answer_system_help(self, question: str) -> str:
         answer = self._complete(

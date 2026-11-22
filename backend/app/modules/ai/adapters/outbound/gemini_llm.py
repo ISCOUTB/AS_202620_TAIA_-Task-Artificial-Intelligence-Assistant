@@ -17,6 +17,10 @@ from app.modules.ai.adapters.outbound.interpretation_contract import (
     HELP_INSTRUCTIONS,
     MAX_HELP_CHARS,
     as_data,
+    STUDY_PLAN_INSTRUCTIONS,
+    interpretation_message,
+    parse_study_sessions,
+    study_plan_message,
     interpretation_instructions,
     parse_interpretation,
 )
@@ -29,7 +33,10 @@ _BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 # este valor por defecto, un clon sin GEMINI_MODEL recibia 404. Ver
 # docs/arc42/11-riesgos-y-deudas-tecnicas.md, seccion 11.7.
 _DEFAULT_MODEL = "gemini-3.5-flash-lite"
-_DEFAULT_TIMEOUT = 20.0
+# FallbackLLM prueba hasta tres proveedores en serie (ADR-0013) y la app espera
+# 30 s. Con 20 s por proveedor la cadena podia tardar 60 s y la app mostraba un
+# error mientras el backend seguia trabajando. Con 8 s, la cadena cabe en 30 s.
+_DEFAULT_TIMEOUT = 8.0
 # RF-AGT-14: la ayuda acota el razonamiento, que cuenta contra maxOutputTokens.
 # "minimal" es el nivel mas bajo que acepta gemini-3.5-flash-lite.
 _HELP_THINKING = {"thinkingLevel": "minimal"}
@@ -84,6 +91,21 @@ _INTERPRETATION_SCHEMA: dict[str, Any] = {
     "required": ["intent", "confidence"],
 }
 
+_STUDY_PLAN_SCHEMA: dict[str, Any] = {
+    "type": "OBJECT",
+    "properties": {
+        "sessions": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {"item": {"type": "INTEGER"}, "slot": {"type": "INTEGER"}},
+                "required": ["item", "slot"],
+            },
+        },
+    },
+    "required": ["sessions"],
+}
+
 
 class GeminiLLM(LLMPort):
     """Implementacion de LLMPort sobre la API REST de Gemini."""
@@ -125,7 +147,7 @@ class GeminiLLM(LLMPort):
     def interpret(self, request: IncomingRequest, now: datetime) -> Interpretation:
         payload = self._generate(
             instructions=interpretation_instructions(now),
-            message=as_data("Mensaje del estudiante", request.text),
+            message=interpretation_message(request.text, request.history),
             config={
                 "responseMimeType": "application/json",
                 "responseSchema": _INTERPRETATION_SCHEMA,
@@ -134,6 +156,21 @@ class GeminiLLM(LLMPort):
             },
         )
         return parse_interpretation(payload)
+
+    def propose_study_sessions(self, slots, items) -> list[tuple[int, int]]:
+        """RF-EST-02: una llamada que sugiere qué actividad va en cada hueco."""
+
+        payload = self._generate(
+            instructions=STUDY_PLAN_INSTRUCTIONS,
+            message=study_plan_message(slots, items),
+            config={
+                "responseMimeType": "application/json",
+                "responseSchema": _STUDY_PLAN_SCHEMA,
+                "temperature": 0,
+                "maxOutputTokens": 2048,
+            },
+        )
+        return parse_study_sessions(payload)
 
     def answer_system_help(self, question: str) -> str:
         text = self._generate(

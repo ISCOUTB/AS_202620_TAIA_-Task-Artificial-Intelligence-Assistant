@@ -41,6 +41,9 @@ class FallbackLLM(LLMPort):
     def answer_system_help(self, question: str) -> str:
         return self._first_answer(lambda provider: provider.answer_system_help(question))
 
+    def propose_study_sessions(self, slots, items) -> list[tuple[int, int]]:
+        return self._first_answer(lambda provider: provider.propose_study_sessions(slots, items))
+
     def last_usage(self) -> LLMUsage | None:
         return self._answered.last_usage() if self._answered else None
 

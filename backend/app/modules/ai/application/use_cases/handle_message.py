@@ -132,8 +132,11 @@ class HandleUserMessageUseCase:
             # Otra peticion ya la reclamo: se atiende como un mensaje sin
             # accion pendiente, igual que una confirmacion repetida.
 
+        # RF-AGT-15: el modelo recibe los mensajes anteriores para entender
+        # continuaciones como "y manana?". El ultimo turno es el mensaje actual.
+        history = tuple((turn.role, turn.text) for turn in conversation.turns[:-1])
         try:
-            interpretation = self._llm.interpret(request, self._now())
+            interpretation = self._llm.interpret(replace(request, history=history), self._now())
             self._usage = self._llm.last_usage()
         except LLMError:
             return AssistantReply(replies.service_unavailable())
