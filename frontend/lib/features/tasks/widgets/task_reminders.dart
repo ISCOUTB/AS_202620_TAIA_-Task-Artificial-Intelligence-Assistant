@@ -151,10 +151,14 @@ class _ReminderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Con el modelo actual, `is_completed` marca el que ya avisó: no se edita
-    // ni se elimina (RF-REC-04 y RF-REC-05).
-    final pending = !reminder.isCompleted;
+    // Solo uno pendiente se edita o se elimina (RF-REC-04 y RF-REC-05).
+    final pending = reminder.isPending;
     final when = formatDateTimeShort(reminder.scheduledAt);
+    final state = switch (reminder.status) {
+      'sent' => '$when · enviado',
+      'cancelled' => '$when · cancelado',
+      _ => when,
+    };
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
       decoration: BoxDecoration(
@@ -175,7 +179,7 @@ class _ReminderRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  reminder.message,
+                  reminder.displayMessage,
                   style: const TextStyle(
                     color: taiaInk,
                     fontWeight: FontWeight.w700,
@@ -183,7 +187,7 @@ class _ReminderRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  pending ? when : '$when · enviado',
+                  state,
                   style: TextStyle(
                     color: taiaInk.withValues(alpha: 0.6),
                     fontSize: 12,
@@ -244,7 +248,7 @@ class _ReminderDialog extends StatefulWidget {
 class _ReminderDialogState extends State<_ReminderDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _message = TextEditingController(
-    text: widget.reminder?.message ?? '',
+    text: widget.reminder?.customMessage ?? '',
   );
   late DateTime _at =
       widget.reminder?.scheduledAt ?? suggestedReminderTime(bogotaNow());
@@ -292,15 +296,17 @@ class _ReminderDialogState extends State<_ReminderDialog> {
     });
     try {
       final reminder = widget.reminder;
+      final text = _message.text.trim();
+      final message = text.isEmpty ? null : text;
       final saved = reminder == null
           ? await widget.service.create(
               taskId: widget.task.id,
-              message: _message.text.trim(),
+              customMessage: message,
               scheduledAt: _at,
             )
           : await widget.service.update(
               reminder.id,
-              message: _message.text.trim(),
+              customMessage: message,
               scheduledAt: _at,
             );
       if (!mounted) return;
@@ -326,19 +332,15 @@ class _ReminderDialogState extends State<_ReminderDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const FormLabel('Mensaje'),
+            const FormLabel('Mensaje (opcional)'),
             TextFormField(
               controller: _message,
               enabled: !_busy,
               maxLength: 500,
               style: taskValueStyle,
               textCapitalization: TextCapitalization.sentences,
-              decoration: taskFieldDecoration(
-                hint: 'Ej. Repasar el capítulo 3',
-              ).copyWith(counterText: ''),
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Escribe el mensaje del recordatorio.'
-                  : null,
+              decoration: taskFieldDecoration(hint: 'Ej. Repasar el capítulo 3')
+                  .copyWith(counterText: ''),
             ),
             const SizedBox(height: 14),
             const FormLabel('Fecha y hora'),

@@ -40,7 +40,7 @@ class HomeData {
         counts[due.weekday - 1]++;
       }
     }
-    final pending = reminders.where((r) => !r.isCompleted).toList()
+    final pending = reminders.where((r) => r.isPending).toList()
       ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     final parts = fullName.trim().split(RegExp(r'\s+'));
     return HomeData(

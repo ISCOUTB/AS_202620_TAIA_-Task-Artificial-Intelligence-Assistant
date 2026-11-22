@@ -14,16 +14,17 @@ import '../support/test_app.dart';
 Map<String, dynamic> reminderJson({
   String id = 'r1',
   String taskId = 't1',
-  String message = 'Repasar',
+  String? message = 'Repasar',
   String scheduledAt = '2026-10-08T23:00:00Z',
-  bool completed = false,
+  String origin = 'custom',
+  String status = 'pending',
 }) => {
   'id': id,
-  'user_id': 'u1',
-  'message': message,
-  'scheduled_at': scheduledAt,
-  'is_completed': completed,
   'task_id': taskId,
+  'scheduled_at': scheduledAt,
+  'custom_message': message,
+  'origin': origin,
+  'status': status,
 };
 
 FakeResponse _subjects(RequestOptions _) => const FakeResponse(200, [
@@ -64,34 +65,35 @@ void main() {
   setUp(() => clock = () => DateTime.utc(2026, 10, 5, 15));
   tearDown(() => clock = DateTime.now);
 
-  testWidgets('RF-TAR-05 · el detalle muestra la creación y sus recordatorios', (
-    tester,
-  ) async {
-    final api = FakeApi(
-      routes({
-        'GET /academic/subjects': _subjects,
-        'GET /reminders': (_) => FakeResponse(200, [
-          reminderJson(message: 'Repasar capítulo 3'),
-          reminderJson(id: 'r2', taskId: 'otra', message: 'De otra tarea'),
-        ]),
-      }),
-    );
+  testWidgets(
+    'RF-TAR-05 · el detalle muestra la creación y sus recordatorios',
+    (tester) async {
+      final api = FakeApi(
+        routes({
+          'GET /academic/subjects': _subjects,
+          'GET /reminders': (_) => FakeResponse(200, [
+            reminderJson(message: 'Repasar capítulo 3'),
+            reminderJson(id: 'r2', taskId: 'otra', message: 'De otra tarea'),
+          ]),
+        }),
+      );
 
-    await _open(
-      tester,
-      api,
-      task: taskJson(
-        status: 'completed',
-        completedAt: '2026-10-04T20:30:00Z',
-        priority: null,
-      ),
-    );
+      await _open(
+        tester,
+        api,
+        task: taskJson(
+          status: 'completed',
+          completedAt: '2026-10-04T20:30:00Z',
+          priority: null,
+        ),
+      );
 
-    expect(find.text('Creada el 1 de oct · 10:00 a. m.'), findsOneWidget);
-    expect(find.text('Completada el 4 de oct · 03:30 p. m.'), findsOneWidget);
-    expect(find.text('Repasar capítulo 3'), findsOneWidget);
-    expect(find.text('De otra tarea'), findsNothing);
-  });
+      expect(find.text('Creada el 1 de oct · 10:00 a. m.'), findsOneWidget);
+      expect(find.text('Completada el 4 de oct · 03:30 p. m.'), findsOneWidget);
+      expect(find.text('Repasar capítulo 3'), findsOneWidget);
+      expect(find.text('De otra tarea'), findsNothing);
+    },
+  );
 
   testWidgets('RF-TAR-06 · editar envía los cambios sin reenviar la fecha', (
     tester,
@@ -250,12 +252,46 @@ void main() {
       final body = _writes(api).single.body as Map<String, dynamic>;
       expect(body, {
         'task_id': 't1',
-        'message': 'Imprimir',
+        'custom_message': 'Imprimir',
         // La hora propuesta es la siguiente en punto: 11:00 de Colombia.
         'scheduled_at': '2026-10-05T11:00:00-05:00',
       });
       expect(find.text('Imprimir'), findsOneWidget);
     });
+
+    testWidgets(
+      'RF-REC-01 · el mensaje es opcional y el automático se nombra',
+      (tester) async {
+        final api = FakeApi(
+          routes({
+            'GET /academic/subjects': _subjects,
+            'GET /reminders': (_) => FakeResponse(200, [
+              reminderJson(message: null, origin: 'automatic'),
+            ]),
+            'POST /reminders': (r) => FakeResponse(
+              201,
+              reminderJson(
+                id: 'r9',
+                message: null,
+                scheduledAt: '2026-10-05T16:00:00Z',
+              ),
+            ),
+          }),
+        );
+        await _open(tester, api);
+
+        expect(find.text('Recordatorio automático'), findsOneWidget);
+
+        await tester.tap(find.text('Agregar recordatorio'));
+        await pumpFrames(tester);
+        await tester.tap(find.text('Guardar'));
+        await pumpFrames(tester);
+
+        final body = _writes(api).single.body as Map<String, dynamic>;
+        expect(body.containsKey('custom_message'), isFalse);
+        expect(find.text('Recordatorio'), findsOneWidget);
+      },
+    );
 
     testWidgets('RF-REC-01 · no se crean recordatorios tras la fecha límite', (
       tester,
@@ -300,7 +336,10 @@ void main() {
       await _open(
         tester,
         api,
-        task: taskJson(status: 'completed', completedAt: '2026-10-04T20:30:00Z'),
+        task: taskJson(
+          status: 'completed',
+          completedAt: '2026-10-04T20:30:00Z',
+        ),
       );
 
       expect(find.text('Agregar recordatorio'), findsNothing);
@@ -332,7 +371,7 @@ void main() {
       await pumpFrames(tester);
 
       final body = _writes(api).single.body as Map<String, dynamic>;
-      expect(body['message'], 'Repasar todo');
+      expect(body['custom_message'], 'Repasar todo');
       expect(body['scheduled_at'], '2026-10-08T18:00:00-05:00');
       expect(find.text('Repasar todo'), findsOneWidget);
     });
@@ -349,7 +388,7 @@ void main() {
               id: 'r2',
               message: 'Ya avisó',
               scheduledAt: '2026-10-04T23:00:00Z',
-              completed: true,
+              status: 'sent',
             ),
           ]),
           'DELETE /reminders/r1': (_) => const FakeResponse(204),

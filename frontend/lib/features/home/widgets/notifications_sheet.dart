@@ -100,7 +100,7 @@ class _NotificationsSheet extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    reminder.message,
+                                    reminder.displayMessage,
                                     style: const TextStyle(
                                       color: taiaInk,
                                       fontWeight: FontWeight.w700,

@@ -28,33 +28,33 @@ class RemindersService {
       ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
   }
 
-  /// POST /reminders (RF-REC-01).
+  /// POST /reminders (RF-REC-01). Sin mensaje, el servidor usa el de por defecto.
   Future<Reminder> create({
     required String taskId,
-    required String message,
+    String? customMessage,
     required DateTime scheduledAt,
   }) => apiGuard(() async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/reminders',
       data: {
         'task_id': taskId,
-        'message': message,
+        'custom_message': ?customMessage,
         'scheduled_at': formatApiDateTime(scheduledAt),
       },
     );
     return Reminder.fromJson(response.data!);
   });
 
-  /// PATCH /reminders/{id} (RF-REC-04).
+  /// PATCH /reminders/{id} (RF-REC-04). Sin mensaje, conserva el que tenía.
   Future<Reminder> update(
     String id, {
-    required String message,
+    String? customMessage,
     required DateTime scheduledAt,
   }) => apiGuard(() async {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/reminders/$id',
       data: {
-        'message': message,
+        'custom_message': ?customMessage,
         'scheduled_at': formatApiDateTime(scheduledAt),
       },
     );

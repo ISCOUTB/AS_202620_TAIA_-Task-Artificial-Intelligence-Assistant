@@ -16,7 +16,7 @@ class RemindersBell extends StatelessWidget {
     try {
       final all = await (service ?? remindersService).list();
       if (!context.mounted) return;
-      final pending = all.where((r) => !r.isCompleted).toList()
+      final pending = all.where((r) => r.isPending).toList()
         ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       await showNotificationsSheet(context, pending);
     } on ApiException catch (e) {

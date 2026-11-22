@@ -178,7 +178,7 @@ class CalendarScreenState extends State<CalendarScreen> {
     try {
       final all = await _reminders.list();
       if (!mounted) return;
-      final pending = all.where((r) => !r.isCompleted).toList()
+      final pending = all.where((r) => r.isPending).toList()
         ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
       await showNotificationsSheet(context, pending);
     } on ApiException catch (e) {
