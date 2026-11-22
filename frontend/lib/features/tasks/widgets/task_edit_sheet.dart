@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../mascot/mascot_expression.dart';
 import '../../../mascot/taia_mascot.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_service.dart';
 import '../../auth/auth_shell.dart';
+import '../../reminders/reminders_service.dart';
 import '../subject.dart';
 import '../subjects_service.dart';
 import '../task.dart';
 import '../tasks_service.dart';
+import 'task_reminders.dart';
 
 /// Resultado de la hoja: la tarea guardada o el aviso de que se eliminó.
 class TaskEditResult {
@@ -20,12 +23,13 @@ class TaskEditResult {
   final bool deleted;
 }
 
-/// Abre la hoja de edición sobre la pantalla actual.
+/// Abre la hoja de detalle y edición sobre la pantalla actual (RF-TAR-05).
 Future<TaskEditResult?> showTaskEditSheet(
   BuildContext context,
   AcademicTask task, {
   TasksService? tasksService,
   SubjectsService? subjectsService,
+  RemindersService? remindersService,
 }) {
   return showModalBottomSheet<TaskEditResult>(
     context: context,
@@ -40,6 +44,7 @@ Future<TaskEditResult?> showTaskEditSheet(
       task: task,
       tasksService: tasksService,
       subjectsService: subjectsService,
+      remindersService: remindersService,
     ),
   );
 }
@@ -75,11 +80,13 @@ class TaskEditSheet extends StatefulWidget {
     required this.task,
     this.tasksService,
     this.subjectsService,
+    this.remindersService,
   });
 
   final AcademicTask task;
   final TasksService? tasksService;
   final SubjectsService? subjectsService;
+  final RemindersService? remindersService;
 
   @override
   State<TaskEditSheet> createState() => _TaskEditSheetState();
@@ -168,7 +175,7 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
     }
         // El backend exige una fecha futura; solo se envía si el usuario la cambió.
     final dueChanged = _due != widget.task.dueAt;
-    if (dueChanged && !_due.isAfter(DateTime.now())) {
+    if (dueChanged && !_due.isAfter(bogotaNow())) {
       setState(() {
         _error = 'La fecha límite debe ser posterior al momento actual.';
         _expression = MascotExpression.surprised;
@@ -263,6 +270,8 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
   @override
   Widget build(BuildContext context) {
     final priority = widget.task.priority;
+    final createdAt = widget.task.createdAt;
+    final completedAt = widget.task.completedAt;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
@@ -443,6 +452,20 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                   ),
                 ),
               ],
+              if (createdAt != null || completedAt != null) ...[
+                const SizedBox(height: 16),
+                if (createdAt != null)
+                  _DateNote('Creada el ${formatDateTimeShort(createdAt)}'),
+                if (completedAt != null)
+                  _DateNote(
+                    'Completada el ${formatDateTimeShort(completedAt)}',
+                  ),
+              ],
+              const SizedBox(height: 16),
+              TaskReminders(
+                task: widget.task,
+                service: widget.remindersService,
+              ),
               const SizedBox(height: 24),
               if (_error != null) AuthErrorText(_error!),
               AuthSubmitButton(
@@ -462,6 +485,24 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Fecha informativa del detalle (creación o completado).
+class _DateNote extends StatelessWidget {
+  const _DateNote(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        text,
+        style: TextStyle(color: taiaInk.withValues(alpha: 0.6), fontSize: 12),
       ),
     );
   }
