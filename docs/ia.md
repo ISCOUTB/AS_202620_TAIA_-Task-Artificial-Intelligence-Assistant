@@ -1458,3 +1458,40 @@ El equipo hizo las fusiones en el orden A, B, C, D y E y pidió resolver los con
 
 * Después de cada fusión: 418, 518, 596 y 707 pruebas aprobadas; tras las tareas de integración, 708. `tools/audit_boundaries.py`: 0 regresiones. Cliente Flutter fusionado: `flutter analyze` sin avisos y 57 pruebas.
 * `tools/verificar_dependencias.py` y `tools/verificar_modelo_amenazas.py`: veredicto `ok`.
+
+## Entrada 033
+
+**Fecha:** 2026-11-22
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Conectar el cliente Flutter con las rutas de S16 (ola 2, tarea E3).
+
+### Solicitud realizada
+
+El equipo pidió adaptar la app al modelo nuevo de recordatorios, que la hacía fallar en producción, y completar en el cliente lo que dependía de los frentes A, B y C: bandeja de notificaciones, opción de recordatorios al crear, cuenta, recuperación de contraseña, calendario, estadísticas y registro del token FCM.
+
+### Resultado generado
+
+* `Reminder` lee `custom_message`, `origin` y `status`; el mensaje del recordatorio es opcional (RF-REC-01, 03 a 05).
+* Bandeja `/notifications` con contador de no leídas en la campana, marcar una o todas como leídas (RF-NOT-03). Reemplaza la campana que derivaba los avisos de `/reminders`.
+* Opción de recordatorios al crear una actividad: por defecto (preseleccionada), fechas propias (hasta 10) o ninguno (RF-TAR-02).
+* Perfil: editar nombre y correo, cambiar la contraseña, desactivar la cuenta y desvincular Telegram (RF-USR-06, 07 y 09, RF-TEL-03).
+* "¿Olvidaste tu contraseña?": pedir el código y restablecer con código y contraseña nueva (RF-USR-08, RNF-03).
+* Calendario con `GET /academic/calendar` por el mes o la semana a la vista, con las clases del día en la agenda (RF-TAR-11).
+* Estadísticas del perfil con los cinco gráficos, su pregunta y su estado vacío, sin calcular nada en el cliente (RF-PRF-01).
+* Registro del token FCM al abrir la app con sesión y en cada renovación; Firebase se inicializa solo en Android (RF-NOT-01).
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* Para el token FCM se usan `getToken` y `onTokenRefresh` aunque `firebase_messaging` 17 los marque obsoletos: `register()` entrega el FID, y el backend envía con `Message(token=...)`, que espera el token de registro.
+* Los gráficos se dibujan con widgets de Flutter, sin agregar una dependencia de gráficas.
+
+### Verificación realizada
+
+* `flutter analyze` sin avisos y `flutter test` con 83 pruebas aprobadas (57 antes de E3). Las pruebas usan un adaptador HTTP falso, sin red ni Firebase.
+* El envío real de una notificación push a un dispositivo queda como prueba manual del equipo.

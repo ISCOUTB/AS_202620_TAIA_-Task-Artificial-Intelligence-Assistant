@@ -587,7 +587,7 @@ El sistema debería permitir desactivar todos los recordatorios de una actividad
 Las notificaciones se entregan como **push mediante Firebase Cloud Messaging (FCM)** a la aplicación. No dependen de que el usuario tenga Telegram vinculado.
 
 ### RF-NOT-01 · Registrar dispositivo
-**Prioridad:** MVP · **Estado:** Parcial (el backend registra el token; la app todavía no lo envía)
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir que la aplicación registre el token FCM del dispositivo después de iniciar sesión y lo elimine al cerrar sesión. Un usuario puede tener varios dispositivos. El token se asocia a la sesión y pertenece al módulo Usuario. Reminders lo obtiene mediante el puerto de Usuario.
 
@@ -917,7 +917,7 @@ El sistema genera un plan para los próximos 7 días a partir del horario de cla
 El usuario puede ver el plan propuesto, aceptarlo (queda guardado y visible en el calendario), descartarlo o regenerarlo con otras preferencias. Solo hay un plan activo por usuario a la vez.
 
 ### RF-PRF-01 · Perfil con estadísticas de rendimiento
-**Prioridad:** MVP · **Estado:** Parcial (el backend calcula las estadísticas; la app las muestra en la ola 2)
+**Prioridad:** MVP · **Estado:** Implementado
 
 El perfil del usuario muestra gráficos simples de un período seleccionable (semana, mes o período académico):
 
