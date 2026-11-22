@@ -1530,3 +1530,35 @@ El equipo reportó que la sesión no se guardaba, que no llegaban notificaciones
 * App: `flutter analyze` sin avisos y 102 pruebas aprobadas (83 antes).
 * LLM real: con Groq y con `gemini-3.5-flash-lite`, "¿Y mañana?" con contexto, "hoy", "mañana", "esta semana" y "el viernes" devolvieron el rango correcto. `tools/eval_llm.py --proveedor groq`: intención 0,886 (antes 0,9035) y campos 0,866 (antes 0,838).
 * No se verificó en un dispositivo: el push con la app abierta y cerrada queda como prueba manual del equipo.
+
+## Entrada 035
+
+**Fecha:** 2026-11-22
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Corregir lo que el equipo encontró al probar la APK: la flecha de atrás de la configuración inicial, el paso del horario y la mascota; y dejar rastro del envío de recordatorios.
+
+### Solicitud realizada
+
+El equipo pidió que atrás funcione en la configuración inicial, que una clase pueda elegirse en varios días con un paso del horario menos tedioso, usar las ilustraciones de TAIA de `Trabajo/vocetos` en lugar de la silueta y revisar por qué no llegaban las notificaciones.
+
+### Resultado generado
+
+* Configuración inicial: atrás (flecha y botón del teléfono) regresa al paso anterior (RF-ASG-10).
+* Compositor de clases: materia, varios días con atajos ("Lun y Mié", "Lun a Vie"), franjas rápidas u hora propia, resumen en vivo y vista semanal con un color por materia; crea un bloque por día e informa el día que choca (RF-ASG-06). Se usa en la configuración inicial y en Horario.
+* Mascota: las 12 poses de `Trabajo/vocetos/TAIA_disenos_transparentes`, limpias de restos de otras figuras, en `frontend/assets/mascot/`, animadas (flota, se balancea y rebota al cambiar de expresión) y con tres expresiones nuevas (`laptop`, `resting`, `books`). La silueta queda para el splash, la bienvenida y el inicio de sesión, que tienen fondo rosado.
+* Recordatorios: cada recordatorio procesado deja `reminder_notified` o `reminder_cancelled_at_dispatch` en el log, y FCM registra `fcm_enabled`, `fcm_send_failed` y `fcm_invalid_token` (RF-NOT-02, RNF-05).
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* App: `flutter analyze` sin avisos y 107 pruebas aprobadas.
+* Backend: pruebas del registro del envío con `caplog`, que también comprueban que el mensaje no aparece en el log.
