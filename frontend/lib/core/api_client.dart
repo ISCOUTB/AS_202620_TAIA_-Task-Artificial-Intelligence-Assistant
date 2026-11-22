@@ -36,8 +36,9 @@ Dio buildDio(TokenStorage tokens, {HttpClientAdapter? adapter}) {
     BaseOptions(
       baseUrl: apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
-      // El asistente de IA puede tardar en responder.
-      receiveTimeout: const Duration(seconds: 30),
+      // El asistente de IA puede tardar: si Groq no responde, el backend prueba
+      // la otra clave y luego Gemini, hasta 31 s en total (RF-AGT-20).
+      receiveTimeout: const Duration(seconds: 40),
       headers: {'Accept': 'application/json'},
     ),
   );
