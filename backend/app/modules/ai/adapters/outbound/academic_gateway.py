@@ -76,6 +76,7 @@ class AcademicGatewayAdapter(AcademicGateway):
         query = AcademicTaskQuery(
             subject_id=_parse_id(filters.subject_id) if filters.subject_id else None,
             status=filters.status,
+            type=filters.type,
             due_from=filters.due_from,
             due_to=filters.due_to,
             text=filters.text,
@@ -85,11 +86,7 @@ class AcademicGatewayAdapter(AcademicGateway):
             page = self._academic.list_tasks(owner, query)
         except ValueError as error:
             raise AcademicError(str(error)) from error
-        tasks = [_to_view(task) for task in page.items]
-        # AcademicTaskQuery todavía no filtra por tipo (P-D-01): se filtra la página.
-        if filters.type:
-            tasks = [task for task in tasks if task.type == filters.type]
-        return tasks
+        return [_to_view(task) for task in page.items]
 
     def update_task(self, user_id: str, task_id: str, changes: TaskChanges) -> TaskView:
         owner = _parse_user_id(user_id)

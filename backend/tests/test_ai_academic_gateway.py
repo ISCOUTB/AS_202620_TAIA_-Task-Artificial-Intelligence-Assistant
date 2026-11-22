@@ -84,6 +84,24 @@ def test_ai_gateway_filters_by_subject_id_and_type():
     assert gateway.list_tasks(str(user_id), TaskFilters(subject_id=str(other_subject.id))) == []
 
 
+
+def test_ai_gateway_sends_the_type_filter_to_academic_rf_agt_11():
+    """El tipo se filtra en la consulta de Academic, no sobre la página ya leída (P-D-01)."""
+
+    class _AcademicSpy:
+        def __init__(self) -> None:
+            self.queries = []
+
+        def list_tasks(self, user_id, query):
+            self.queries.append(query)
+            return type("Page", (), {"items": []})()
+
+    academic = _AcademicSpy()
+
+    AcademicGatewayAdapter(academic=academic).list_tasks(str(uuid.uuid4()), TaskFilters(type="exam"))
+
+    assert [query.type for query in academic.queries] == ["exam"]
+
 def test_ai_gateway_rejects_missing_or_foreign_subject():
     user_id, _ = _user_with_subject()
     _, foreign = _user_with_subject("Química")
