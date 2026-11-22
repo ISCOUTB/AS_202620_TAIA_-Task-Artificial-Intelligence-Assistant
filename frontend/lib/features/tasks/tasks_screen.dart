@@ -315,7 +315,7 @@ class _Header extends StatelessWidget {
               width: 84,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: TaiaColors.fieryRose,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TaiaMascot(motion: 0.6, expression: expression),
@@ -450,7 +450,7 @@ class _Message extends StatelessWidget {
               width: 200,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: TaiaColors.fieryRose,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(32),
               ),
               child: TaiaMascot(motion: 0.6, expression: expression),

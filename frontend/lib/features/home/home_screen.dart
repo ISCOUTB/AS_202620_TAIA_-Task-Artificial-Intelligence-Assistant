@@ -95,11 +95,11 @@ class HomeScreenState extends State<HomeScreen> {
       backgroundColor: TaiaColors.ivoryMist,
       floatingActionButton: FloatingActionButton.large(
         tooltip: 'Habla con TAIA',
-        backgroundColor: TaiaColors.fieryRose,
+        backgroundColor: Colors.white,
         onPressed: _openAgent,
         child: const Padding(
           padding: EdgeInsets.all(10),
-          child: TaiaMascot(motion: 0.6, expression: MascotExpression.wink),
+          child: TaiaMascot(motion: 0.6, expression: MascotExpression.laptop),
         ),
       ),
       body: SafeArea(
@@ -182,7 +182,7 @@ class _Message extends StatelessWidget {
               width: 200,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: TaiaColors.fieryRose,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(32),
               ),
               child: TaiaMascot(motion: 0.6, expression: expression),

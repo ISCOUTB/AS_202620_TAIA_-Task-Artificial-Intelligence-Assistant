@@ -42,7 +42,7 @@ class ActivitySuccess extends StatelessWidget {
             width: 160,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: TaiaColors.fieryRose,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(32),
             ),
             child: const TaiaMascot(

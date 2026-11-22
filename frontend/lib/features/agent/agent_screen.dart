@@ -60,7 +60,7 @@ class _AgentScreenState extends State<AgentScreen> {
   MascotExpression get _expression {
     if (_chat.sending) return MascotExpression.thinking;
     if (_chat.error != null) return MascotExpression.surprised;
-    return MascotExpression.happy;
+    return MascotExpression.laptop;
   }
 
   @override

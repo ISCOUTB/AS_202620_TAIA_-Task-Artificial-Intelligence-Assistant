@@ -123,7 +123,10 @@ class _SplashScreenState extends State<SplashScreen>
                         scale: 0.3 + 0.7 * pop,
                         child: Hero(
                           tag: 'taia-mascot',
-                          child: TaiaMascot(motion: _interval(0.5, 1)),
+                          child: TaiaMascot(
+                            motion: _interval(0.5, 1),
+                            silhouette: true,
+                          ),
                         ),
                       ),
                     ),

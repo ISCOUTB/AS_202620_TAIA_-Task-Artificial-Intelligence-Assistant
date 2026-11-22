@@ -326,7 +326,7 @@ class _SheetTitle extends StatelessWidget {
           width: 70,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: TaiaColors.fieryRose,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
           ),
           child: const TaiaMascot(

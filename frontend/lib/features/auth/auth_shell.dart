@@ -86,6 +86,7 @@ class AuthShell extends StatelessWidget {
                             child: TaiaMascot(
                               motion: 0.6,
                               expression: expression,
+                              silhouette: true,
                             ),
                           ),
                         ),

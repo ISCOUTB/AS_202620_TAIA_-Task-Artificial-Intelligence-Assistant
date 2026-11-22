@@ -28,4 +28,25 @@ enum MascotExpression {
 
   /// Con un libro abierto.
   reading,
+
+  /// Con un portátil (la del asistente).
+  laptop,
+
+  /// Ojos cerrados, en calma (estados vacíos).
+  resting,
+
+  /// Con una pila de libros (plan de estudio).
+  books;
+
+  /// Pose ilustrada de `assets/mascot/`.
+  String get asset => 'assets/mascot/$name.png';
+
+  /// La silueta vectorial solo dibuja las nueve primeras; las demás usan la
+  /// más parecida.
+  MascotExpression get silhouette => switch (this) {
+    laptop => happy,
+    resting => normal,
+    books => reading,
+    _ => this,
+  };
 }

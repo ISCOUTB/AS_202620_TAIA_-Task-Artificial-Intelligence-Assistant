@@ -51,7 +51,7 @@ class AgendaSection extends StatelessWidget {
                 width: 56,
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: TaiaColors.fieryRose,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: TaiaMascot(motion: 0.5, expression: expression),
@@ -312,7 +312,7 @@ class _EmptyDay extends StatelessWidget {
             width: 130,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: TaiaColors.fieryRose,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(28),
             ),
             child: TaiaMascot(motion: 0.6, expression: expression),

@@ -74,7 +74,7 @@ class PageHeader extends StatelessWidget {
           width: 72,
           padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
-            color: TaiaColors.fieryRose,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(22),
           ),
           child: TaiaMascot(motion: 0.6, expression: expression),

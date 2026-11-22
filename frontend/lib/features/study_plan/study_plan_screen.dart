@@ -128,7 +128,7 @@ class _StudyPlanScreenState extends State<StudyPlanScreen> {
               label: 'ACADÉMICO',
               title: 'Plan de estudio',
               subtitle: 'Sesiones para los próximos 7 días, sin chocar con tus clases.',
-              expression: MascotExpression.organizing,
+              expression: MascotExpression.books,
             ),
             const SizedBox(height: 16),
             if (_loading || _busy)

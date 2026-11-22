@@ -106,7 +106,15 @@ class TodayCard extends StatelessWidget {
                   else
                     ProgressRing(done: data.todayDone, total: data.todayTotal),
                   const SizedBox(height: 8),
-                  TaiaMascot(motion: 0.6, expression: expression),
+                  // Sobre el degradado coral, la ilustración va en un círculo claro.
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: TaiaMascot(motion: 0.6, expression: expression),
+                  ),
                 ],
               ),
             ),

@@ -315,7 +315,7 @@ class _TaskEditSheetState extends State<TaskEditSheet> {
                     width: 70,
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: TaiaColors.fieryRose,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: TaiaMascot(motion: 0.5, expression: _expression),

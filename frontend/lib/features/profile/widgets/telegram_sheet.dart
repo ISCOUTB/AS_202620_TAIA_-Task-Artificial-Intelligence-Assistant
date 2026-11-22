@@ -170,7 +170,7 @@ class _TelegramSheetState extends State<_TelegramSheet> {
                 width: 74,
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: TaiaColors.fieryRose,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(22),
                 ),
                 child: TaiaMascot(motion: 0.5, expression: _expression),

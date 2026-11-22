@@ -15,15 +15,21 @@ import 'mascot_geometry.dart';
 ///
 /// [expression] cambia el rostro (y los útiles escolares). Al cambiar, la
 /// mascota da un pequeño rebote para que se note la reacción.
+///
+/// Por defecto muestra la pose ilustrada de `assets/mascot/`, que flota y se
+/// balancea. Con [silhouette] dibuja la silueta vectorial clara, la que se usa
+/// sobre el fondo rosado del splash, la bienvenida y el inicio de sesión.
 class TaiaMascot extends StatefulWidget {
   const TaiaMascot({
     super.key,
     this.motion = 1,
     this.expression = MascotExpression.normal,
+    this.silhouette = false,
   });
 
   final double motion;
   final MascotExpression expression;
+  final bool silhouette;
 
   /// Proporción ancho / alto del lienzo, incluido el margen para el movimiento.
   static const aspectRatio = _viewWidth / _viewHeight;
@@ -63,8 +69,47 @@ class _TaiaMascotState extends State<TaiaMascot> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Widget _pose(BuildContext context) {
+    final asset = widget.expression.asset;
+    final image = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      child: Image.asset(
+        asset,
+        key: ValueKey(asset),
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+      ),
+    );
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final motion = still ? 0.0 : widget.motion;
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cycle, _pop]),
+      builder: (context, child) {
+        final t = _cycle.value * 2 * math.pi;
+        final bounce = Curves.elasticOut.transform(_pop.value);
+        // Flota, se balancea desde la base y "respira" un poco.
+        return FractionalTranslation(
+          translation: Offset(0, -0.025 * motion * math.sin(t)),
+          child: Transform.rotate(
+            angle: 0.04 * motion * math.sin(t + 0.9),
+            alignment: Alignment.bottomCenter,
+            child: Transform.scale(
+              scale:
+                  (0.9 + 0.1 * bounce) * (1 + 0.02 * motion * math.sin(2 * t)),
+              alignment: Alignment.bottomCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: AspectRatio(aspectRatio: 1, child: image),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!widget.silhouette) return _pose(context);
     return AnimatedBuilder(
       animation: _pop,
       builder: (context, child) {
@@ -81,7 +126,7 @@ class _TaiaMascotState extends State<TaiaMascot> with TickerProviderStateMixin {
           painter: _MascotPainter(
             cycle: _cycle,
             motion: widget.motion,
-            expression: widget.expression,
+            expression: widget.expression.silhouette,
           ),
         ),
       ),
@@ -216,7 +261,8 @@ class _MascotPainter extends CustomPainter {
   }
 
   void _paintFace(Canvas canvas, double blink) {
-    switch (expression) {
+    // Las poses que solo existen ilustradas usan la silueta más parecida.
+    switch (expression.silhouette) {
       case MascotExpression.normal:
         canvas.drawPath(_eyes, _eyeStroke);
       case MascotExpression.happy:
@@ -249,10 +295,17 @@ class _MascotPainter extends CustomPainter {
             _chevron(_rightEyeX + 5, _eyeY, pointsRight: false),
             _eyeStroke,
           );
+      case MascotExpression.laptop:
+      case MascotExpression.resting:
+      case MascotExpression.books:
+        break;
     }
 
-    switch (expression) {
+    switch (expression.silhouette) {
       case MascotExpression.normal:
+      case MascotExpression.laptop:
+      case MascotExpression.resting:
+      case MascotExpression.books:
         break;
       case MascotExpression.happy:
         _openMouth(canvas, 62);
@@ -285,7 +338,7 @@ class _MascotPainter extends CustomPainter {
 
   /// Destellos, signo de pregunta y útiles escolares.
   void _paintExtras(Canvas canvas) {
-    switch (expression) {
+    switch (expression.silhouette) {
       case MascotExpression.surprised:
       case MascotExpression.wink:
       case MascotExpression.excited:
@@ -301,6 +354,9 @@ class _MascotPainter extends CustomPainter {
         _paintBook(canvas);
       case MascotExpression.normal:
       case MascotExpression.happy:
+      case MascotExpression.laptop:
+      case MascotExpression.resting:
+      case MascotExpression.books:
         break;
     }
   }

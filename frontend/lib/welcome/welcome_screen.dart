@@ -47,7 +47,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       widthFactor: 0.55,
                       child: const Hero(
                         tag: 'taia-mascot',
-                        child: TaiaMascot(motion: 0.6),
+                        child: TaiaMascot(motion: 0.6, silhouette: true),
                       ),
                     ),
                     const SizedBox(height: 32),
