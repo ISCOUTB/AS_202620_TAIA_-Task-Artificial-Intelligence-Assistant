@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 
 from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
-from app.modules.usuario.domain.entities.usuario import Usuario
+from app.modules.usuario.domain.entities.usuario import Usuario, UserStatus
 
 
 class AuthenticatedUserNotFoundError(ValueError):
-    """El usuario indicado por el token ya no existe."""
+    """El usuario indicado por el token ya no existe o está inactivo."""
 
 
 class GetCurrentUserUseCase:
@@ -23,6 +23,7 @@ class GetCurrentUserUseCase:
             raise AuthenticatedUserNotFoundError("Usuario autenticado no encontrado.") from error
 
         user = self._repository.get_by_id(parsed_id)
-        if user is None:
+        # RF-USR-09: los datos de una cuenta inactiva no son accesibles por ningún canal.
+        if user is None or user.status is not UserStatus.ACTIVE:
             raise AuthenticatedUserNotFoundError("Usuario autenticado no encontrado.")
         return user

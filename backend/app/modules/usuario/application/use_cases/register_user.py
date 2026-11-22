@@ -20,6 +20,20 @@ class ConsentRequiredError(ValueError):
     """Se lanza cuando el registro no trae la aceptación de la política vigente."""
 
 
+class WeakPasswordError(ValueError):
+    """Se lanza cuando la contraseña no cumple las reglas de RF-USR-01."""
+
+
+MIN_PASSWORD_LENGTH = 8
+
+
+def check_password_rules(password: str) -> None:
+    """Reglas de contraseña de RF-USR-01, comunes al registro, al cambio y a la recuperación."""
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise WeakPasswordError(f"La contraseña debe tener al menos {MIN_PASSWORD_LENGTH} caracteres.")
+
+
 def check_consent(accepted: bool, policy_version: str) -> None:
     """Exige aceptación explícita de la versión vigente (RF-USR-10)."""
 
@@ -53,8 +67,7 @@ class RegisterUserUseCase:
         email_value = Email(email)
         if self._repository.get_by_email(email_value) is not None:
             raise UserAlreadyExistsError("Ya existe un usuario con ese correo.")
-        if len(password) < 8:
-            raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+        check_password_rules(password)
 
         password_hash = self._password_hasher.hash(password)
         user = Usuario.create(full_name=full_name, email=email_value, password_hash=password_hash)

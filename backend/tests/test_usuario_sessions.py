@@ -117,6 +117,18 @@ def test_reusing_a_rotated_token_revokes_every_session(auth):
             auth.refresh.execute(pair.refresh_token)
 
 
+def test_access_token_lasts_30_minutes_and_refresh_token_30_days(auth):
+    """RF-USR-03: el token de acceso dura 30 minutos y el de renovación, 30 días."""
+    pair = auth.login.execute(EMAIL, TEST_PASSWORD)
+    payload = jwt.decode(pair.access_token, SECRET, algorithms=["HS256"])
+    auth.clock.now = START + timedelta(days=30) - timedelta(minutes=1)
+
+    renewed = auth.refresh.execute(pair.refresh_token)
+
+    assert payload["exp"] - payload["iat"] == 30 * 60
+    assert renewed.refresh_token != pair.refresh_token
+
+
 def test_expired_refresh_token_is_rejected(auth):
     pair = auth.login.execute(EMAIL, TEST_PASSWORD)
     auth.clock.now = START + timedelta(days=30)
@@ -147,16 +159,46 @@ def test_logout_invalidates_access_and_refresh_tokens(auth):
 # --- Integración con PostgreSQL y la API ---------------------------------------------
 
 
-def _login(client: TestClient) -> dict:
+def _register(client: TestClient) -> str:
     email = f"sesion-{uuid.uuid4().hex[:8]}@example.com"
     created = client.post(
         "/users",
         json={"full_name": "Ana", "email": email, "password": TEST_PASSWORD, **CONSENT},
     )
     assert created.status_code == 201, created.text
+    return email
+
+
+def _login(client: TestClient) -> dict:
+    email = _register(client)
     login = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD})
     assert login.status_code == 200, login.text
     return login.json()
+
+
+def test_api_login_returns_both_tokens_and_bearer_type(clean_db):
+    """RF-USR-02: login correcto → 200 con access_token, refresh_token y token_type."""
+    tokens = _login(TestClient(app))
+
+    assert set(tokens) == {"access_token", "refresh_token", "token_type"}
+    assert tokens["access_token"]
+    assert tokens["refresh_token"]
+    assert tokens["token_type"] == "bearer"
+
+
+def test_api_wrong_password_and_unknown_email_get_the_same_401(clean_db):
+    """RF-USR-02: contraseña incorrecta y correo inexistente responden igual."""
+    client = TestClient(app)
+    email = _register(client)
+
+    wrong = client.post("/users/login", json={"email": email, "password": "otra-clave-cualquiera"})
+    unknown = client.post(
+        "/users/login", json={"email": "nadie@example.com", "password": "otra-clave-cualquiera"}
+    )
+
+    assert wrong.status_code == unknown.status_code == 401
+    assert wrong.json() == unknown.json()
+    assert wrong.headers["WWW-Authenticate"] == unknown.headers["WWW-Authenticate"]
 
 
 def test_api_logout_returns_401_for_the_same_tokens(clean_db):

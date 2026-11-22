@@ -7,13 +7,17 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
+from app.modules.reminders.application.ports.inbound.task_reminder_sync import get_task_reminder_sync
 from app.modules.usuario.adapters.outbound.provider import (
     failed_login_attempt_repository as _failed_login_attempt_repository,
     password_hasher as _password_hasher,
+    password_reset_code_repository as _password_reset_code_repository,
+    password_reset_mailer as _password_reset_mailer,
+    password_reset_request_repository as _password_reset_request_repository,
     repository as _repository,
     session_repository as _session_repository,
     telegram_link_repository as _telegram_link_repository,
@@ -23,6 +27,7 @@ from app.modules.usuario.application.ports.outbound.token_service import AccessT
 from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from app.modules.usuario.application.use_cases.link_telegram import (
     CreateTelegramLinkUseCase,
+    UnlinkTelegramUseCase,
     UserAlreadyLinkedError,
 )
 from app.modules.usuario.application.use_cases.login_user import (
@@ -30,6 +35,17 @@ from app.modules.usuario.application.use_cases.login_user import (
     InvalidCredentialsError,
     LoginUserUseCase,
     TooManyLoginAttemptsError,
+)
+from app.modules.usuario.application.use_cases.manage_account import (
+    ChangePasswordUseCase,
+    DeactivateAccountUseCase,
+    IncorrectPasswordError,
+    UpdateProfileUseCase,
+)
+from app.modules.usuario.application.use_cases.manage_devices import (
+    InvalidFcmTokenError,
+    RegisterFcmTokenUseCase,
+    RemoveFcmTokenUseCase,
 )
 from app.modules.usuario.application.use_cases.manage_sessions import (
     AuthenticateAccessTokenUseCase,
@@ -40,6 +56,12 @@ from app.modules.usuario.application.use_cases.manage_sessions import (
 from app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
     UserAlreadyExistsError,
+)
+from app.modules.usuario.application.use_cases.reset_password import (
+    InvalidResetCodeError,
+    RequestPasswordResetUseCase,
+    ResetPasswordUseCase,
+    TooManyResetRequestsError,
 )
 from app.modules.usuario.domain.entities.usuario import Usuario
 from app.modules.usuario.domain.value_objects.email import InvalidEmailError
@@ -66,6 +88,39 @@ class UserLoginRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
+
+
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = Field(None, min_length=1, max_length=100)
+    email: str | None = Field(None, min_length=3)
+    # RF-USR-06: obligatoria solo si cambia el correo.
+    current_password: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
+    new_password: str = Field(..., min_length=1)
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+    # RF-USR-08: el código de verificación tiene 6 dígitos.
+    code: str = Field(..., pattern=r"^[0-9]{6}$")
+    # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
+    new_password: str = Field(..., min_length=1)
+
+
+class DeactivateAccountRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+
+
+class FcmTokenRequest(BaseModel):
+    fcm_token: str = Field(..., min_length=1)
 
 
 class UserResponse(BaseModel):
@@ -138,7 +193,7 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
     "/login",
     responses={
         401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
-        403: {"model": ErrorResponse, "description": "La cuenta está inactiva."},
+        403: {"model": ErrorResponse, "description": "La cuenta lleva más de 30 días desactivada (RF-USR-09)."},
         422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
         429: {"model": ErrorResponse, "description": "Demasiados intentos fallidos con ese correo (RNF-03)."},
     },
@@ -197,6 +252,60 @@ def refresh_session(payload: RefreshTokenRequest) -> LoginResponse:
 
 
 @router.post(
+    "/password-reset",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        422: {"model": ErrorResponse, "description": "El correo no es válido."},
+        429: {"model": ErrorResponse, "description": "El correo agotó sus 3 solicitudes de las últimas 24 horas (RNF-03)."},
+        503: {"model": ErrorResponse, "description": "El servicio de correo no está configurado."},
+    },
+)
+def request_password_reset(payload: PasswordResetRequest, background_tasks: BackgroundTasks) -> Response:
+    """Envía un código de verificación al correo; responde lo mismo exista o no la cuenta (RF-USR-08).
+
+    El correo se envía después de responder, para que el tiempo de respuesta no revele si la cuenta existe.
+    """
+    mailer = _password_reset_mailer
+    if mailer is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El servicio de correo no está disponible. Intenta más tarde.",
+        )
+    use_case = RequestPasswordResetUseCase(
+        _repository, _password_reset_request_repository, _password_reset_code_repository, mailer
+    )
+    try:
+        email = use_case.execute(payload.email)
+    except TooManyResetRequestsError as error:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(error)) from error
+    except InvalidEmailError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    background_tasks.add_task(use_case.deliver, email)
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.post(
+    "/password-reset/confirm",
+    responses={
+        400: {"model": ErrorResponse, "description": "El correo o el código no son válidos."},
+        422: {"model": ErrorResponse, "description": "El correo o la nueva contraseña no son válidos."},
+    },
+)
+def confirm_password_reset(payload: PasswordResetConfirmRequest) -> Response:
+    """Restablece la contraseña con el código y cierra todas las sesiones (RF-USR-08)."""
+    use_case = ResetPasswordUseCase(
+        _repository, _password_reset_code_repository, _password_hasher, _session_repository
+    )
+    try:
+        use_case.execute(payload.email, payload.code, payload.new_password)
+    except InvalidResetCodeError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_200_OK)
+
+
+@router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
@@ -205,6 +314,36 @@ def logout_user(credentials: BearerCredentials) -> Response:
     """Cierra la sesión actual: su token de acceso y su token de renovación dejan de valer (RF-USR-04)."""
     claims = _authenticated_claims(credentials)
     LogoutUseCase(_session_repository).execute(claims.session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put(
+    "/me/fcm-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        422: {"model": ErrorResponse, "description": "El token del dispositivo no es válido."},
+    },
+)
+def register_fcm_token(payload: FcmTokenRequest, credentials: BearerCredentials) -> Response:
+    """Registra el token FCM del dispositivo en la sesión actual (RF-NOT-01)."""
+    claims = _authenticated_claims(credentials)
+    try:
+        RegisterFcmTokenUseCase(_session_repository).execute(claims.session_id, payload.fcm_token)
+    except InvalidFcmTokenError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/me/fcm-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
+)
+def remove_fcm_token(credentials: BearerCredentials) -> Response:
+    """Quita el token FCM de la sesión actual (RF-NOT-01)."""
+    claims = _authenticated_claims(credentials)
+    RemoveFcmTokenUseCase(_session_repository).execute(claims.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -217,8 +356,84 @@ def get_current_user(credentials: BearerCredentials) -> UserResponse:
     return UserResponse.from_domain(_authenticated_user(credentials))
 
 
-def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
+@router.patch(
+    "/me",
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "Cambiar el correo exige la contraseña actual correcta."},
+        409: {"model": ErrorResponse, "description": "Ya existe un usuario registrado con ese correo."},
+        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+    },
+)
+def update_current_user(payload: UserUpdateRequest, credentials: BearerCredentials) -> UserResponse:
+    """Actualiza el nombre y el correo del usuario autenticado (RF-USR-06)."""
+    user = _authenticated_user(credentials)
+    try:
+        updated = UpdateProfileUseCase(_repository, _password_hasher).execute(
+            user.id,
+            full_name=payload.full_name,
+            email=payload.email,
+            current_password=payload.current_password,
+        )
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except UserAlreadyExistsError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return UserResponse.from_domain(updated)
+
+
+@router.put(
+    "/me/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "La contraseña actual es incorrecta."},
+        422: {"model": ErrorResponse, "description": "La nueva contraseña no es válida."},
+    },
+)
+def change_password(payload: PasswordChangeRequest, credentials: BearerCredentials) -> Response:
+    """Cambia la contraseña; las demás sesiones del usuario se cierran (RF-USR-07)."""
     claims = _authenticated_claims(credentials)
+    user = _user_from_claims(claims)
+    try:
+        ChangePasswordUseCase(_repository, _password_hasher, _session_repository).execute(
+            user.id, claims.session_id, payload.current_password, payload.new_password
+        )
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/me/deactivate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "La contraseña actual es incorrecta."},
+    },
+)
+def deactivate_account(payload: DeactivateAccountRequest, credentials: BearerCredentials) -> Response:
+    """Desactiva la cuenta: cierra sesiones, Telegram, dispositivos y recordatorios (RF-USR-09)."""
+    user = _authenticated_user(credentials)
+    use_case = DeactivateAccountUseCase(
+        _repository, _password_hasher, _session_repository, get_task_reminder_sync()
+    )
+    try:
+        use_case.execute(user.id, payload.current_password)
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
+    return _user_from_claims(_authenticated_claims(credentials))
+
+
+def _user_from_claims(claims: AccessTokenClaims) -> Usuario:
     try:
         return GetCurrentUserUseCase(_repository).execute(claims.user_id)
     except ValueError as error:
@@ -268,3 +483,15 @@ def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse
         telegram_deep_link=f"https://t.me/{bot_username}?start={link.token}",
         expires_at=link.expires_at.isoformat(),
     )
+
+
+@router.delete(
+    "/me/telegram",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
+)
+def unlink_telegram(credentials: BearerCredentials) -> Response:
+    """Desvincula Telegram: los mensajes de esa cuenta ya no acceden a los datos (RF-TEL-03)."""
+    user = _authenticated_user(credentials)
+    UnlinkTelegramUseCase(_repository).execute(user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

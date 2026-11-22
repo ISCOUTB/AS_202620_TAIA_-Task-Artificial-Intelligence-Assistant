@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 from app.modules.usuario.domain.value_objects.email import Email
 from app.shared.clock import now_bogota
+
+# RF-USR-09: plazo para reactivar una cuenta desactivada iniciando sesión.
+REACTIVATION_WINDOW = timedelta(days=30)
 
 
 class UserStatus(str, Enum):
@@ -43,13 +46,7 @@ class Usuario:
     def create(full_name: str, email: Email, password_hash: str) -> "Usuario":
         """Crea un usuario nuevo aplicando las reglas de RF-USR-01."""
 
-        clean_name = (full_name or "").strip()
-        if not clean_name:
-            raise InvalidUserError("El nombre del usuario no puede estar vacío.")
-        if len(clean_name) > Usuario.MAX_FULL_NAME_LENGTH:
-            raise InvalidUserError(
-                f"El nombre no puede superar {Usuario.MAX_FULL_NAME_LENGTH} caracteres."
-            )
+        clean_name = Usuario._clean_full_name(full_name)
         if not password_hash:
             raise InvalidUserError("El usuario debe tener una contraseña protegida.")
 
@@ -60,9 +57,41 @@ class Usuario:
             password_hash=password_hash,
         )
 
+    @staticmethod
+    def _clean_full_name(full_name: str) -> str:
+        clean_name = (full_name or "").strip()
+        if not clean_name:
+            raise InvalidUserError("El nombre del usuario no puede estar vacío.")
+        if len(clean_name) > Usuario.MAX_FULL_NAME_LENGTH:
+            raise InvalidUserError(
+                f"El nombre no puede superar {Usuario.MAX_FULL_NAME_LENGTH} caracteres."
+            )
+        return clean_name
+
+    def rename(self, full_name: str) -> None:
+        """Cambia el nombre con las reglas de RF-USR-01 (RF-USR-06)."""
+        self.full_name = Usuario._clean_full_name(full_name)
+
+    def change_email(self, email: Email) -> None:
+        """Cambia el correo; la unicidad la comprueba el caso de uso (RF-USR-06)."""
+        self.email = email
+
     @property
     def status(self) -> UserStatus:
         return UserStatus.ACTIVE if self.deactivated_at is None else UserStatus.INACTIVE
+
+    def deactivate(self, now: datetime) -> None:
+        """Marca la cuenta como inactiva y desvincula Telegram (RF-USR-09)."""
+        self.deactivated_at = now
+        self.unlink_telegram()
+
+    def can_reactivate(self, now: datetime) -> bool:
+        """Una cuenta inactiva se reactiva solo dentro de los 30 días siguientes (RF-USR-09)."""
+        return self.deactivated_at is not None and now - self.deactivated_at <= REACTIVATION_WINDOW
+
+    def reactivate(self) -> None:
+        """Vuelve a activar la cuenta; lo cancelado al desactivar no se restaura (RF-USR-09)."""
+        self.deactivated_at = None
 
     def accept_policy(self, policy_version: str, now: datetime | None = None) -> None:
         """Registra la constancia de aceptación de la política (RF-USR-10)."""

@@ -1,7 +1,6 @@
-"""Modelos ORM de sesiones, tokens e intentos de acceso (diccionario de datos, 5.2 a 5.6).
+"""Modelos ORM de sesiones, tokens e intentos de acceso (diccionario de datos, 5.2 a 5.7).
 
-La tabla `users` está en sqlalchemy_user_repository.py. Estos modelos todavía
-no tienen repositorio: se usan a partir de las fases 4 y 7.
+La tabla `users` está en sqlalchemy_user_repository.py.
 """
 
 from __future__ import annotations
@@ -9,7 +8,20 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Identity, Index, String, Text, Uuid, func, text
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    Uuid,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,17 +61,22 @@ class RefreshTokenModel(Base):
 
 
 class PasswordResetTokenModel(Base):
-    """Tokens de recuperación de contraseña (RF-USR-08)."""
+    """Códigos de verificación para recuperar la contraseña (RF-USR-08).
+
+    Sin `UNIQUE (token_hash)`: con 6 dígitos, dos usuarios pueden recibir el mismo código.
+    """
 
     __tablename__ = "password_reset_tokens"
     __table_args__ = (
         CheckConstraint(_EXPIRES_AFTER_CREATED, name="expires_after_created"),
+        CheckConstraint("failed_attempts BETWEEN 0 AND 5", name="failed_attempts_range"),
         Index("ix_password_reset_tokens_user_id_created_at", "user_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_USERS_ID))
-    token_hash: Mapped[str] = mapped_column(CHAR(64), unique=True)
+    token_hash: Mapped[str] = mapped_column(CHAR(64))
+    failed_attempts: Mapped[int] = mapped_column(SmallInteger, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -89,3 +106,15 @@ class FailedLoginAttemptModel(Base):
     # Sin FOREIGN KEY: el correo intentado puede no existir.
     email: Mapped[str] = mapped_column(String(254))
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PasswordResetRequestModel(Base):
+    """Solicitudes de "olvidé mi contraseña", para el límite de RNF-03 (RF-USR-08)."""
+
+    __tablename__ = "password_reset_requests"
+    __table_args__ = (Index("ix_password_reset_requests_email_requested_at", "email", "requested_at"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
+    # Sin FOREIGN KEY: se registra también cuando el correo no existe.
+    email: Mapped[str] = mapped_column(String(254))
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

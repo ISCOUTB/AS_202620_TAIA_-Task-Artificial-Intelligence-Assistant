@@ -48,3 +48,23 @@ class SessionRepository(ABC):
     @abstractmethod
     def revoke_all(self, user_id: uuid.UUID, revoked_at: datetime) -> None:
         """Revoca todas las sesiones activas del usuario."""
+
+    @abstractmethod
+    def revoke_others(self, user_id: uuid.UUID, keep_session_id: uuid.UUID, revoked_at: datetime) -> None:
+        """Revoca las sesiones activas del usuario salvo `keep_session_id` (RF-USR-07)."""
+
+    @abstractmethod
+    def set_fcm_token(self, session_id: uuid.UUID, fcm_token: str) -> None:
+        """Asocia el token FCM a la sesión activa; si estaba en otra sesión, lo quita de allí (RF-NOT-01)."""
+
+    @abstractmethod
+    def clear_fcm_token(self, session_id: uuid.UUID) -> None:
+        """Quita el token FCM de la sesión (RF-NOT-01)."""
+
+    @abstractmethod
+    def get_fcm_tokens(self, user_id: uuid.UUID) -> list[str]:
+        """Tokens FCM de las sesiones no revocadas del usuario."""
+
+    @abstractmethod
+    def invalidate_fcm_token(self, fcm_token: str) -> None:
+        """Pone en `NULL` el token en la sesión que lo tenga."""

@@ -1,4 +1,4 @@
-"""Casos de uso para vincular una cuenta Telegram existente."""
+"""Casos de uso para vincular y desvincular una cuenta Telegram existente (RF-TEL-01, 03)."""
 
 from __future__ import annotations
 
@@ -83,3 +83,19 @@ class ConfirmTelegramLinkUseCase:
         self._users.save(user)
         self._links.mark_used(token)
         return user
+
+
+class UnlinkTelegramUseCase:
+    """Desvincula Telegram: ese `telegram_user_id` deja de resolver al usuario (RF-TEL-03)."""
+
+    def __init__(self, users: UserRepository) -> None:
+        self._users = users
+
+    def execute(self, user_id: uuid.UUID) -> None:
+        user = self._users.get_by_id(user_id)
+        if user is None:
+            raise ValueError("Usuario no encontrado.")
+        if user.telegram_user_id is None:
+            return
+        user.unlink_telegram()
+        self._users.save(user)

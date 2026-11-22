@@ -91,6 +91,56 @@ class SqlAlchemySessionRepository(SessionRepository):
                 .values(revoked_at=revoked_at, fcm_token=None)
             )
 
+    def revoke_others(self, user_id: uuid.UUID, keep_session_id: uuid.UUID, revoked_at: datetime) -> None:
+        with self._session_factory.begin() as session:
+            session.execute(
+                update(SessionModel)
+                .where(
+                    SessionModel.user_id == user_id,
+                    SessionModel.id != keep_session_id,
+                    SessionModel.revoked_at.is_(None),
+                )
+                .values(revoked_at=revoked_at, fcm_token=None)
+            )
+
+    def set_fcm_token(self, session_id: uuid.UUID, fcm_token: str) -> None:
+        with self._session_factory.begin() as session:
+            # UNIQUE (fcm_token): el dispositivo se mueve a la sesión actual.
+            session.execute(
+                update(SessionModel)
+                .where(SessionModel.fcm_token == fcm_token, SessionModel.id != session_id)
+                .values(fcm_token=None)
+            )
+            session.execute(
+                update(SessionModel)
+                .where(SessionModel.id == session_id, SessionModel.revoked_at.is_(None))
+                .values(fcm_token=fcm_token)
+            )
+
+    def clear_fcm_token(self, session_id: uuid.UUID) -> None:
+        with self._session_factory.begin() as session:
+            session.execute(
+                update(SessionModel).where(SessionModel.id == session_id).values(fcm_token=None)
+            )
+
+    def get_fcm_tokens(self, user_id: uuid.UUID) -> list[str]:
+        with self._session_factory() as session:
+            return list(
+                session.scalars(
+                    select(SessionModel.fcm_token).where(
+                        SessionModel.user_id == user_id,
+                        SessionModel.revoked_at.is_(None),
+                        SessionModel.fcm_token.is_not(None),
+                    )
+                )
+            )
+
+    def invalidate_fcm_token(self, fcm_token: str) -> None:
+        with self._session_factory.begin() as session:
+            session.execute(
+                update(SessionModel).where(SessionModel.fcm_token == fcm_token).values(fcm_token=None)
+            )
+
 
 def _refresh_token_model(session_id: uuid.UUID, refresh_token: str, expires_at: datetime) -> RefreshTokenModel:
     return RefreshTokenModel(
