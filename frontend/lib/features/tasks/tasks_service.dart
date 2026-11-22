@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
 import '../../core/api_error.dart';
 import '../../core/bogota_time.dart';
+import '../reminders/reminder_option.dart';
 import 'task.dart';
 
 class TaskPage {
@@ -68,6 +69,7 @@ class TasksService {
     required String description,
     required DateTime dueAt,
     required TaskType type,
+    ReminderOption? reminders,
   }) => apiGuard(() async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/academic/tasks',
@@ -77,6 +79,7 @@ class TasksService {
         'description': description,
         'due_at': formatApiDateTime(dueAt),
         'type': type.name,
+        'reminders': ?reminders?.toJson(),
       },
     );
     return AcademicTask.fromJson(response.data!);

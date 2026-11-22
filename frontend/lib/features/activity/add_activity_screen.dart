@@ -8,6 +8,8 @@ import '../../theme/taia_colors.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../notifications/notifications_bell.dart';
+import '../reminders/reminder_option.dart';
+import '../reminders/reminder_rules.dart';
 import '../tasks/subject.dart';
 import '../tasks/subjects_service.dart';
 import '../tasks/task.dart';
@@ -17,6 +19,7 @@ import 'activity_logic.dart';
 import 'widgets/activity_success.dart';
 import 'widgets/new_subject_dialog.dart';
 import 'widgets/quick_date_chips.dart';
+import 'widgets/reminder_option_field.dart';
 
 /// Pestaña para añadir una actividad (tarea o examen). Si el usuario aún no
 /// tiene materias, puede crear una desde aquí mismo.
@@ -49,6 +52,10 @@ class AddActivityScreenState extends State<AddActivityScreen> {
 
   TaskType _type = TaskType.task;
   late DateTime _due = defaultDueDate(bogotaNow());
+
+  // RF-TAR-02: la política por defecto va preseleccionada.
+  ReminderMode _reminderMode = ReminderMode.defaults;
+  List<DateTime> _customAt = [];
 
   bool _saving = false;
   String? _error;
@@ -157,6 +164,14 @@ class AddActivityScreenState extends State<AddActivityScreen> {
       });
       return;
     }
+    final reminderError = _reminderError();
+    if (reminderError != null) {
+      setState(() {
+        _error = reminderError;
+        _expression = MascotExpression.surprised;
+      });
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -169,6 +184,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
         description: _description.text.trim(),
         dueAt: _due,
         type: _type,
+        reminders: ReminderOption(_reminderMode, _customAt),
       );
       if (!mounted) return;
       setState(() {
@@ -186,6 +202,18 @@ class AddActivityScreenState extends State<AddActivityScreen> {
     }
   }
 
+  /// Reglas de RF-TAR-02 para las fechas propias: al menos una, como máximo
+  /// [maxCustomReminders], y cada una futura y anterior a la fecha límite.
+  String? _reminderError() {
+    if (_reminderMode != ReminderMode.custom) return null;
+    if (_customAt.isEmpty) return 'Agrega al menos una fecha de recordatorio.';
+    for (final at in _customAt) {
+      final error = reminderTimeError(at, due: _due, now: bogotaNow());
+      if (error != null) return error;
+    }
+    return null;
+  }
+
   /// Limpia el formulario para crear otra actividad (la materia se conserva).
   void _addAnother() {
     _title.clear();
@@ -195,6 +223,8 @@ class AddActivityScreenState extends State<AddActivityScreen> {
       _error = null;
       _type = TaskType.task;
       _due = defaultDueDate(bogotaNow());
+      _reminderMode = ReminderMode.defaults;
+      _customAt = [];
       _expression = MascotExpression.wink;
     });
   }
@@ -309,6 +339,28 @@ class AddActivityScreenState extends State<AddActivityScreen> {
                 style: TextStyle(color: Colors.red.shade700, fontSize: 12),
               ),
             ),
+          const SizedBox(height: 18),
+          const FormLabel('Recordatorios'),
+          ReminderOptionField(
+            mode: _reminderMode,
+            customAt: _customAt,
+            due: _due,
+            enabled: !_saving,
+            onModeChanged: (mode) {
+              setState(() {
+                _reminderMode = mode;
+                _error = null;
+              });
+              _onEdited();
+            },
+            onCustomChanged: (dates) {
+              setState(() {
+                _customAt = dates;
+                _error = null;
+              });
+              _onEdited();
+            },
+          ),
           const SizedBox(height: 28),
           if (_error != null) AuthErrorText(_error!),
           AuthSubmitButton(
