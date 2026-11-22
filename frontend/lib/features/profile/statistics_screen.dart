@@ -7,22 +7,22 @@ import '../../theme/taia_colors.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../shell/mascot_message.dart';
-import '../shell/page_header.dart';
 import '../tasks/widgets/task_form_widgets.dart';
 import 'statistics_service.dart';
 
 /// Estadísticas del perfil (RF-PRF-01): cinco gráficos de un período
-/// seleccionable, cada uno con su pregunta y su estado vacío.
-class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key, this.service});
+/// seleccionable, cada uno con su pregunta y su estado vacío. Se muestran
+/// directamente en el perfil, sin abrir otra pantalla.
+class StatisticsSection extends StatefulWidget {
+  const StatisticsSection({super.key, this.service});
 
   final StatisticsService? service;
 
   @override
-  State<StatisticsScreen> createState() => _StatisticsScreenState();
+  State<StatisticsSection> createState() => StatisticsSectionState();
 }
 
-class _StatisticsScreenState extends State<StatisticsScreen> {
+class StatisticsSectionState extends State<StatisticsSection> {
   StatisticsPeriod _period = StatisticsPeriod.month;
   ProfileStatistics? _data;
   String? _error;
@@ -35,6 +35,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     super.initState();
     _load();
   }
+
+  /// La usa el perfil al deslizar para actualizar.
+  Future<void> refresh() => _load();
 
   Future<void> _load() async {
     setState(() {
@@ -67,58 +70,55 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _data;
-    return Scaffold(
-      backgroundColor: TaiaColors.ivoryMist,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            const PageHeader(
-              label: 'TU PROGRESO',
-              title: 'Estadísticas',
-              subtitle: 'Cómo vas con tus actividades.',
-              expression: MascotExpression.organizing,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'TU PROGRESO',
+            style: TextStyle(
+              color: TaiaColors.fieryRose,
+              fontSize: 12,
+              letterSpacing: 1.6,
+              fontWeight: FontWeight.w800,
             ),
-            const SizedBox(height: 16),
-            TaskSegments<StatisticsPeriod>(
-              value: _period,
-              enabled: !_loading,
-              options: const {
-                StatisticsPeriod.week: 'Semana',
-                StatisticsPeriod.month: 'Mes',
-                StatisticsPeriod.academicPeriod: 'Período',
-              },
-              onChanged: (period) {
-                setState(() => _period = period);
-                _load();
-              },
-            ),
-            const SizedBox(height: 16),
-            if (_loading)
-              const MascotMessage(
-                expression: MascotExpression.thinking,
-                text: 'Calculando tus estadísticas…',
-                showSpinner: true,
-              )
-            else if (data == null)
-              MascotMessage(
-                expression: MascotExpression.surprised,
-                text: _error ?? 'No se pudieron cargar tus estadísticas.',
-                onRetry: _load,
-              )
-            else ...[
-              _StatusCard(data: data, periodText: _periodText),
-              _WeeklyCard(weeks: data.completedByWeek),
-              _OnTimeCard(data: data, periodText: _periodText),
-              _LoadCard(
-                subjects: data.pendingBySubject,
-                periodText: _periodText,
-              ),
-              _UpcomingCard(data: data),
-            ],
-          ],
+          ),
         ),
-      ),
+        TaskSegments<StatisticsPeriod>(
+          value: _period,
+          enabled: !_loading,
+          options: const {
+            StatisticsPeriod.week: 'Semana',
+            StatisticsPeriod.month: 'Mes',
+            StatisticsPeriod.academicPeriod: 'Período',
+          },
+          onChanged: (period) {
+            setState(() => _period = period);
+            _load();
+          },
+        ),
+        const SizedBox(height: 16),
+        if (_loading)
+          const MascotMessage(
+            expression: MascotExpression.thinking,
+            text: 'Calculando tus estadísticas…',
+            showSpinner: true,
+          )
+        else if (data == null)
+          MascotMessage(
+            expression: MascotExpression.surprised,
+            text: _error ?? 'No se pudieron cargar tus estadísticas.',
+            onRetry: _load,
+          )
+        else ...[
+          _StatusCard(data: data, periodText: _periodText),
+          _WeeklyCard(weeks: data.completedByWeek),
+          _OnTimeCard(data: data, periodText: _periodText),
+          _LoadCard(subjects: data.pendingBySubject, periodText: _periodText),
+          _UpcomingCard(data: data),
+        ],
+      ],
     );
   }
 }

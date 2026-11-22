@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taia/features/auth/auth_service.dart';
-import 'package:taia/features/profile/profile_screen.dart';
+import 'package:taia/features/profile/settings_screen.dart';
 import 'package:taia/features/profile/profile_service.dart';
 import 'package:taia/welcome/welcome_screen.dart';
 
@@ -41,7 +41,7 @@ Future<FakeApi> _pump(
   final dio = api.dio();
   await tester.pumpWidget(
     MaterialApp(
-      home: ProfileScreen(
+      home: SettingsScreen(
         service: AuthService(
           dio: dio,
           tokens: MemoryTokens(access: 'a'),
@@ -83,7 +83,7 @@ void main() {
     await pumpFrames(tester);
 
     expect(_writes(api).single.body, {'full_name': 'Vale Ríos'});
-    expect(find.text('Vale Ríos'), findsOneWidget);
+    expect(find.text('Perfil actualizado'), findsOneWidget);
   });
 
   testWidgets('RF-USR-06 · cambiar el correo exige la contraseña actual', (

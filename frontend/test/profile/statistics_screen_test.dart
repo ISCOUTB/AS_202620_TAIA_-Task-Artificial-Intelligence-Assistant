@@ -45,7 +45,13 @@ Future<FakeApi> _pump(
     }),
   );
   await tester.pumpWidget(
-    MaterialApp(home: StatisticsScreen(service: StatisticsService(api.dio()))),
+    MaterialApp(
+      home: Scaffold(
+        body: ListView(
+          children: [StatisticsSection(service: StatisticsService(api.dio()))],
+        ),
+      ),
+    ),
   );
   await pumpFrames(tester);
   return api;

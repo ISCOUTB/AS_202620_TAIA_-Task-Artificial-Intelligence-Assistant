@@ -226,21 +226,33 @@ class _ClassItem extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.school_outlined, color: taiaInk, size: 20),
+                Icon(
+                  item.isStudy
+                      ? Icons.auto_stories_outlined
+                      : Icons.school_outlined,
+                  color: item.isStudy ? TaiaColors.fieryRose : taiaInk,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.subjectName,
+                        item.isStudy
+                            ? 'Estudiar: ${item.studyTitle}'
+                            : item.subjectName,
                         style: const TextStyle(
                           color: taiaInk,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       Text(
-                        room == null
+                        item.isStudy
+                            ? 'Plan de estudio hasta las '
+                                  '${formatClockTime(item.endsAt)} · '
+                                  '${item.subjectName}'
+                            : room == null
                             ? 'Clase hasta las ${formatClockTime(item.endsAt)}'
                             : 'Clase hasta las ${formatClockTime(item.endsAt)}'
                                   ' · $room',

@@ -5,14 +5,24 @@ import '../../core/api_error.dart';
 import '../../core/bogota_time.dart';
 import '../tasks/task.dart';
 
-/// Un bloque del horario proyectado en una fecha (RF-TAR-11).
+/// Un bloque del horario proyectado en una fecha (RF-TAR-11), o una sesión
+/// del plan de estudio aceptado (RF-EST-03) si [studyTitle] no es null.
 class ClassOccurrence {
   const ClassOccurrence({
     required this.subjectName,
     required this.startsAt,
     required this.endsAt,
     this.room,
+    this.studyTitle,
   });
+
+  factory ClassOccurrence.fromStudySession(Map<String, dynamic> json) =>
+      ClassOccurrence(
+        subjectName: json['subject_name'] as String,
+        startsAt: parseApiDateTime(json['starts_at'] as String),
+        endsAt: parseApiDateTime(json['ends_at'] as String),
+        studyTitle: json['title'] as String,
+      );
 
   factory ClassOccurrence.fromJson(Map<String, dynamic> json) =>
       ClassOccurrence(
@@ -26,6 +36,11 @@ class ClassOccurrence {
   final DateTime startsAt;
   final DateTime endsAt;
   final String? room;
+
+  /// Qué estudiar en la sesión; null si es una clase.
+  final String? studyTitle;
+
+  bool get isStudy => studyTitle != null;
 }
 
 /// Actividades y clases de un rango de fechas.
@@ -54,9 +69,15 @@ class CalendarService {
           tasks: (data['tasks'] as List<dynamic>)
               .map((e) => AcademicTask.fromJson(e as Map<String, dynamic>))
               .toList(),
-          classes: (data['classes'] as List<dynamic>)
-              .map((e) => ClassOccurrence.fromJson(e as Map<String, dynamic>))
-              .toList(),
+          classes: [
+            ...(data['classes'] as List<dynamic>).map(
+              (e) => ClassOccurrence.fromJson(e as Map<String, dynamic>),
+            ),
+            ...(data['study_sessions'] as List<dynamic>? ?? const []).map(
+              (e) =>
+                  ClassOccurrence.fromStudySession(e as Map<String, dynamic>),
+            ),
+          ]..sort((a, b) => a.startsAt.compareTo(b.startsAt)),
         );
       });
 
