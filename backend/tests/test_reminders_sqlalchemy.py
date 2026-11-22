@@ -123,6 +123,44 @@ def test_claim_is_conditional_rf_not_02(repos, clean_db):
         assert session.scalar(text("SELECT count(*) FROM notifications")) == 1
 
 
+def test_claim_with_existing_notification_marks_sent_without_error_rf_not_02(repos, clean_db):
+    """Un pendiente que ya tiene notificación no rompe el envío: queda `sent` sin duplicarla."""
+    reminders, _ = repos
+    reminder = _reminder()
+    reminders.add_all([reminder])
+    reminders.claim(reminder.id, _notification(reminder))
+    with clean_db.begin() as session:
+        session.execute(text("UPDATE reminders SET status = 'pending'"))
+
+    assert reminders.claim(reminder.id, _notification(reminder)) is False
+    assert reminders.get(reminder.id).status is ReminderStatus.SENT
+    with clean_db() as session:
+        assert session.scalar(text("SELECT count(*) FROM notifications")) == 1
+
+
+def test_one_failing_reminder_does_not_block_the_rest_rf_not_02(clean_db):
+    push = FakePush()
+    tasks, devices, dispatch = _dispatcher(clean_db, push)
+    task = tasks.add(USER, due_at=SIX_PM + timedelta(days=1))
+    broken, healthy = _reminder(task=task.task_id), _reminder(task=task.task_id, moment=SIX_PM + timedelta(minutes=1))
+    SQLAlchemyReminderRepository(clean_db).add_all([broken, healthy])
+    original_get = tasks.get
+
+    def failing_get(task_id, user_id):
+        if failing_get.calls == 0:
+            failing_get.calls += 1
+            raise RuntimeError("fila dañada")
+        return original_get(task_id, user_id)
+
+    failing_get.calls = 0
+    tasks.get = failing_get
+
+    assert dispatch.execute(SIX_PM + timedelta(minutes=1)) == 1
+    with clean_db() as session:
+        statuses = dict(session.execute(text("SELECT id, status::text FROM reminders")).all())
+    assert (statuses[broken.id], statuses[healthy.id]) == ("pending", "sent")
+
+
 def _dispatcher(clean_db_or_factory, push):
     tasks, devices = FakeTasks(), FakeDevices()
     return tasks, devices, DispatchDueRemindersUseCase(

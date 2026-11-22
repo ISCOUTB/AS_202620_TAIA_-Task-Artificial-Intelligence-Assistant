@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from app.modules.reminders.adapters.outbound.sqlalchemy_models import NotificationModel, ReminderModel
@@ -20,6 +23,8 @@ from app.modules.reminders.domain.entities import (
     ReminderStatus,
 )
 from app.shared.clock import as_bogota
+
+logger = logging.getLogger("taia.reminders")
 
 PENDING = ReminderStatus.PENDING.value
 SENT = ReminderStatus.SENT.value
@@ -94,11 +99,28 @@ class SQLAlchemyReminderRepository(ReminderRepository):
             .where(ReminderModel.id == reminder_id, ReminderModel.status == PENDING)
             .values(status=SENT)
         )
-        with self._session_factory.begin() as session:
-            if session.execute(claimed).rowcount != 1:
-                return False
-            session.add(_notification_to_model(notification))
-            return True
+        row = _notification_row(notification)
+        # UNIQUE (reminder_id): si ya hay una notificación de este recordatorio, no
+        # se crea otra y el recordatorio queda `sent` igual (idempotencia, RF-NOT-02).
+        insert_once = (
+            insert(NotificationModel)
+            .values(**row)
+            .on_conflict_do_nothing(index_elements=[NotificationModel.reminder_id])
+            .returning(NotificationModel.id)
+        )
+        try:
+            with self._session_factory.begin() as session:
+                if session.execute(claimed).rowcount != 1:
+                    return False
+                return session.execute(insert_once).scalar() is not None
+        except IntegrityError as error:
+            # Solo el nombre de la restricción: nunca valores de la fila (RNF-05).
+            diag = getattr(getattr(error, "orig", None), "diag", None)
+            logger.error(
+                "reminder_claim_integrity_error",
+                extra={"fields": {"constraint": getattr(diag, "constraint_name", None)}},
+            )
+            raise
 
     def _list(self, *conditions) -> list[Reminder]:
         query = select(ReminderModel).where(*conditions).order_by(ReminderModel.scheduled_at, ReminderModel.id)
@@ -194,16 +216,16 @@ def _reminder_to_domain(model: ReminderModel) -> Reminder:
     )
 
 
-def _notification_to_model(notification: Notification) -> NotificationModel:
-    return NotificationModel(
-        id=notification.id,
-        reminder_id=notification.reminder_id,
-        message=notification.message,
-        created_at=notification.created_at,
-        push_attempts=notification.push_attempts,
-        push_sent_at=notification.push_sent_at,
-        read_at=notification.read_at,
-    )
+def _notification_row(notification: Notification) -> dict:
+    return {
+        "id": notification.id,
+        "reminder_id": notification.reminder_id,
+        "message": notification.message,
+        "created_at": notification.created_at,
+        "push_attempts": notification.push_attempts,
+        "push_sent_at": notification.push_sent_at,
+        "read_at": notification.read_at,
+    }
 
 
 def _notification_to_domain(model: NotificationModel) -> Notification:

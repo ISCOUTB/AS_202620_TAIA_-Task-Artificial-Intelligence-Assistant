@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from collections.abc import Callable, Sequence
@@ -20,6 +21,8 @@ from app.modules.reminders.application.ports.outbound.reminder_repository import
 from app.modules.reminders.domain.entities import Notification, Reminder, default_message
 from app.modules.usuario.application.ports.inbound.user_devices import UserDeviceDirectory
 from app.shared.clock import as_bogota
+
+logger = logging.getLogger("taia.reminders")
 
 # Un intento inicial y hasta 3 reintentos con espera creciente, en segundos (RF-NOT-02).
 RETRY_DELAYS = (1.0, 2.0, 4.0)
@@ -57,8 +60,17 @@ class DispatchDueRemindersUseCase:
         now = as_bogota(now)
         notified = 0
         for reminder in self._reminders.list_due(now):
-            if self._dispatch(reminder, now):
-                notified += 1
+            try:
+                if self._dispatch(reminder, now):
+                    notified += 1
+            except Exception as error:
+                # Un recordatorio que falla no puede detener a los demás: antes, un
+                # solo IntegrityError abortaba el lote en cada ejecución y ningún
+                # usuario recibía notificaciones. Sin datos del usuario (RNF-05).
+                logger.error(
+                    "reminder_dispatch_item_failed",
+                    extra={"fields": {"reminder_id": str(reminder.id), "error": type(error).__name__}},
+                )
         return notified
 
     def _dispatch(self, reminder: Reminder, now: datetime) -> bool:
