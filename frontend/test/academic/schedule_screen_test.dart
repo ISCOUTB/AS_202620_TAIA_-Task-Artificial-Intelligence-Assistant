@@ -95,7 +95,69 @@ void main() {
     expect(api.requests.single.query, {'weekday': 'friday'});
   });
 
-  testWidgets('RF-ASG-06 · crea un bloque y muestra el 409 del solape', (
+  testWidgets(
+    'RF-ASG-06 · una clase en varios días crea un bloque por día y avisa el que choca',
+    (tester) async {
+      final api = FakeApi(
+        routes({
+          'GET /academic/schedule-blocks': (_) => const FakeResponse(200, []),
+          'GET /academic/period': _noPeriod,
+          'GET /academic/subjects': _subjects,
+          'POST /academic/schedule-blocks': (r) =>
+              (r.data as Map)['weekday'] == 'tuesday'
+              ? const FakeResponse(409, {
+                  'detail': 'El bloque se solapa con otro del mismo día.',
+                })
+              : FakeResponse(201, {
+                  'id': 'b9',
+                  'subject_id': 's1',
+                  'subject_name': 'Física',
+                  'weekday': 'monday',
+                  'start_time': '07:00:00',
+                  'end_time': '09:00:00',
+                  'room': 'B-3',
+                }),
+        }),
+      );
+      await _pump(tester, api);
+
+      await tester.tap(find.text('Nuevo bloque'));
+      await pumpFrames(tester);
+      await tester.tap(find.byTooltip('Lunes'));
+      await tester.tap(find.byTooltip('Martes'));
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Aula (opcional)'),
+        'B-3',
+      );
+      await pumpFrames(tester);
+      await tester.ensureVisible(find.text('Agregar en 2 días'));
+      await tester.tap(find.text('Agregar en 2 días'));
+      await pumpFrames(tester);
+
+      expect(
+        [for (final r in _writes(api)) r.body],
+        [
+          {
+            'subject_id': 's1',
+            'weekday': 'monday',
+            'start_time': '07:00:00',
+            'end_time': '09:00:00',
+            'room': 'B-3',
+          },
+          {
+            'subject_id': 's1',
+            'weekday': 'tuesday',
+            'start_time': '07:00:00',
+            'end_time': '09:00:00',
+            'room': 'B-3',
+          },
+        ],
+      );
+      expect(find.textContaining('No se pudo el martes'), findsOneWidget);
+    },
+  );
+
+  testWidgets('RF-ASG-06 · si ningún día se puede agregar, muestra el 409', (
     tester,
   ) async {
     final api = FakeApi(
@@ -112,17 +174,12 @@ void main() {
 
     await tester.tap(find.text('Nuevo bloque'));
     await pumpFrames(tester);
-    await tester.enterText(find.widgetWithText(TextField, 'Ej. A-201'), 'B-3');
-    await tester.tap(find.text('Guardar'));
+    await tester.tap(find.byTooltip('Lunes'));
+    await pumpFrames(tester);
+    await tester.ensureVisible(find.text('Agregar clase'));
+    await tester.tap(find.text('Agregar clase'));
     await pumpFrames(tester);
 
-    expect(_writes(api).single.body, {
-      'subject_id': 's1',
-      'weekday': 'monday',
-      'start_time': '08:00:00',
-      'end_time': '10:00:00',
-      'room': 'B-3',
-    });
     expect(
       find.text('El bloque se solapa con otro del mismo día.'),
       findsOneWidget,

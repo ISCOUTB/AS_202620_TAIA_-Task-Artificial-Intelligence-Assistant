@@ -5,6 +5,7 @@ import '../../core/bogota_time.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
 import '../academic/schedule_block.dart';
+import '../academic/widgets/class_composer.dart';
 import '../academic/widgets/schedule_dialogs.dart';
 import '../auth/auth_shell.dart';
 import '../shell/page_header.dart';
@@ -130,35 +131,103 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
   }
 
+  /// Una clase puede repetirse varios días: se crea un bloque por día.
   Future<void> _addClass() async {
-    final changed = await showScheduleBlockDialog(
+    final result = await showClassComposer(
       context,
       service: _service.schedule,
       subjects: _subjects,
     );
-    if (!changed || !mounted) return;
-    await _run(() async {
-      final blocks = await _service.schedule.list();
-      if (mounted) setState(() => _blocks = blocks);
+    if (result == null || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(describeComposerResult(result))));
+    await _reloadBlocks();
+  }
+
+  Future<void> _reloadBlocks() => _run(() async {
+    final blocks = await _service.schedule.list();
+    if (mounted) setState(() => _blocks = blocks);
+  });
+
+  Future<void> _removeClass(ScheduleBlock block) async {
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: TaiaColors.ivoryMist,
+        title: Text('¿Quitar ${block.subjectName}?'),
+        content: Text(
+          '${block.weekday.label} · ${formatBlockTime(block.start)} a '
+          '${formatBlockTime(block.end)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (remove != true || !mounted) return;
+    await _run(() => _service.schedule.delete(block.id));
+    await _reloadBlocks();
+  }
+
+  /// RF-ASG-10: atrás regresa al paso anterior; desde el primero no se sale.
+  void _back() {
+    if (_step == 0 || _busy) return;
+    setState(() {
+      _error = null;
+      _step -= 1;
     });
   }
+
+  static const _expressions = [
+    MascotExpression.happy,
+    MascotExpression.thinking,
+    MascotExpression.studying,
+    MascotExpression.organizing,
+  ];
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // RF-ASG-10: no se puede salir sin terminar.
+      // RF-ASG-10: no se puede salir sin terminar, pero atrás sí regresa de paso.
       canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
       child: Scaffold(
         backgroundColor: TaiaColors.ivoryMist,
         body: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
+              SizedBox(
+                height: 48,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _step == 0
+                      ? null
+                      : IconButton(
+                          tooltip: 'Paso anterior',
+                          onPressed: _busy ? null : _back,
+                          icon: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: taiaInk,
+                          ),
+                        ),
+                ),
+              ),
               PageHeader(
                 label: 'PASO ${_step + 1} DE 4',
                 title: _titles[_step],
                 subtitle: 'Configuremos TAIA para ti 🐙',
-                expression: MascotExpression.organizing,
+                expression: _expressions[_step],
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
@@ -239,10 +308,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         onPressed: _busy ? null : _adjustPeriod,
         child: const Text('Ajustar fechas'),
       ),
-      TextButton(
-        onPressed: _busy ? null : () => setState(() => _step = 0),
-        child: const Text('Atrás'),
-      ),
     ];
   }
 
@@ -298,22 +363,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   List<Widget> _scheduleStep() => [
     const Text(
-      'Agrega tus clases de la semana. TAIA las usa para no ponerte a estudiar '
-      'encima de ellas. Si no tienes clases fijas, puedes terminar.',
+      'Toca "Agregar clase", elige la materia y todos los días en que la '
+      'tienes. TAIA usa tu horario para no ponerte a estudiar encima de tus '
+      'clases. Si no tienes clases fijas, puedes terminar.',
       style: TextStyle(color: taiaInk, fontSize: 15),
     ),
     const SizedBox(height: 16),
-    for (final block in _blocks)
-      ListTile(
-        dense: true,
-        leading: const Icon(Icons.schedule, color: TaiaColors.fieryRose),
-        title: Text(block.subjectName, style: taskValueStyle),
-        subtitle: Text(
-          '${block.weekday.label} · ${formatBlockTime(block.start)} a '
-          '${formatBlockTime(block.end)}',
+    WeekScheduleView(
+      blocks: _blocks,
+      subjects: _subjects,
+      onTapBlock: _busy ? null : _removeClass,
+    ),
+    if (_blocks.isNotEmpty)
+      Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          'Toca una clase para quitarla.',
+          style: TextStyle(color: taiaInk.withValues(alpha: 0.6), fontSize: 12),
         ),
       ),
-    OutlinedButton.icon(
+    const SizedBox(height: 12),
+    FilledButton.tonalIcon(
       onPressed: _busy ? null : _addClass,
       icon: const Icon(Icons.add),
       label: const Text('Agregar clase'),

@@ -178,4 +178,39 @@ void main() {
       expect(done, isTrue);
     },
   );
+
+  testWidgets(
+    'RF-ASG-10 · atrás regresa al paso anterior, con la flecha y con el botón del teléfono',
+    (tester) async {
+      useTallScreen(tester);
+      final api = FakeApi(
+        routes({
+          'GET /academic/subjects': (_) => const FakeResponse(200, []),
+          'GET /academic/schedule-blocks': (_) => const FakeResponse(200, []),
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OnboardingScreen(service: _service(api), onDone: () {}),
+        ),
+      );
+      await pumpFrames(tester);
+      expect(find.byTooltip('Paso anterior'), findsNothing);
+
+      await tester.tap(find.text('Continuar'));
+      await pumpFrames(tester);
+      expect(find.text('Tu período académico'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Paso anterior'));
+      await pumpFrames(tester);
+      expect(find.text('¿Qué estudias?'), findsOneWidget);
+
+      await tester.tap(find.text('Continuar'));
+      await pumpFrames(tester);
+      await tester.binding.handlePopRoute();
+      await pumpFrames(tester);
+      expect(find.text('¿Qué estudias?'), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+    },
+  );
 }

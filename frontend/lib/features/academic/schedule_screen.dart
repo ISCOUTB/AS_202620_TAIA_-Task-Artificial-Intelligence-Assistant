@@ -12,6 +12,7 @@ import '../tasks/subjects_service.dart';
 import 'schedule_block.dart';
 import 'schedule_service.dart';
 import '../shell/page_header.dart';
+import 'widgets/class_composer.dart';
 import 'widgets/schedule_dialogs.dart';
 
 /// Horario semanal (RF-ASG-06 y RF-ASG-07) y período académico (RF-ASG-08).
@@ -59,6 +60,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _editBlock([ScheduleBlock? block]) async {
+    if (block == null) {
+      final result = await showClassComposer(
+        context,
+        service: _service,
+        subjects: _subjects,
+      );
+      if (result == null || !mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(describeComposerResult(result))));
+      await _load();
+      return;
+    }
     final changed = await showScheduleBlockDialog(
       context,
       service: _service,
