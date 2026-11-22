@@ -1,3 +1,5 @@
+import '../../core/bogota_time.dart';
+
 /// Estado derivado de la tarea (lo calcula el backend).
 enum TaskStatus { pending, completed, overdue }
 
@@ -15,11 +17,11 @@ class AcademicTask {
     required this.status,
     this.description,
     this.completedAt,
+    this.createdAt,
     this.priority,
   });
 
   factory AcademicTask.fromJson(Map<String, dynamic> json) {
-    final completed = json['completed_at'] as String?;
     return AcademicTask(
       id: json['id'] as String,
       subjectId: json['subject_id'] as String,
@@ -27,10 +29,9 @@ class AcademicTask {
       type: json['type'] == 'exam' ? TaskType.exam : TaskType.task,
       title: json['title'] as String,
       description: json['description'] as String?,
-      dueAt: DateTime.parse(json['due_at'] as String).toLocal(),
-      completedAt: completed == null
-          ? null
-          : DateTime.parse(completed).toLocal(),
+      dueAt: parseApiDateTime(json['due_at'] as String),
+      completedAt: parseApiDateTimeOrNull(json['completed_at']),
+      createdAt: parseApiDateTimeOrNull(json['created_at']),
       status: switch (json['status']) {
         'completed' => TaskStatus.completed,
         'overdue' => TaskStatus.overdue,
@@ -48,6 +49,9 @@ class AcademicTask {
   final String? description;
   final DateTime dueAt;
   final DateTime? completedAt;
+
+  /// Cuándo se creó la actividad.
+  final DateTime? createdAt;
   final TaskStatus status;
 
   /// "high", "medium" o "low"; solo las pendientes tienen prioridad.

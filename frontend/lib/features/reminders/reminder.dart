@@ -1,3 +1,5 @@
+import '../../core/bogota_time.dart';
+
 /// Recordatorio devuelto por `/reminders`.
 class Reminder {
   const Reminder({
@@ -11,7 +13,7 @@ class Reminder {
   factory Reminder.fromJson(Map<String, dynamic> json) => Reminder(
     id: json['id'] as String,
     message: json['message'] as String,
-    scheduledAt: DateTime.parse(json['scheduled_at'] as String).toLocal(),
+    scheduledAt: parseApiDateTime(json['scheduled_at'] as String),
     isCompleted: json['is_completed'] as bool? ?? false,
     taskId: json['task_id'] as String,
   );

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/bogota_time.dart';
 import '../../core/spanish_dates.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
@@ -43,7 +44,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   bool _loading = true;
 
   CalendarMode _mode = CalendarMode.month;
-  late DateTime _selected = dateOnly(DateTime.now());
+  late DateTime _selected = dateOnly(bogotaNow());
   late DateTime _focused = _selected;
 
   bool _celebrating = false;
@@ -119,7 +120,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   /// Avanza ([delta] = 1) o retrocede ([delta] = -1) un mes o una semana y deja
   /// seleccionado el día de hoy (si está a la vista) o el primer día.
   void _go(int delta) {
-    final today = dateOnly(DateTime.now());
+    final today = dateOnly(bogotaNow());
     setState(() {
       if (_mode == CalendarMode.month) {
         final month = addMonths(_focused, delta);
@@ -137,7 +138,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _goToday() {
-    final today = dateOnly(DateTime.now());
+    final today = dateOnly(bogotaNow());
     setState(() {
       _selected = today;
       _focused = today;
@@ -223,7 +224,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _content(List<AcademicTask> items) {
-    final today = dateOnly(DateTime.now());
+    final today = dateOnly(bogotaNow());
     final byDay = tasksByDay(items);
     final dayTasks = byDay[_selected] ?? const <AcademicTask>[];
 

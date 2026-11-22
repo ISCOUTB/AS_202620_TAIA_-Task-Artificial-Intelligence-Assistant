@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../mascot/mascot_expression.dart';
 import '../../../mascot/taia_mascot.dart';
@@ -28,7 +29,7 @@ class _NotificationsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = bogotaNow();
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(

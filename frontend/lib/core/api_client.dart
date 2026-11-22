@@ -21,9 +21,6 @@ class SessionEvents {
 
 final SessionEvents sessionEvents = SessionEvents();
 
-/// Marca una petición que no debe intentar renovar la sesión si recibe 401.
-const String skipAuthRefresh = 'skipAuthRefresh';
-
 const _retriedKey = 'retriedAfterRefresh';
 
 /// Crea el cliente HTTP.
@@ -32,7 +29,9 @@ const _retriedKey = 'retriedAfterRefresh';
 /// - Si la API responde 401, renueva el par de tokens con `/users/refresh` y
 ///   repite la petición una vez. Si la renovación es rechazada, borra la
 ///   sesión y avisa con [sessionEvents].
-Dio buildDio(TokenStorage tokens) {
+///
+/// [adapter] reemplaza la red en las pruebas.
+Dio buildDio(TokenStorage tokens, {HttpClientAdapter? adapter}) {
   final dio = Dio(
     BaseOptions(
       baseUrl: apiBaseUrl,
@@ -42,7 +41,8 @@ Dio buildDio(TokenStorage tokens) {
       headers: {'Accept': 'application/json'},
     ),
   );
-  final refresher = _TokenRefresher(tokens);
+  if (adapter != null) dio.httpClientAdapter = adapter;
+  final refresher = _TokenRefresher(tokens, adapter);
 
   dio.interceptors.add(
     InterceptorsWrapper(
@@ -59,7 +59,6 @@ Dio buildDio(TokenStorage tokens) {
             request.path == '/users/login' || request.path == '/users/refresh';
         if (error.response?.statusCode != 401 ||
             isAuthCall ||
-            request.extra[skipAuthRefresh] == true ||
             request.extra[_retriedKey] == true) {
           handler.next(error);
           return;
@@ -96,14 +95,16 @@ Dio buildDio(TokenStorage tokens) {
 /// Renueva los tokens. El token de renovación se invalida al usarlo, así que
 /// varias peticiones que fallen a la vez comparten una sola renovación.
 class _TokenRefresher {
-  _TokenRefresher(this._tokens)
+  _TokenRefresher(this._tokens, HttpClientAdapter? adapter)
     : _bare = Dio(
         BaseOptions(
           baseUrl: apiBaseUrl,
           connectTimeout: const Duration(seconds: 15),
           receiveTimeout: const Duration(seconds: 30),
         ),
-      );
+      ) {
+    if (adapter != null) _bare.httpClientAdapter = adapter;
+  }
 
   final TokenStorage _tokens;
 

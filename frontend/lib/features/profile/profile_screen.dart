@@ -6,35 +6,28 @@ import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
 import '../../welcome/welcome_screen.dart';
+import '../academic/schedule_screen.dart';
+import '../academic/subjects_screen.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../home/widgets/reminders_bell.dart';
 import '../shell/mascot_message.dart';
-import 'notification_prefs.dart';
-import 'profile_logic.dart';
 import 'profile_service.dart';
-import 'widgets/notification_sheet.dart';
 import 'widgets/profile_card.dart';
 import 'widgets/profile_tile.dart';
 import 'widgets/telegram_sheet.dart';
 
-/// Pestaña de perfil: datos de la cuenta, integración con Telegram, preferencia
-/// de notificaciones y cierre de sesión.
+/// Pestaña de perfil: datos de la cuenta, asignaturas y horario, integración
+/// con Telegram y cierre de sesión.
 ///
 /// Editar el perfil y eliminar la cuenta aparecen como "Próximamente": el
 /// backend todavía no tiene esos endpoints.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({
-    super.key,
-    this.service,
-    this.profileService,
-    this.prefs,
-  });
+  const ProfileScreen({super.key, this.service, this.profileService});
 
   /// Servicio de autenticación; si es null se usa el compartido de la app.
   final AuthService? service;
   final ProfileService? profileService;
-  final NotificationPrefs? prefs;
 
   @override
   State<ProfileScreen> createState() => ProfileScreenState();
@@ -45,20 +38,17 @@ class ProfileScreenState extends State<ProfileScreen>
   UserProfile? _user;
   String? _error;
   bool _loading = true;
-  NotificationChannel _preferred = NotificationChannel.app;
   MascotExpression _expression = MascotExpression.wink;
   Timer? _celebrationTimer;
 
   AuthService get _auth => widget.service ?? authService;
   ProfileService get _profile => widget.profileService ?? profileService;
-  NotificationPrefs get _prefs => widget.prefs ?? notificationPrefs;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _load();
-    _loadPreference();
   }
 
   @override
@@ -99,11 +89,6 @@ class ProfileScreenState extends State<ProfileScreen>
         _loading = false;
       });
     }
-  }
-
-  Future<void> _loadPreference() async {
-    final preferred = await _prefs.read();
-    if (mounted) setState(() => _preferred = preferred);
   }
 
   void _toast(String message) {
@@ -150,34 +135,9 @@ class ProfileScreenState extends State<ProfileScreen>
     _toast('¡Telegram vinculado!');
   }
 
-  Future<void> _openNotifications() async {
-    final linked = _user?.telegramLinked ?? false;
-    final result = await showNotificationSheet(
-      context,
-      current: effectiveChannel(_preferred, telegramLinked: linked),
-      telegramLinked: linked,
-    );
-    if (!mounted || result == null) return;
-    switch (result) {
-      case NotificationSheetResult.linkTelegram:
-        await _openTelegram();
-      case NotificationSheetResult.app:
-        await _savePreference(NotificationChannel.app);
-      case NotificationSheetResult.telegram:
-        await _savePreference(NotificationChannel.telegram);
-    }
-  }
-
-  Future<void> _savePreference(NotificationChannel channel) async {
-    await _prefs.save(channel);
-    if (!mounted) return;
-    setState(() => _preferred = channel);
-    _toast(
-      channel == NotificationChannel.telegram
-          ? 'Listo: tus recordatorios irán por Telegram.'
-          : 'Listo: verás tus recordatorios en la aplicación.',
-    );
-  }
+  Future<void> _push(Widget screen) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => screen));
 
   Future<void> _showInfo(String title, String message) {
     return showDialog<void>(
@@ -237,7 +197,6 @@ class ProfileScreenState extends State<ProfileScreen>
       return;
     }
     await _auth.logout();
-    await _prefs.clear();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(builder: (_) => const WelcomeScreen()),
@@ -269,10 +228,6 @@ class ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _content(UserProfile user) {
-    final channel = effectiveChannel(
-      _preferred,
-      telegramLinked: user.telegramLinked,
-    );
     final policy = user.consentPolicyVersion;
     return RefreshIndicator(
       color: TaiaColors.fieryRose,
@@ -312,6 +267,24 @@ class ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 20),
           ProfileSection(
+            title: 'ACADÉMICO',
+            tiles: [
+              ProfileTile(
+                icon: Icons.menu_book_outlined,
+                title: 'Asignaturas',
+                subtitle: 'Materias, alias y archivo',
+                onTap: () => _push(const SubjectsScreen()),
+              ),
+              ProfileTile(
+                icon: Icons.schedule,
+                title: 'Horario',
+                subtitle: 'Clases de la semana y período académico',
+                onTap: () => _push(const ScheduleScreen()),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ProfileSection(
             title: 'INTEGRACIONES',
             tiles: [
               ProfileTile(
@@ -319,7 +292,7 @@ class ProfileScreenState extends State<ProfileScreen>
                 title: 'Telegram',
                 subtitle: user.telegramLinked
                     ? 'Cuenta vinculada'
-                    : 'Habla con TAIA y recibe avisos en el chat',
+                    : 'Habla con TAIA desde el chat',
                 trailing: user.telegramLinked
                     ? const Icon(
                         Icons.check_circle,
@@ -340,18 +313,6 @@ class ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                 onTap: _openTelegram,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ProfileSection(
-            title: 'PREFERENCIAS',
-            tiles: [
-              ProfileTile(
-                icon: Icons.notifications_none_rounded,
-                title: 'Notificaciones',
-                subtitle: channel.label,
-                onTap: _openNotifications,
               ),
             ],
           ),
@@ -428,7 +389,7 @@ class _Header extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                'Tus datos y cómo quieres que te avise.',
+                'Tus datos, tus materias y tu sesión.',
                 style: TextStyle(color: Color(0xA63B2A2A), fontSize: 14),
               ),
             ],

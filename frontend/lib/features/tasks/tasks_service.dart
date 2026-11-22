@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/api_client.dart';
 import '../../core/api_error.dart';
+import '../../core/bogota_time.dart';
 import 'task.dart';
 
 class TaskPage {
@@ -30,10 +31,10 @@ class TasksService {
       '/academic/tasks',
       queryParameters: {
         if (status != null) 'status': status.name,
-        if (dueFrom != null) 'due_from': dueFrom.toUtc().toIso8601String(),
-        if (dueTo != null) 'due_to': dueTo.toUtc().toIso8601String(),
+        if (dueFrom != null) 'due_from': formatApiDateTime(dueFrom),
+        if (dueTo != null) 'due_to': formatApiDateTime(dueTo),
         if (query != null && query.isNotEmpty) 'q': query,
-        if (subjectId != null) 'subject_id': subjectId,
+        'subject_id': ?subjectId,
         'limit': limit,
         'offset': offset,
       },
@@ -74,7 +75,7 @@ class TasksService {
         'subject_id': subjectId,
         'title': title,
         'description': description,
-        'due_at': dueAt.toUtc().toIso8601String(),
+        'due_at': formatApiDateTime(dueAt),
         'type': type.name,
       },
     );
@@ -101,7 +102,7 @@ class TasksService {
         'description': description,
         'subject_id': subjectId,
         'type': type.name,
-        if (dueAt != null) 'due_at': dueAt.toUtc().toIso8601String(),
+        if (dueAt != null) 'due_at': formatApiDateTime(dueAt),
       },
     );
     return AcademicTask.fromJson(response.data!);
