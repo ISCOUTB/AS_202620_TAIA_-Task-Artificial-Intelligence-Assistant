@@ -382,6 +382,8 @@ Al entrar por primera vez, la aplicación debe pedir al estudiante, en pasos, su
 
 **Reglas**
 - No se puede saltar. La configuración está completa cuando el estudiante tiene un período académico y al menos una asignatura activa; se deduce de esos datos y no se guarda aparte.
+- El botón de atrás regresa al paso anterior; desde el primer paso no sale de la configuración.
+- Una clase se agrega de una vez en todos los días en que se dicta: se crea un bloque por día (RF-ASG-06). Si un día choca con otra clase, los demás se agregan y se informa cuál falló.
 - El horario de clases es opcional dentro de la configuración, porque un estudiante de un curso puede no tener clases fijas.
 - Una cuenta que entra sin la configuración completa, también una existente, pasa primero por ella.
 
@@ -635,6 +637,7 @@ Un proceso programado del backend debe revisar periódicamente (al menos cada mi
 - La comparación de horas usa instantes con zona (RT-03), nunca la hora local del servidor.
 - Un token FCM que el servicio reporte como inválido se elimina.
 - Un recordatorio que falla no detiene el envío de los demás: el fallo se registra con el identificador del recordatorio y el proceso sigue.
+- Cada recordatorio procesado deja una línea en el log con su identificador, el del usuario y el resultado del envío (enviado, fallido, sin dispositivos o push desactivado), sin el mensaje ni los tokens (RNF-05).
 - Si ya existe una notificación del recordatorio, no se crea otra y el recordatorio queda `sent`.
 - Con la aplicación abierta, Android no muestra la notificación por sí solo: la aplicación muestra el aviso y actualiza el contador de la bandeja.
 
