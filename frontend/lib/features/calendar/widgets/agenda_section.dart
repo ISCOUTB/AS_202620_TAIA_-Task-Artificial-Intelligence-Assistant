@@ -7,15 +7,17 @@ import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
 import '../../tasks/task.dart';
 import '../calendar_logic.dart';
+import '../calendar_service.dart';
 
-/// "Agenda del 3 de noviembre": las actividades del día seleccionado, o un
-/// mensaje con la mascota si el día está libre.
+/// "Agenda del 3 de noviembre": las clases y las actividades del día
+/// seleccionado (RF-TAR-11), o un mensaje con la mascota si el día está libre.
 class AgendaSection extends StatelessWidget {
   const AgendaSection({
     super.key,
     required this.day,
     required this.today,
     required this.tasks,
+    this.classes = const [],
     required this.expression,
     required this.onTapTask,
   });
@@ -23,6 +25,7 @@ class AgendaSection extends StatelessWidget {
   final DateTime day;
   final DateTime today;
   final List<AcademicTask> tasks;
+  final List<ClassOccurrence> classes;
   final MascotExpression expression;
   final ValueChanged<AcademicTask> onTapTask;
 
@@ -56,9 +59,13 @@ class AgendaSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (tasks.isEmpty)
-          _EmptyDay(day: day, today: today, expression: expression)
-        else
+        if (tasks.isEmpty && classes.isEmpty)
+          _EmptyDay(day: day, today: today, expression: expression),
+        for (final item in classes) ...[
+          _ClassItem(item: item),
+          const SizedBox(height: 10),
+        ],
+        if (tasks.isNotEmpty)
           for (final task in tasks) ...[
             _AgendaItem(task: task, onTap: () => onTapTask(task)),
             const SizedBox(height: 10),
@@ -176,6 +183,76 @@ class _AgendaItem extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Una clase del horario en la agenda del día.
+class _ClassItem extends StatelessWidget {
+  const _ClassItem({required this.item});
+
+  final ClassOccurrence item;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = item.room;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 62,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 12, right: 8),
+            child: Text(
+              formatClockTime(item.startsAt),
+              style: TextStyle(
+                color: taiaInk.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            decoration: BoxDecoration(
+              color: TaiaColors.softPeach.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.school_outlined, color: taiaInk, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.subjectName,
+                        style: const TextStyle(
+                          color: taiaInk,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        room == null
+                            ? 'Clase hasta las ${formatClockTime(item.endsAt)}'
+                            : 'Clase hasta las ${formatClockTime(item.endsAt)}'
+                                  ' · $room',
+                        style: TextStyle(
+                          color: taiaInk.withValues(alpha: 0.65),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

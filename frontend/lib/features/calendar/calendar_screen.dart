@@ -15,17 +15,25 @@ import '../tasks/task.dart';
 import '../tasks/tasks_service.dart';
 import '../tasks/widgets/task_edit_sheet.dart';
 import 'calendar_logic.dart';
+import 'calendar_service.dart';
 import 'widgets/agenda_section.dart';
 import 'widgets/calendar_card.dart';
 import 'widgets/calendar_mode_toggle.dart';
 
-/// Pestaña de calendario: vista por mes o por semana. Al elegir un día se ven
-/// sus actividades, y al tocar una se abre la hoja de edición.
+/// Pestaña de calendario: vista por mes o por semana con las actividades y
+/// las clases del rango (RF-TAR-11). Al tocar una actividad se abre la hoja de
+/// edición.
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key, this.tasksService, this.subjectsService});
+  const CalendarScreen({
+    super.key,
+    this.tasksService,
+    this.subjectsService,
+    this.calendarService,
+  });
 
   final TasksService? tasksService;
   final SubjectsService? subjectsService;
+  final CalendarService? calendarService;
 
   @override
   State<CalendarScreen> createState() => CalendarScreenState();
@@ -33,6 +41,10 @@ class CalendarScreen extends StatefulWidget {
 
 class CalendarScreenState extends State<CalendarScreen> {
   List<AcademicTask>? _items;
+  List<ClassOccurrence> _classes = const [];
+
+  /// Rango que se pidió por última vez (RF-TAR-11).
+  ({DateTime start, DateTime end})? _loadedRange;
   String? _error;
   bool _loading = true;
 
@@ -45,6 +57,7 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjects => widget.subjectsService ?? subjectsService;
+  CalendarService get _calendar => widget.calendarService ?? calendarService;
 
   @override
   void initState() {
@@ -58,7 +71,7 @@ class CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
-  /// Vuelve a pedir las tareas sin ocultar las que ya se muestran.
+  /// Vuelve a pedir el rango visible sin ocultar lo que ya se muestra.
   Future<void> refresh() => _load(silent: _items != null);
 
   Future<void> _load({bool silent = false}) async {
@@ -68,11 +81,14 @@ class CalendarScreenState extends State<CalendarScreen> {
         _error = null;
       });
     }
+    final range = visibleRange(_mode, _focused);
     try {
-      final items = await _tasks.listAll();
+      final data = await _calendar.range(range.start, range.end);
       if (!mounted) return;
       setState(() {
-        _items = items;
+        _items = data.tasks;
+        _classes = data.classes;
+        _loadedRange = range;
         _error = null;
         _loading = false;
       });
@@ -100,12 +116,18 @@ class CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  /// Si cambió el mes o la semana a la vista, pide su rango.
+  void _reloadIfRangeChanged() {
+    if (visibleRange(_mode, _focused) != _loadedRange) _load(silent: true);
+  }
+
   void _setMode(CalendarMode mode) {
     if (mode == _mode) return;
     setState(() {
       _mode = mode;
       _focused = _selected;
     });
+    _reloadIfRangeChanged();
   }
 
   /// Avanza ([delta] = 1) o retrocede ([delta] = -1) un mes o una semana y deja
@@ -126,6 +148,7 @@ class CalendarScreenState extends State<CalendarScreen> {
         _selected = days.any((d) => isSameDay(d, today)) ? today : days.first;
       }
     });
+    _reloadIfRangeChanged();
   }
 
   void _goToday() {
@@ -134,6 +157,7 @@ class CalendarScreenState extends State<CalendarScreen> {
       _selected = today;
       _focused = today;
     });
+    _reloadIfRangeChanged();
   }
 
   Future<void> _edit(AcademicTask task) async {
@@ -206,11 +230,13 @@ class CalendarScreenState extends State<CalendarScreen> {
     final today = dateOnly(bogotaNow());
     final byDay = tasksByDay(items);
     final dayTasks = byDay[_selected] ?? const <AcademicTask>[];
+    final dayClasses =
+        classesByDay(_classes)[_selected] ?? const <ClassOccurrence>[];
 
     final MascotExpression expression;
     if (_celebrating) {
       expression = MascotExpression.excited;
-    } else if (dayTasks.isEmpty) {
+    } else if (dayTasks.isEmpty && dayClasses.isEmpty) {
       expression = MascotExpression.happy;
     } else {
       expression = MascotExpression.organizing;
@@ -277,6 +303,7 @@ class CalendarScreenState extends State<CalendarScreen> {
             day: _selected,
             today: today,
             tasks: dayTasks,
+            classes: dayClasses,
             expression: expression,
             onTapTask: _edit,
           ),

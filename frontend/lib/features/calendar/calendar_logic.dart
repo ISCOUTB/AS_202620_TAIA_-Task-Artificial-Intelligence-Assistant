@@ -1,4 +1,5 @@
 import '../tasks/task.dart';
+import 'calendar_service.dart';
 
 /// Vista del calendario: el mes completo o una sola semana.
 enum CalendarMode { month, week }
@@ -43,6 +44,35 @@ List<List<DateTime?>> monthRows(DateTime month) {
     cells.add(null);
   }
   return [for (var i = 0; i < cells.length; i += 7) cells.sublist(i, i + 7)];
+}
+
+/// Días que se piden al servidor: el mes completo o la semana (RF-TAR-11).
+({DateTime start, DateTime end}) visibleRange(
+  CalendarMode mode,
+  DateTime focused,
+) {
+  if (mode == CalendarMode.month) {
+    return (
+      start: DateTime(focused.year, focused.month),
+      end: DateTime(focused.year, focused.month + 1, 0),
+    );
+  }
+  final days = weekDays(focused);
+  return (start: days.first, end: days.last);
+}
+
+/// Clases agrupadas por día y ordenadas por hora de inicio.
+Map<DateTime, List<ClassOccurrence>> classesByDay(
+  List<ClassOccurrence> classes,
+) {
+  final map = <DateTime, List<ClassOccurrence>>{};
+  for (final item in classes) {
+    map.putIfAbsent(dateOnly(item.startsAt), () => []).add(item);
+  }
+  for (final list in map.values) {
+    list.sort((a, b) => a.startsAt.compareTo(b.startsAt));
+  }
+  return map;
 }
 
 /// Tareas agrupadas por día de entrega, y dentro de cada día por hora.
