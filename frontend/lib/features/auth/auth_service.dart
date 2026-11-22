@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/api_client.dart';
 import '../../core/api_error.dart';
+import '../../core/bogota_time.dart';
 import '../../core/token_storage.dart';
 
 export '../../core/api_error.dart' show ApiException;
@@ -25,9 +26,7 @@ class UserProfile {
     fullName: json['full_name'] as String,
     email: json['email'] as String,
     telegramLinked: json['telegram_linked'] as bool? ?? false,
-    createdAt: DateTime.tryParse(
-      json['created_at'] as String? ?? '',
-    )?.toLocal(),
+    createdAt: parseApiDateTimeOrNull(json['created_at']),
     consentPolicyVersion: json['consent_policy_version'] as String?,
   );
 
@@ -44,9 +43,7 @@ class UserProfile {
 }
 
 class AuthService {
-  AuthService({required Dio dio, required TokenStorage tokens})
-    : _dio = dio,
-      _tokens = tokens;
+  AuthService({required this._dio, required this._tokens});
 
   factory AuthService.create() =>
       AuthService(dio: apiDio, tokens: appTokenStorage);
@@ -96,14 +93,14 @@ class AuthService {
     return UserProfile.fromJson(response.data!);
   });
 
-  /// POST /users/logout invalida la sesión en el servidor; luego se borran los
-  /// tokens locales aunque el servidor no responda.
+  /// POST /users/logout invalida la sesión en el servidor (RF-USR-04); luego
+  /// se borran los tokens locales aunque el servidor no responda.
+  ///
+  /// Si el token de acceso ya venció, el cliente lo renueva y repite la
+  /// petición: así la sesión también se revoca en el servidor.
   Future<void> logout() async {
     try {
-      await _dio.post<void>(
-        '/users/logout',
-        options: Options(extra: {skipAuthRefresh: true}),
-      );
+      await _dio.post<void>('/users/logout');
     } on DioException {
       // Se cierra la sesión local de todos modos.
     }
