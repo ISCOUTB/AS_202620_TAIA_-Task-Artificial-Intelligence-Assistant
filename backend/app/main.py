@@ -22,7 +22,8 @@ configure_identity_service(identity_service)
 
 academic_repository = get_task_repository()
 configure_academic_task_lookup(AcademicTaskLookupService(academic_repository))
-configure_academic_task_management(AcademicTaskManagementService(academic_repository, get_subject_repository()))
+academic_task_management = AcademicTaskManagementService(academic_repository, get_subject_repository())
+configure_academic_task_management(academic_task_management)
 
 # IA se compone aqui y no en su adaptador HTTP. Construir el LLM aqui mantiene
 # un unico cliente httpx para toda la vida del proceso: antes se creaba uno por
@@ -93,6 +94,34 @@ configure_structure_use_cases(
     ManageScheduleUseCase(get_subject_repository(), get_schedule_block_repository()),
     ManageAcademicPeriodUseCase(get_academic_period_repository()),
 )
+
+# Frente C: la API de tareas usa la misma instancia que publica AcademicTaskManagement
+# (RF-TAR-02, RF-TAR-05), el calendario proyecta el horario (RF-TAR-11) y AcademicInsights
+# lo reutiliza para el agente (RF-AGT-10, 12 y 13). Estadísticas del perfil (RF-PRF-01).
+from app.modules.academic.adapters.inbound.api import configure_task_api
+from app.modules.academic.adapters.inbound.calendar_api import (
+    configure_calendar_use_case,
+    router as academic_calendar_router,
+)
+from app.modules.academic.adapters.inbound.statistics_api import (
+    configure_statistics_use_case,
+    router as academic_statistics_router,
+)
+from app.modules.academic.application.ports.inbound.academic_insights import configure_academic_insights
+from app.modules.academic.application.services.academic_insights import AcademicInsightsService
+from app.modules.academic.application.use_cases.academic_calendar import AcademicCalendarUseCase
+from app.modules.academic.application.use_cases.profile_statistics import ProfileStatisticsUseCase
+
+academic_calendar = AcademicCalendarUseCase(
+    academic_repository, get_subject_repository(), get_schedule_block_repository(), get_academic_period_repository()
+)
+configure_task_api(academic_task_management)
+configure_calendar_use_case(academic_calendar)
+configure_academic_insights(AcademicInsightsService(academic_repository, get_subject_repository(), academic_calendar))
+configure_statistics_use_case(
+    ProfileStatisticsUseCase(academic_repository, get_subject_repository(), get_academic_period_repository())
+)
+
 reminder_repository = get_reminder_repository()
 configure_reminder_use_cases(ReminderUseCases(
     create=CreateReminderUseCase(reminder_repository, AcademicTaskLookupAdapter(get_academic_task_lookup().get_summary)),
@@ -132,6 +161,8 @@ app.include_router(academic_router)
 app.include_router(academic_subjects_router)
 app.include_router(academic_schedule_router)
 app.include_router(academic_period_router)
+app.include_router(academic_calendar_router)  # Frente C
+app.include_router(academic_statistics_router)  # Frente C
 app.include_router(usuario_router)
 app.include_router(telegram_webhook_router)
 app.include_router(ai_router)

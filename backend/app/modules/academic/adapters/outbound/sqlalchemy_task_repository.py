@@ -39,6 +39,24 @@ class SqlAlchemyTaskRepository(TaskRepository):
             total = session.scalar(select(func.count()).select_from(filtered.subquery()))
             return [_to_domain(model) for model in session.scalars(page)], total
 
+    def list_due_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        query = (
+            _owned_by(user_id)
+            .where(TaskModel.due_at >= start, TaskModel.due_at < end)
+            .order_by(TaskModel.due_at, TaskModel.id)
+        )
+        with self._session_factory() as session:
+            return [_to_domain(model) for model in session.scalars(query)]
+
+    def list_completed_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        query = (
+            _owned_by(user_id)
+            .where(TaskModel.completed_at >= start, TaskModel.completed_at < end)
+            .order_by(TaskModel.completed_at, TaskModel.id)
+        )
+        with self._session_factory() as session:
+            return [_to_domain(model) for model in session.scalars(query)]
+
     def count_by_subject(self, subject_id: uuid.UUID) -> int:
         query = select(func.count()).select_from(TaskModel).where(TaskModel.subject_id == subject_id)
         with self._session_factory() as session:
