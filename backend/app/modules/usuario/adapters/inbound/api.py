@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
+from app.modules.reminders.application.ports.inbound.task_reminder_sync import get_task_reminder_sync
 from app.modules.usuario.adapters.outbound.provider import (
     failed_login_attempt_repository as _failed_login_attempt_repository,
     password_hasher as _password_hasher,
@@ -33,6 +34,7 @@ from app.modules.usuario.application.use_cases.login_user import (
 )
 from app.modules.usuario.application.use_cases.manage_account import (
     ChangePasswordUseCase,
+    DeactivateAccountUseCase,
     IncorrectPasswordError,
     UpdateProfileUseCase,
 )
@@ -89,6 +91,10 @@ class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., min_length=1)
     # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
     new_password: str = Field(..., min_length=1)
+
+
+class DeactivateAccountRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
 
 
 class FcmTokenRequest(BaseModel):
@@ -165,7 +171,7 @@ def register_user(payload: UserCreateRequest) -> UserResponse:
     "/login",
     responses={
         401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
-        403: {"model": ErrorResponse, "description": "La cuenta está inactiva."},
+        403: {"model": ErrorResponse, "description": "La cuenta lleva más de 30 días desactivada (RF-USR-09)."},
         422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
         429: {"model": ErrorResponse, "description": "Demasiados intentos fallidos con ese correo (RNF-03)."},
     },
@@ -323,6 +329,27 @@ def change_password(payload: PasswordChangeRequest, credentials: BearerCredentia
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/me/deactivate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "La contraseña actual es incorrecta."},
+    },
+)
+def deactivate_account(payload: DeactivateAccountRequest, credentials: BearerCredentials) -> Response:
+    """Desactiva la cuenta: cierra sesiones, Telegram, dispositivos y recordatorios (RF-USR-09)."""
+    user = _authenticated_user(credentials)
+    use_case = DeactivateAccountUseCase(
+        _repository, _password_hasher, _session_repository, get_task_reminder_sync()
+    )
+    try:
+        use_case.execute(user.id, payload.current_password)
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

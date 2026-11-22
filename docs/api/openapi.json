@@ -1514,7 +1514,7 @@
             }
           },
           "403": {
-            "description": "La cuenta está inactiva.",
+            "description": "La cuenta lleva más de 30 días desactivada (RF-USR-09).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1866,6 +1866,66 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/users/me/deactivate": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Deactivate Account",
+        "description": "Desactiva la cuenta: cierra sesiones, Telegram, dispositivos y recordatorios (RF-USR-09).",
+        "operationId": "deactivate_account_users_me_deactivate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Credenciales ausentes, inválidas o expiradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "La contraseña actual es incorrecta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2585,6 +2645,20 @@
           "task_id"
         ],
         "title": "CreateReminderRequest"
+      },
+      "DeactivateAccountRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Current Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password"
+        ],
+        "title": "DeactivateAccountRequest"
       },
       "EditReminderRequest": {
         "properties": {

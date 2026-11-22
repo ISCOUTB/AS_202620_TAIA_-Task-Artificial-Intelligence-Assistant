@@ -76,6 +76,10 @@ class LoginUserUseCase:
             raise InvalidCredentialsError("Correo o contraseña incorrectos.")
 
         if user.status is not UserStatus.ACTIVE:
-            raise InactiveUserError("El usuario está inactivo.")
+            # RF-USR-09: dentro de los 30 días, iniciar sesión reactiva la cuenta.
+            if not user.can_reactivate(now):
+                raise InactiveUserError("La cuenta está desactivada y ya no se puede reactivar.")
+            user.reactivate()
+            self._repository.save(user)
 
         return start_session(user, self._sessions, self._token_service, self._now)

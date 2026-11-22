@@ -1,9 +1,10 @@
-"""Casos de uso de la cuenta del usuario autenticado (RF-USR-06, 07)."""
+"""Casos de uso de la cuenta del usuario autenticado (RF-USR-06, 07, 09)."""
 
 from __future__ import annotations
 
 import uuid
 
+from app.modules.reminders.application.ports.inbound.task_reminder_sync import TaskReminderSync
 from app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
 from app.modules.usuario.application.ports.outbound.session_repository import SessionRepository
 from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
@@ -91,3 +92,33 @@ class ChangePasswordUseCase:
         user.password_hash = self._hasher.hash(new_password)
         self._users.save(user)
         self._sessions.revoke_others(user.id, session_id, self._now())
+
+
+class DeactivateAccountUseCase:
+    """Desactiva la cuenta sin borrarla y corta todos sus canales (RF-USR-09)."""
+
+    def __init__(
+        self,
+        users: UserRepository,
+        hasher: PasswordHasher,
+        sessions: SessionRepository,
+        reminder_sync: TaskReminderSync,
+        now: Clock = now_bogota,
+    ) -> None:
+        self._users = users
+        self._hasher = hasher
+        self._sessions = sessions
+        self._reminder_sync = reminder_sync
+        self._now = now
+
+    def execute(self, user_id: uuid.UUID, current_password: str) -> None:
+        user = _get_user(self._users, user_id)
+        check_current_password(self._hasher, user, current_password)
+        now = self._now()
+
+        # Primero `deactivated_at`: desde ahí la cuenta ya no es accesible por ningún canal,
+        # aunque falle un paso posterior. `revoke_all` también pone los `fcm_token` en NULL.
+        user.deactivate(now)
+        self._users.save(user)
+        self._sessions.revoke_all(user.id, now)
+        self._reminder_sync.cancel_all_for_user(user.id)
