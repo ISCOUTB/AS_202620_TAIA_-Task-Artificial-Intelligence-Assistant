@@ -6,12 +6,20 @@ import '../shell/main_shell.dart';
 import 'auth_service.dart';
 import 'auth_shell.dart';
 import 'login_screen.dart';
+import 'privacy_policy.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, this.service});
+  const RegisterScreen({
+    super.key,
+    this.service,
+    this.openLink = openInBrowser,
+  });
 
   /// Servicio de autenticación; si es null se usa el compartido de la app.
   final AuthService? service;
+
+  /// Abre la política de datos; las pruebas lo reemplazan.
+  final Future<bool> Function(Uri uri) openLink;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -39,10 +47,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-    /// Al editar un campo la mascota vuelve a su expresión de reposo.
+  /// Al editar un campo la mascota vuelve a su expresión de reposo.
   void _onEdited() {
     if (!_loading && _expression != MascotExpression.organizing) {
       setState(() => _expression = MascotExpression.organizing);
+    }
+  }
+
+  /// Muestra la política antes de aceptarla: la autorización es informada
+  /// (RF-USR-10).
+  Future<void> _openPolicy() async {
+    var opened = false;
+    try {
+      opened = await widget.openLink(Uri.parse(privacyPolicyUrl));
+    } on Exception {
+      opened = false;
+    }
+    if (!opened && mounted) {
+      setState(() => _error = 'No se pudo abrir la política de datos.');
     }
   }
 
@@ -167,17 +189,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
               builder: (field) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    activeColor: TaiaColors.fieryRose,
-                    value: field.value ?? false,
-                    onChanged: _loading ? null : field.didChange,
-                    title: const Text(
-                      'Acepto la política de tratamiento de datos personales '
-                      '(versión $consentPolicyVersion).',
-                      style: TextStyle(color: taiaInk, fontSize: 13),
+                  // Material propio: la tarjeta clara de AuthShell taparía el
+                  // efecto del toque de la casilla.
+                  Material(
+                    type: MaterialType.transparency,
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: TaiaColors.fieryRose,
+                      value: field.value ?? false,
+                      onChanged: _loading ? null : field.didChange,
+                      title: const Text(
+                        'Acepto la política de tratamiento de datos personales '
+                        '(versión $consentPolicyVersion).',
+                        style: TextStyle(color: taiaInk, fontSize: 13),
+                      ),
                     ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: TaiaColors.fieryRose,
+                    ),
+                    onPressed: _openPolicy,
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('Leer la política de datos'),
                   ),
                   if (field.hasError)
                     Text(
