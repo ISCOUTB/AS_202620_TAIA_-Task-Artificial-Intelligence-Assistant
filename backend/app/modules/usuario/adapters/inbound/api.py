@@ -31,6 +31,10 @@ from app.modules.usuario.application.use_cases.login_user import (
     LoginUserUseCase,
     TooManyLoginAttemptsError,
 )
+from app.modules.usuario.application.use_cases.manage_account import (
+    IncorrectPasswordError,
+    UpdateProfileUseCase,
+)
 from app.modules.usuario.application.use_cases.manage_devices import (
     InvalidFcmTokenError,
     RegisterFcmTokenUseCase,
@@ -71,6 +75,13 @@ class UserLoginRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
+
+
+class UserUpdateRequest(BaseModel):
+    full_name: str | None = Field(None, min_length=1, max_length=100)
+    email: str | None = Field(None, min_length=3)
+    # RF-USR-06: obligatoria solo si cambia el correo.
+    current_password: str | None = None
 
 
 class FcmTokenRequest(BaseModel):
@@ -254,6 +265,34 @@ def remove_fcm_token(credentials: BearerCredentials) -> Response:
 def get_current_user(credentials: BearerCredentials) -> UserResponse:
     """Devuelve el perfil del usuario autenticado mediante Bearer JWT."""
     return UserResponse.from_domain(_authenticated_user(credentials))
+
+
+@router.patch(
+    "/me",
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "Cambiar el correo exige la contraseña actual correcta."},
+        409: {"model": ErrorResponse, "description": "Ya existe un usuario registrado con ese correo."},
+        422: {"model": ErrorResponse, "description": "Los datos del usuario no son válidos."},
+    },
+)
+def update_current_user(payload: UserUpdateRequest, credentials: BearerCredentials) -> UserResponse:
+    """Actualiza el nombre y el correo del usuario autenticado (RF-USR-06)."""
+    user = _authenticated_user(credentials)
+    try:
+        updated = UpdateProfileUseCase(_repository, _password_hasher).execute(
+            user.id,
+            full_name=payload.full_name,
+            email=payload.email,
+            current_password=payload.current_password,
+        )
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except UserAlreadyExistsError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return UserResponse.from_domain(updated)
 
 
 def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:

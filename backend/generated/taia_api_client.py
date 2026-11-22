@@ -16,6 +16,7 @@ PATH_ACADEMIC_SCHEDULE_BLOCKS = "/academic/schedule-blocks"
 PATH_ACADEMIC_SCHEDULE_BLOCKS_BLOCK_ID = "/academic/schedule-blocks/{block_id}"
 PATH_ACADEMIC_PERIOD = "/academic/period"
 PATH_USERS_ME_FCM_TOKEN = "/users/me/fcm-token"
+PATH_USERS_ME = "/users/me"
 PATH_REMINDERS = "/reminders"
 PATH_REMINDERS_REMINDER_ID = "/reminders/{reminder_id}"
 
@@ -146,7 +147,10 @@ class TaiaApiClient:
         return self._request("DELETE", PATH_USERS_ME_FCM_TOKEN, body, **{})
 
     def get_current_user_users_me_get(self, body: object | None = None) -> object:
-        return self._request("GET", "/users/me", body, **{})
+        return self._request("GET", PATH_USERS_ME, body, **{})
+
+    def update_current_user_users_me_patch(self, body: object | None = None) -> object:
+        return self._request("PATCH", PATH_USERS_ME, body, **{})
 
     def create_telegram_link_users_me_telegram_link_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/me/telegram/link", body, **{})

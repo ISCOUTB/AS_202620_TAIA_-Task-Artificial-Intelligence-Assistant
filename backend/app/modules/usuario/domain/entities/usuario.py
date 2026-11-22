@@ -43,13 +43,7 @@ class Usuario:
     def create(full_name: str, email: Email, password_hash: str) -> "Usuario":
         """Crea un usuario nuevo aplicando las reglas de RF-USR-01."""
 
-        clean_name = (full_name or "").strip()
-        if not clean_name:
-            raise InvalidUserError("El nombre del usuario no puede estar vacío.")
-        if len(clean_name) > Usuario.MAX_FULL_NAME_LENGTH:
-            raise InvalidUserError(
-                f"El nombre no puede superar {Usuario.MAX_FULL_NAME_LENGTH} caracteres."
-            )
+        clean_name = Usuario._clean_full_name(full_name)
         if not password_hash:
             raise InvalidUserError("El usuario debe tener una contraseña protegida.")
 
@@ -59,6 +53,25 @@ class Usuario:
             email=email,
             password_hash=password_hash,
         )
+
+    @staticmethod
+    def _clean_full_name(full_name: str) -> str:
+        clean_name = (full_name or "").strip()
+        if not clean_name:
+            raise InvalidUserError("El nombre del usuario no puede estar vacío.")
+        if len(clean_name) > Usuario.MAX_FULL_NAME_LENGTH:
+            raise InvalidUserError(
+                f"El nombre no puede superar {Usuario.MAX_FULL_NAME_LENGTH} caracteres."
+            )
+        return clean_name
+
+    def rename(self, full_name: str) -> None:
+        """Cambia el nombre con las reglas de RF-USR-01 (RF-USR-06)."""
+        self.full_name = Usuario._clean_full_name(full_name)
+
+    def change_email(self, email: Email) -> None:
+        """Cambia el correo; la unicidad la comprueba el caso de uso (RF-USR-06)."""
+        self.email = email
 
     @property
     def status(self) -> UserStatus:
