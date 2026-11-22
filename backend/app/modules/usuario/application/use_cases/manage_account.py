@@ -1,15 +1,21 @@
-"""Casos de uso de la cuenta del usuario autenticado (RF-USR-06)."""
+"""Casos de uso de la cuenta del usuario autenticado (RF-USR-06, 07)."""
 
 from __future__ import annotations
 
 import uuid
 
 from app.modules.usuario.application.ports.outbound.password_hasher import PasswordHasher
+from app.modules.usuario.application.ports.outbound.session_repository import SessionRepository
 from app.modules.usuario.application.ports.outbound.user_repository import UserRepository
 from app.modules.usuario.application.use_cases.get_current_user import AuthenticatedUserNotFoundError
-from app.modules.usuario.application.use_cases.register_user import UserAlreadyExistsError
+from app.modules.usuario.application.use_cases.register_user import (
+    UserAlreadyExistsError,
+    WeakPasswordError,
+    check_password_rules,
+)
 from app.modules.usuario.domain.entities.usuario import Usuario
 from app.modules.usuario.domain.value_objects.email import Email
+from app.shared.clock import Clock, now_bogota
 
 
 class IncorrectPasswordError(ValueError):
@@ -56,3 +62,32 @@ class UpdateProfileUseCase:
                 user.change_email(new_email)
         self._users.save(user)
         return user
+
+
+class ChangePasswordUseCase:
+    """Cambia la contraseña y revoca las demás sesiones del usuario (RF-USR-07)."""
+
+    def __init__(
+        self,
+        users: UserRepository,
+        hasher: PasswordHasher,
+        sessions: SessionRepository,
+        now: Clock = now_bogota,
+    ) -> None:
+        self._users = users
+        self._hasher = hasher
+        self._sessions = sessions
+        self._now = now
+
+    def execute(
+        self, user_id: uuid.UUID, session_id: uuid.UUID, current_password: str, new_password: str
+    ) -> None:
+        user = _get_user(self._users, user_id)
+        check_current_password(self._hasher, user, current_password)
+        check_password_rules(new_password)
+        if self._hasher.verify(new_password, user.password_hash):
+            raise WeakPasswordError("La nueva contraseña debe ser distinta de la actual.")
+
+        user.password_hash = self._hasher.hash(new_password)
+        self._users.save(user)
+        self._sessions.revoke_others(user.id, session_id, self._now())

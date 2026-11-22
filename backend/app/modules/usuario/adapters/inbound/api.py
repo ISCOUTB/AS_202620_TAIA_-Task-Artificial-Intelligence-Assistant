@@ -32,6 +32,7 @@ from app.modules.usuario.application.use_cases.login_user import (
     TooManyLoginAttemptsError,
 )
 from app.modules.usuario.application.use_cases.manage_account import (
+    ChangePasswordUseCase,
     IncorrectPasswordError,
     UpdateProfileUseCase,
 )
@@ -82,6 +83,12 @@ class UserUpdateRequest(BaseModel):
     email: str | None = Field(None, min_length=3)
     # RF-USR-06: obligatoria solo si cambia el correo.
     current_password: str | None = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
+    new_password: str = Field(..., min_length=1)
 
 
 class FcmTokenRequest(BaseModel):
@@ -295,8 +302,35 @@ def update_current_user(payload: UserUpdateRequest, credentials: BearerCredentia
     return UserResponse.from_domain(updated)
 
 
-def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
+@router.put(
+    "/me/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        403: {"model": ErrorResponse, "description": "La contraseña actual es incorrecta."},
+        422: {"model": ErrorResponse, "description": "La nueva contraseña no es válida."},
+    },
+)
+def change_password(payload: PasswordChangeRequest, credentials: BearerCredentials) -> Response:
+    """Cambia la contraseña; las demás sesiones del usuario se cierran (RF-USR-07)."""
     claims = _authenticated_claims(credentials)
+    user = _user_from_claims(claims)
+    try:
+        ChangePasswordUseCase(_repository, _password_hasher, _session_repository).execute(
+            user.id, claims.session_id, payload.current_password, payload.new_password
+        )
+    except IncorrectPasswordError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _authenticated_user(credentials: HTTPAuthorizationCredentials | None) -> Usuario:
+    return _user_from_claims(_authenticated_claims(credentials))
+
+
+def _user_from_claims(claims: AccessTokenClaims) -> Usuario:
     try:
         return GetCurrentUserUseCase(_repository).execute(claims.user_id)
     except ValueError as error:

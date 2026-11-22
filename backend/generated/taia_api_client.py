@@ -152,6 +152,9 @@ class TaiaApiClient:
     def update_current_user_users_me_patch(self, body: object | None = None) -> object:
         return self._request("PATCH", PATH_USERS_ME, body, **{})
 
+    def change_password_users_me_password_put(self, body: object | None = None) -> object:
+        return self._request("PUT", "/users/me/password", body, **{})
+
     def create_telegram_link_users_me_telegram_link_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/me/telegram/link", body, **{})
 

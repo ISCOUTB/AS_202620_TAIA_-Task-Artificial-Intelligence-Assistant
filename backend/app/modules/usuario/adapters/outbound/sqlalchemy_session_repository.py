@@ -91,6 +91,18 @@ class SqlAlchemySessionRepository(SessionRepository):
                 .values(revoked_at=revoked_at, fcm_token=None)
             )
 
+    def revoke_others(self, user_id: uuid.UUID, keep_session_id: uuid.UUID, revoked_at: datetime) -> None:
+        with self._session_factory.begin() as session:
+            session.execute(
+                update(SessionModel)
+                .where(
+                    SessionModel.user_id == user_id,
+                    SessionModel.id != keep_session_id,
+                    SessionModel.revoked_at.is_(None),
+                )
+                .values(revoked_at=revoked_at, fcm_token=None)
+            )
+
     def set_fcm_token(self, session_id: uuid.UUID, fcm_token: str) -> None:
         with self._session_factory.begin() as session:
             # UNIQUE (fcm_token): el dispositivo se mueve a la sesión actual.

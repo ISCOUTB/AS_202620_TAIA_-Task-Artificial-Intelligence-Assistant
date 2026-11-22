@@ -69,6 +69,11 @@ class InMemorySessionRepository(SessionRepository):
             if stored.user_id == user_id:
                 self.revoke(session_id, revoked_at)
 
+    def revoke_others(self, user_id: uuid.UUID, keep_session_id: uuid.UUID, revoked_at: datetime) -> None:
+        for session_id, stored in self._sessions.items():
+            if stored.user_id == user_id and session_id != keep_session_id:
+                self.revoke(session_id, revoked_at)
+
     def set_fcm_token(self, session_id: uuid.UUID, fcm_token: str) -> None:
         self.invalidate_fcm_token(fcm_token)
         stored = self._sessions.get(session_id)
