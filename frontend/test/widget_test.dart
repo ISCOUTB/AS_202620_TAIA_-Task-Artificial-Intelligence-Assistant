@@ -50,4 +50,43 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1000));
     expect(find.byType(WelcomeScreen), findsOneWidget);
   });
+
+  testWidgets(
+    'RF-USR-03 · con sesión guardada el splash entra directo a la app',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SplashScreen(
+            minDisplay: const Duration(milliseconds: 500),
+            sessionCheck: () async => true,
+            signedIn: (_) => const Text('app principal'),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(milliseconds: 1000));
+
+      expect(find.text('app principal'), findsOneWidget);
+      expect(find.byType(WelcomeScreen), findsNothing);
+    },
+  );
+
+  testWidgets('RF-USR-03 · sin sesión guardada el splash va a la bienvenida', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SplashScreen(
+          minDisplay: const Duration(milliseconds: 500),
+          sessionCheck: () async => false,
+          signedIn: (_) => const Text('app principal'),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 1000));
+
+    expect(find.byType(WelcomeScreen), findsOneWidget);
+    expect(find.text('app principal'), findsNothing);
+  });
 }

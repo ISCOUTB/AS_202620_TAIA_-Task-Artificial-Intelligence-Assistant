@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../features/shell/app_entry.dart';
 import '../mascot/taia_mascot.dart';
 import '../welcome/welcome_screen.dart';
 import 'splash_background.dart';
@@ -10,15 +11,26 @@ import 'taia_wordmark.dart';
 /// tentáculos en movimiento mientras carga y transición a la bienvenida.
 ///
 /// Se muestra al menos [minDisplay] y, si se pasa [loading], hasta que termine.
+///
+/// Si [sessionCheck] encuentra una sesión guardada, entra directo a la app
+/// ([signedIn]); si no, pasa a la bienvenida (RF-USR-03). Un token vencido se
+/// renueva solo en la primera petición, y si ya no sirve, `sessionEvents`
+/// devuelve a la bienvenida.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({
     super.key,
     this.minDisplay = const Duration(milliseconds: 3200),
     this.loading,
+    this.sessionCheck,
+    this.signedIn,
   });
 
   final Duration minDisplay;
   final Future<void>? loading;
+  final Future<bool> Function()? sessionCheck;
+
+  /// Pantalla con la sesión abierta. Por defecto, [AppEntry].
+  final WidgetBuilder? signedIn;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -38,16 +50,32 @@ class _SplashScreenState extends State<SplashScreen>
     _continueWhenReady();
   }
 
+  Future<bool> _hasSession() async {
+    final check = widget.sessionCheck;
+    if (check == null) return false;
+    try {
+      return await check();
+    } catch (_) {
+      // Si el almacenamiento seguro falla, se pide iniciar sesión.
+      return false;
+    }
+  }
+
   Future<void> _continueWhenReady() async {
+    final session = _hasSession();
     await Future.wait([
       Future<void>.delayed(widget.minDisplay),
       if (widget.loading != null) widget.loading!,
     ]);
+    final signedIn = await session;
     if (!mounted) return;
+    final next = signedIn
+        ? (widget.signedIn ?? (_) => const AppEntry())
+        : (_) => const WelcomeScreen();
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         transitionDuration: const Duration(milliseconds: 900),
-        pageBuilder: (_, _, _) => const WelcomeScreen(),
+        pageBuilder: (context, _, _) => next(context),
         transitionsBuilder: (_, animation, _, child) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: child,

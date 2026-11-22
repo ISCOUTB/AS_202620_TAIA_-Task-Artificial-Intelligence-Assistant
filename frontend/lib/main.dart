@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/api_client.dart';
+import 'features/auth/auth_service.dart';
 import 'firebase_options.dart';
 import 'splash/splash_screen.dart';
 import 'theme/taia_colors.dart';
@@ -46,7 +47,7 @@ class TaiaApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: TaiaColors.fieryRose),
       ),
-      home: const SplashScreen(),
+      home: SplashScreen(sessionCheck: authService.hasSession),
     );
   }
 }

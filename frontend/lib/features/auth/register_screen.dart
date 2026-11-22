@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
-import '../shell/main_shell.dart';
+import '../shell/app_entry.dart';
 import 'auth_service.dart';
 import 'auth_shell.dart';
 import 'login_screen.dart';
@@ -93,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(
-          builder: (_) => MainShell(service: widget.service),
+          builder: (_) => AppEntry(service: widget.service),
         ),
         (route) => false,
       );
