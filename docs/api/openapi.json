@@ -1985,6 +1985,36 @@
         ]
       }
     },
+    "/users/me/telegram": {
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Unlink Telegram",
+        "description": "Desvincula Telegram: los mensajes de esa cuenta ya no acceden a los datos (RF-TEL-03).",
+        "operationId": "unlink_telegram_users_me_telegram_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Credenciales ausentes, inválidas o expiradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/telegram/webhook": {
       "post": {
         "tags": [

@@ -24,6 +24,7 @@ from app.modules.usuario.application.ports.outbound.token_service import AccessT
 from app.modules.usuario.application.use_cases.get_current_user import GetCurrentUserUseCase
 from app.modules.usuario.application.use_cases.link_telegram import (
     CreateTelegramLinkUseCase,
+    UnlinkTelegramUseCase,
     UserAlreadyLinkedError,
 )
 from app.modules.usuario.application.use_cases.login_user import (
@@ -407,3 +408,15 @@ def create_telegram_link(credentials: BearerCredentials) -> TelegramLinkResponse
         telegram_deep_link=f"https://t.me/{bot_username}?start={link.token}",
         expires_at=link.expires_at.isoformat(),
     )
+
+
+@router.delete(
+    "/me/telegram",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
+)
+def unlink_telegram(credentials: BearerCredentials) -> Response:
+    """Desvincula Telegram: los mensajes de esa cuenta ya no acceden a los datos (RF-TEL-03)."""
+    user = _authenticated_user(credentials)
+    UnlinkTelegramUseCase(_repository).execute(user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

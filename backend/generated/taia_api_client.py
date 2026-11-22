@@ -161,6 +161,9 @@ class TaiaApiClient:
     def create_telegram_link_users_me_telegram_link_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/me/telegram/link", body, **{})
 
+    def unlink_telegram_users_me_telegram_delete(self, body: object | None = None) -> object:
+        return self._request("DELETE", "/users/me/telegram", body, **{})
+
     def telegram_webhook_telegram_webhook_post(self, body: object | None = None) -> object:
         return self._request("POST", "/telegram/webhook", body, **{})
 
