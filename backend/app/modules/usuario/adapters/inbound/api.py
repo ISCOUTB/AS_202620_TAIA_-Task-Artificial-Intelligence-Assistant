@@ -31,6 +31,11 @@ from app.modules.usuario.application.use_cases.login_user import (
     LoginUserUseCase,
     TooManyLoginAttemptsError,
 )
+from app.modules.usuario.application.use_cases.manage_devices import (
+    InvalidFcmTokenError,
+    RegisterFcmTokenUseCase,
+    RemoveFcmTokenUseCase,
+)
 from app.modules.usuario.application.use_cases.manage_sessions import (
     AuthenticateAccessTokenUseCase,
     InvalidRefreshTokenError,
@@ -66,6 +71,10 @@ class UserLoginRequest(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
+
+
+class FcmTokenRequest(BaseModel):
+    fcm_token: str = Field(..., min_length=1)
 
 
 class UserResponse(BaseModel):
@@ -205,6 +214,36 @@ def logout_user(credentials: BearerCredentials) -> Response:
     """Cierra la sesión actual: su token de acceso y su token de renovación dejan de valer (RF-USR-04)."""
     claims = _authenticated_claims(credentials)
     LogoutUseCase(_session_repository).execute(claims.session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put(
+    "/me/fcm-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."},
+        422: {"model": ErrorResponse, "description": "El token del dispositivo no es válido."},
+    },
+)
+def register_fcm_token(payload: FcmTokenRequest, credentials: BearerCredentials) -> Response:
+    """Registra el token FCM del dispositivo en la sesión actual (RF-NOT-01)."""
+    claims = _authenticated_claims(credentials)
+    try:
+        RegisterFcmTokenUseCase(_session_repository).execute(claims.session_id, payload.fcm_token)
+    except InvalidFcmTokenError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/me/fcm-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"model": ErrorResponse, "description": "Credenciales ausentes, inválidas o expiradas."}},
+)
+def remove_fcm_token(credentials: BearerCredentials) -> Response:
+    """Quita el token FCM de la sesión actual (RF-NOT-01)."""
+    claims = _authenticated_claims(credentials)
+    RemoveFcmTokenUseCase(_session_repository).execute(claims.session_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

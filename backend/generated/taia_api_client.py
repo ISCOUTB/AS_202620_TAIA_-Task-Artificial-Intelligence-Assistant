@@ -15,6 +15,7 @@ PATH_ACADEMIC_SUBJECTS_SUBJECT_ID = "/academic/subjects/{subject_id}"
 PATH_ACADEMIC_SCHEDULE_BLOCKS = "/academic/schedule-blocks"
 PATH_ACADEMIC_SCHEDULE_BLOCKS_BLOCK_ID = "/academic/schedule-blocks/{block_id}"
 PATH_ACADEMIC_PERIOD = "/academic/period"
+PATH_USERS_ME_FCM_TOKEN = "/users/me/fcm-token"
 PATH_REMINDERS = "/reminders"
 PATH_REMINDERS_REMINDER_ID = "/reminders/{reminder_id}"
 
@@ -137,6 +138,12 @@ class TaiaApiClient:
 
     def logout_user_users_logout_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/logout", body, **{})
+
+    def register_fcm_token_users_me_fcm_token_put(self, body: object | None = None) -> object:
+        return self._request("PUT", PATH_USERS_ME_FCM_TOKEN, body, **{})
+
+    def remove_fcm_token_users_me_fcm_token_delete(self, body: object | None = None) -> object:
+        return self._request("DELETE", PATH_USERS_ME_FCM_TOKEN, body, **{})
 
     def get_current_user_users_me_get(self, body: object | None = None) -> object:
         return self._request("GET", "/users/me", body, **{})

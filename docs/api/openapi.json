@@ -1628,6 +1628,84 @@
         ]
       }
     },
+    "/users/me/fcm-token": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Register Fcm Token",
+        "description": "Registra el token FCM del dispositivo en la sesión actual (RF-NOT-01).",
+        "operationId": "register_fcm_token_users_me_fcm_token_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FcmTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Credenciales ausentes, inválidas o expiradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El token del dispositivo no es válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Remove Fcm Token",
+        "description": "Quita el token FCM de la sesión actual (RF-NOT-01).",
+        "operationId": "remove_fcm_token_users_me_fcm_token_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Credenciales ausentes, inválidas o expiradas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/users/me": {
       "get": {
         "tags": [
@@ -2417,6 +2495,20 @@
         ],
         "title": "ErrorResponse",
         "description": "Cuerpo devuelto por el adaptador cuando la petición falla."
+      },
+      "FcmTokenRequest": {
+        "properties": {
+          "fcm_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Fcm Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fcm_token"
+        ],
+        "title": "FcmTokenRequest"
       },
       "HTTPValidationError": {
         "properties": {

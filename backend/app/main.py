@@ -20,6 +20,12 @@ from app.modules.academic.application.services.task_management import AcademicTa
 identity_service = IdentityServiceImpl(usuario_repository, usuario_token_service, usuario_session_repository)
 configure_identity_service(identity_service)
 
+# Frente A: dispositivos y estado de la cuenta para Reminders (RF-NOT-01, RF-USR-09).
+from app.modules.usuario.application.ports.inbound.user_devices import configure_user_device_directory
+from app.modules.usuario.application.services.user_devices import UserDeviceDirectoryService
+
+configure_user_device_directory(UserDeviceDirectoryService(usuario_repository, usuario_session_repository))
+
 academic_repository = get_task_repository()
 configure_academic_task_lookup(AcademicTaskLookupService(academic_repository))
 configure_academic_task_management(AcademicTaskManagementService(academic_repository, get_subject_repository()))
