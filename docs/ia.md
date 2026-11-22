@@ -1495,3 +1495,38 @@ El equipo pidió adaptar la app al modelo nuevo de recordatorios, que la hacía 
 
 * `flutter analyze` sin avisos y `flutter test` con 83 pruebas aprobadas (57 antes de E3). Las pruebas usan un adaptador HTTP falso, sin red ni Firebase.
 * El envío real de una notificación push a un dispositivo queda como prueba manual del equipo.
+
+## Entrada 034
+
+**Fecha:** 2026-11-22
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Corregir los fallos reportados al probar la app en el teléfono y completar la configuración inicial y el plan de estudio.
+
+### Solicitud realizada
+
+El equipo reportó que la sesión no se guardaba, que no llegaban notificaciones ni aparecían en la bandeja, que el agente no entendía "¿y mañana?" y respondía lo mismo para hoy y mañana, y pidió el aviso de IA en el chat, las gráficas al entrar al perfil, una pantalla de configuración, la configuración inicial con el período sugerido y el plan de estudio con preguntas sobre trabajo y compromisos.
+
+### Resultado generado
+
+* Envío de recordatorios: un recordatorio que falla ya no detiene el lote (en producción, `IntegrityError` en cada ejecución); la notificación se inserta con `ON CONFLICT DO NOTHING` y el log registra la restricción (RF-NOT-02).
+* App: el splash entra directo con la sesión guardada (RF-USR-03); aviso y contador al llegar una notificación con la app abierta (RF-NOT-02).
+* Agente: los mensajes anteriores se envían al LLM como dato delimitado (RF-AGT-15); el backend calcula las fechas relativas y la regla de consultas filtra por el día nombrado (RF-AGT-11); 8 s por proveedor (RF-AGT-20).
+* App: estadísticas en el perfil (RF-PRF-01), pantalla de configuración (RF-USR-11), aviso bajo la barra del chat (RF-AGT-01) y configuración inicial obligatoria con fechas sugeridas por tipo de estudiante (RF-ASG-10, RF-ASG-08).
+* Plan de estudio: migración `0007` (`study_plan_busy_blocks`, `max_daily_minutes`, `preferred_time`), huecos libres y colocación con las reglas de RF-EST-02 en Academic, sugerencia del LLM por el puerto `StudyPlanAdvisor` de AI sin identificadores, rutas `/academic/study-plans`, sesiones aceptadas en el calendario, y formulario y vista en la app (RF-EST-01 a 03).
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* Backend: 749 pruebas aprobadas; `alembic check` sin cambios y `0007` probada hacia abajo y hacia arriba; `tools/audit_boundaries.py` sin regresiones; `tools/verificar_modelo_amenazas.py` con veredicto `ok`. Contrato OpenAPI y cliente regenerados.
+* App: `flutter analyze` sin avisos y 102 pruebas aprobadas (83 antes).
+* LLM real: con Groq y con `gemini-3.5-flash-lite`, "¿Y mañana?" con contexto, "hoy", "mañana", "esta semana" y "el viernes" devolvieron el rango correcto. `tools/eval_llm.py --proveedor groq`: intención 0,886 (antes 0,9035) y campos 0,866 (antes 0,838).
+* No se verificó en un dispositivo: el push con la app abierta y cerrada queda como prueba manual del equipo.
