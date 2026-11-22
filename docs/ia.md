@@ -1247,3 +1247,214 @@ En los logs de producción del primer mensaje atendido por Groq, el equipo vio q
 
 * Sin la corrección, 2 de las 3 pruebas nuevas fallan; con ella pasan las 3.
 * `python -m pytest` con `TEST_DATABASE_URL`: 283 pruebas aprobadas. `tools/audit_boundaries.py`: 0 infracciones.
+
+## Entrada 027
+
+**Fecha:** 2026-11-20 y 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Cerrar el módulo Usuario del MVP: sesiones, token FCM, perfil, cambio y recuperación de contraseña, desactivación y desvinculación de Telegram (cierre S16, frente A).
+
+### Solicitud realizada
+
+Tareas A1 a A7 del frente Usuario en el harness multiagente: verificar RF-USR-02, 03 y 04 contra sus criterios e implementar RF-NOT-01 (lado Usuario) con el puerto `UserDeviceDirectory`, RF-USR-06, RF-USR-07, RF-USR-09, RF-TEL-03, RF-USR-08 y RNF-03.
+
+### Resultado generado
+
+* Pruebas nuevas de sesión: respuesta del login, `401` idéntico para contraseña incorrecta y correo inexistente, y duración de los tokens (30 minutos y 30 días).
+* `SessionRepository` con `set_fcm_token`, `clear_fcm_token`, `get_fcm_tokens`, `invalidate_fcm_token` y `revoke_others`; `UserDeviceDirectoryService` implementa el puerto y se configura en `main.py`.
+* `UpdateProfileUseCase`, `ChangePasswordUseCase` (revoca las demás sesiones) y `check_password_rules`, compartida por el registro, el cambio y la recuperación.
+* `DeactivateAccountUseCase`: exige la contraseña, desvincula Telegram, revoca las sesiones y cancela los recordatorios con `TaskReminderSync.cancel_all_for_user`. El login reactiva la cuenta dentro de 30 días; después responde `403`. `UnlinkTelegramUseCase` pone en `NULL` la vinculación.
+* Recuperación de contraseña: migración `0006` (`password_reset_requests` y `failed_attempts`), límite de 3 solicitudes por correo en 24 horas para cualquier correo, código de 6 dígitos guardado como SHA-256, comparado con `hmac.compare_digest`, de 15 minutos y 5 intentos. El correo sale por Resend después de responder `202` (`BackgroundTasks`).
+* Rutas: `PUT` y `DELETE /users/me/fcm-token`, `PATCH /users/me`, `PUT /users/me/password`, `POST /users/me/deactivate`, `DELETE /users/me/telegram`, `POST /users/password-reset` y `POST /users/password-reset/confirm`.
+
+### Aceptado
+
+* El equipo fijó el código de 6 dígitos, 15 minutos y 5 intentos (H-16), el límite con aviso `429` para cualquier correo (H-07), las cuatro rutas (H-26), las reglas que RF-USR-08 no fijaba y el envío después de responder (H-27).
+* El equipo aprobó el asunto y el texto del correo de recuperación.
+
+### Rechazado o modificado
+
+* La solicitud que responde `429` no se registra: si se registrara, quien insiste quedaría bloqueado sin fin.
+* Si Resend falla, la respuesta sigue siendo `202` y el error solo queda en el log, para no revelar que la cuenta existe.
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL`: 418 pruebas aprobadas (343 antes). `tools/audit_boundaries.py`: 0 regresiones.
+* `alembic upgrade`, `check`, `downgrade 0005` y de nuevo `upgrade` y `check` sin diferencias con los modelos.
+* Ninguna prueba envía correos: Resend se prueba con `httpx.MockTransport` y `conftest.py` vacía `RESEND_API` y `RESEND_FROM`.
+
+## Entrada 028
+
+**Fecha:** 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Alinear el módulo Reminders con el diccionario de datos, sincronizarlo con las actividades y enviar los recordatorios vencidos por FCM (cierre S16, frente B).
+
+### Solicitud realizada
+
+Implementar RF-REC-01 a 06, RF-NOT-02 a 04 y los puertos `TaskReminderSync` y `TaskReminderReader`; eliminar el envío por Telegram y las rutas `/complete` y `/notify` (H-04, D-10); aplicar ADR-0012 para el envío periódico y agregar el adaptador FCM.
+
+### Resultado generado
+
+* Entidades `Reminder` y `Notification` con los campos del diccionario §7, repositorio SQLAlchemy y repositorio en memoria para las pruebas.
+* `domain/policy.py`: la política por defecto de RF-REC-02 como función pura de `due_at` y `now`.
+* `TaskReminderSyncService` implementa los dos puertos (RF-REC-06, RF-TAR-02, 05 a 08 y 10, RF-USR-09).
+* `DispatchDueRemindersUseCase`: reclama cada recordatorio con un `UPDATE` condicionado a `status = 'pending'`, no notifica actividades cerradas ni cuentas inactivas y reintenta el push hasta 3 veces.
+* `ReminderDispatchLoop` (ADR-0012): tarea del `lifespan` que ejecuta el envío cada 60 segundos.
+* `FcmPushSender`: lee `FIREBASE_CREDENTIALS_JSON`; sin ella, o si no es válida, el push queda desactivado y la API arranca.
+* Bandeja `/notifications` (RF-NOT-03) y `firebase-admin==7.4.0` en `requirements.txt` y en los dos locks.
+
+### Aceptado
+
+* El equipo autorizó editar las dos pruebas que rompía el modelo nuevo (H-10), leer la actividad con `AcademicTaskManagement.get_task` (H-11) y dejar RF-REC-07 fuera del cierre S16 (H-22).
+
+### Rechazado o modificado
+
+* Se eliminaron `POST /reminders/{id}/complete`, `POST /reminders/{id}/notify` y el envío por Telegram: `status` reemplaza a "completar" y FCM es el único canal (D-10).
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL`: 443 pruebas aprobadas. `tools/audit_boundaries.py`: 0 regresiones.
+* Dos ejecuciones seguidas del envío producen una sola notificación, y un recordatorio de las 18:00 de Colombia sale en la corrida de las 18:00 aunque el reloj esté en UTC o en UTC+9.
+* pip-audit sobre los dos locks: sin vulnerabilidades conocidas. Ninguna prueba llama a FCM: se usa un doble de `messaging.send`.
+
+## Entrada 029
+
+**Fecha:** 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Conectar las actividades de Academic con Reminders y agregar el calendario, el puerto `AcademicInsights` y las estadísticas del perfil (cierre S16, frente C).
+
+### Solicitud realizada
+
+Tareas C1 a C7: opción de recordatorios al crear (RF-TAR-02), sincronización del ciclo de vida con Reminders (RF-TAR-06, 07, 08 y 10), detalle con recordatorios (RF-TAR-05), calendario (RF-TAR-11), `AcademicInsights` (RF-AGT-10, 12 y 13), estadísticas del perfil (RF-PRF-01) y filtro por tipo en `AcademicTaskQuery`.
+
+### Resultado generado
+
+* `ManageTasksUseCase` valida la opción de recordatorios antes de guardar (como máximo 10 fechas personalizadas) y llama a `TaskReminderSync` al crear, al cambiar `due_at`, al completar, al reabrir y al eliminar.
+* `POST /academic/tasks` acepta `reminders` y `GET /academic/tasks/{id}` devuelve los recordatorios.
+* `AcademicCalendarUseCase` proyecta los bloques del horario en fechas de Colombia, dentro del período académico y con un rango de 31 días como máximo.
+* `AcademicInsightsService` cuenta por período y resuelve asignaturas por nombre, alias y prefijos. `ProfileStatisticsUseCase` agrega los cinco gráficos de RF-PRF-01.
+* Rutas nuevas: `GET /academic/calendar` y `GET /academic/statistics`.
+
+### Aceptado
+
+* El equipo fijó el tope de 10 fechas personalizadas (H-17), el de 31 días del calendario (P-C-04), el filtro `type` en el puerto (H-13) y que el horario semanal no se filtra por el período (H-23).
+
+### Rechazado o modificado
+
+* Mientras Reminders no estaba integrado, Academic toleraba que faltara el puerto (P-C-02). La tolerancia se quitó en la integración (entrada 032).
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL`: 421 pruebas aprobadas. `tools/audit_boundaries.py`: 0 regresiones. Contrato OpenAPI regenerado.
+
+## Entrada 030
+
+**Fecha:** 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Implementar el agente de S16: intenciones nuevas, asignaturas por identificador, contexto persistido y conversación por Telegram (cierre S16, frente D).
+
+### Solicitud realizada
+
+Tareas D0 a D10: Groq como proveedor principal (ADR-0013), RF-AGT-05 a 15, RF-AGT-17, RF-AGT-19, RF-TEL-04 y una evaluación con Groq.
+
+### Resultado generado
+
+* `FallbackLLM.from_env()`: Groq con cada clave configurada y después Gemini; si fallan todos, falla cerrado.
+* `HandleUserMessageUseCase`: la asignatura se resuelve con `AcademicInsights.match_subjects` y se usa su identificador; con varias o ninguna muestra hasta 5 opciones sin guardar la solicitud. Intenciones nuevas `complete_task`, `summary` y `query_schedule`; si falta el período, el agente lo pregunta.
+* `interpretation_contract.py`: tipo, título generado de 60 caracteres como máximo, fecha sin hora a las 23:59 y período, comunes a Gemini y Groq. La ayuda responde con la base de conocimiento `ai/knowledge/ayuda.md`.
+* `replies.py`: confirmación con los recordatorios por defecto, lista de 10 actividades con prioridad, resumen y horario de 10 clases como máximo.
+* `SqlAlchemyConversationStore`: el contexto vence tras 30 minutos de inactividad y se comparte entre la app y Telegram.
+* `TelegramAgentChat` implementa `AgentChat`. El webhook responde en el mismo chat con `method: sendMessage`: instrucciones si la cuenta no está vinculada, un mensaje fijo si está inactiva y el mensaje del límite de uso.
+* `tools/eval_llm.py` puntúa las etiquetas nuevas del dataset. Pruebas nuevas: `test_ai_agent_intents.py`, `test_ai_interpretation_contract.py`, `test_conversation_context.py`, `test_telegram_agent_chat.py` y `test_ai_isolation.py`.
+
+### Aceptado
+
+* El equipo eligió no guardar la solicitud con 0 o varias asignaturas (H-18), el mensaje de la cuenta inactiva (H-20), el tope de 10 clases (P-D-05) y aprobó el contenido de `ayuda.md` (H-06).
+
+### Rechazado o modificado
+
+* El webhook responde en su propio cuerpo en lugar de usar un cliente HTTP de Telegram: no agrega red a la petición.
+* El filtro por tipo en memoria y la creación por nombre de asignatura eran provisionales (P-D-01, P-D-08) y se quitaron en la integración (entrada 032).
+* El equipo pidió que TAIA hable en primera persona y con personalidad (H-29) y eligió el texto de vinculación (H-28): se aplican en la ola 2.
+
+### Verificación realizada
+
+* `python -m pytest` con `TEST_DATABASE_URL`: 454 pruebas aprobadas (351 antes). `tools/audit_boundaries.py`: 0 infracciones.
+* Evaluación con Groq ([resultado](evaluacion_ia/resultado_groq_s16.json), `openai/gpt-oss-120b`): exactitud de intención 0,9035 (antes 0,9192) y de campos 0,838; bajan `update_task` (0,6667) y `system_help` (0,5).
+
+## Entrada 031
+
+**Fecha:** 2026-11-20 y 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Cerrar en el cliente Flutter las brechas que se resuelven con las rutas existentes (cierre S16, frente E).
+
+### Solicitud realizada
+
+Implementar con las rutas actuales RT-03, RF-TAR-05 a 10, RF-REC-01, 04 y 05, RF-USR-04, RF-TEL-01, RF-ASG-01 a 09, RF-AGT-01 (canal app) y RF-USR-10, y quitar la preferencia "Por Telegram" (D-10), cada flujo con pruebas.
+
+### Resultado generado
+
+* `core/bogota_time.dart`: las fechas de la API se leen y se envían en hora de Colombia, con reloj reemplazable en las pruebas.
+* Hoja de detalle de la actividad con sus fechas y sus recordatorios (crear, editar y eliminar los pendientes).
+* El cierre de sesión renueva el token de acceso vencido antes de revocar la sesión.
+* Pantallas de asignaturas (alias, archivo y eliminación con confirmación) y de horario con el período académico.
+* Conversación con el agente desde un botón con la mascota en el inicio, con botones "Sí" y "No" para confirmar y aviso del límite de uso.
+* Enlace a la política de datos desde el registro; se quitó la preferencia "Por Telegram".
+
+### Aceptado
+
+* El equipo aprobó los elementos visuales nuevos (H-24) y el enlace a la política de TAIA en GitHub (H-19).
+
+### Rechazado o modificado
+
+* El equipo pidió usar las ilustraciones reales de TAIA y que muestre sus estados con animaciones (H-30): queda para una ola de diseño.
+
+### Verificación realizada
+
+* `flutter analyze` sin avisos y `flutter test` con 57 pruebas aprobadas. Las pruebas usan un adaptador HTTP falso, sin red.
+
+## Entrada 032
+
+**Fecha:** 2026-11-21
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Integrar en `main` los cinco frentes del cierre S16 y recuperar el CI.
+
+### Solicitud realizada
+
+El equipo hizo las fusiones en el orden A, B, C, D y E y pidió resolver los conflictos, aplicar las tareas pendientes de la integración, actualizar la documentación y corregir el CI, que fallaba desde que se agregó la configuración de Firebase.
+
+### Resultado generado
+
+* Conflictos de fusión: `docs/api/openapi.json` se regeneró desde `app.openapi()` en cada fusión y `main.py` conserva los bloques de Academic y de Reminders.
+* `test_reminders_api.py`: con Academic integrado, una actividad ya trae los recordatorios automáticos de RF-REC-02; la prueba identifica el suyo por origen.
+* P-C-02: Academic falla con error si el puerto de Reminders no está configurado, en lugar de seguir sin sincronizar (H-12).
+* P-D-01: el agente envía el tipo en `AcademicTaskQuery` y ya no filtra en memoria; prueba nueva en `test_ai_academic_gateway.py`.
+* P-D-08: el agente crea tareas solo con el `subject_id` de `match_subjects`; `test_s8_closure.py` usa el identificador.
+* `tools/verificar_dependencias.py` omite el patrón de clave de Gemini solo en `google-services.json` y `firebase_options.dart`, cuya clave de cliente es pública (T-18 en el modelo de amenazas).
+* Documentación: estados de los requerimientos, RF-AGT-20 con Groq como principal, arc42 §8.12 y §11.13, modelo de amenazas y variables de entorno en `CLAUDE.md`.
+
+### Aceptado
+
+* El equipo eligió aceptar la clave de cliente de Firebase y restringirla en Google Cloud (opción 1) y aprobó el plan de documentación.
+
+### Rechazado o modificado
+
+* No se citaron las rutas HTTP en `requerimientos.md`: ningún requerimiento las cita y el contrato está en `docs/api/openapi.json`.
+* No se editó ADR-0013: un ADR aceptado no se modifica.
+
+### Verificación realizada
+
+* Después de cada fusión: 418, 518, 596 y 707 pruebas aprobadas; tras las tareas de integración, 708. `tools/audit_boundaries.py`: 0 regresiones. Cliente Flutter fusionado: `flutter analyze` sin avisos y 57 pruebas.
+* `tools/verificar_dependencias.py` y `tools/verificar_modelo_amenazas.py`: veredicto `ok`.
