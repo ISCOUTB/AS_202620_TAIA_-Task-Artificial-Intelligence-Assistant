@@ -9,12 +9,18 @@ import '../../auth/auth_service.dart';
 import '../../auth/auth_shell.dart';
 import '../profile_service.dart';
 
-/// Hoja para vincular la cuenta con Telegram. Devuelve true si al final la
-/// cuenta quedó vinculada.
+/// Abre el enlace en la app de Telegram.
+Future<bool> _openExternally(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
+/// Hoja para vincular la cuenta con Telegram (RF-TEL-01). Devuelve true si al
+/// final la cuenta quedó vinculada. [openLink] reemplaza la apertura del
+/// enlace en las pruebas.
 Future<bool?> showTelegramSheet(
   BuildContext context, {
   required ProfileService service,
   required Future<bool> Function() onCheckLinked,
+  Future<bool> Function(Uri uri) openLink = _openExternally,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
@@ -25,16 +31,24 @@ Future<bool?> showTelegramSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (context) =>
-        _TelegramSheet(service: service, onCheckLinked: onCheckLinked),
+    builder: (context) => _TelegramSheet(
+      service: service,
+      onCheckLinked: onCheckLinked,
+      openLink: openLink,
+    ),
   );
 }
 
 class _TelegramSheet extends StatefulWidget {
-  const _TelegramSheet({required this.service, required this.onCheckLinked});
+  const _TelegramSheet({
+    required this.service,
+    required this.onCheckLinked,
+    required this.openLink,
+  });
 
   final ProfileService service;
   final Future<bool> Function() onCheckLinked;
+  final Future<bool> Function(Uri uri) openLink;
 
   @override
   State<_TelegramSheet> createState() => _TelegramSheetState();
@@ -70,10 +84,7 @@ class _TelegramSheetState extends State<_TelegramSheet> {
 
   Future<void> _open(TelegramLink link) async {
     try {
-      final opened = await launchUrl(
-        Uri.parse(link.deepLink),
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await widget.openLink(Uri.parse(link.deepLink));
       if (!mounted) return;
       setState(() {
         _expression = MascotExpression.happy;
@@ -169,8 +180,8 @@ class _TelegramSheetState extends State<_TelegramSheet> {
           const SizedBox(height: 14),
           Text(
             link == null
-                ? 'Con Telegram podrás hablar con TAIA y recibir tus '
-                      'recordatorios en el chat, sin abrir la app.'
+                ? 'Con Telegram podrás hablar con TAIA desde el chat, sin '
+                      'abrir la app.'
                 : 'Te abrí Telegram. Sigue estos pasos:',
             style: TextStyle(color: taiaInk.withValues(alpha: 0.8)),
           ),
