@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/api_client.dart';
 import '../../core/api_error.dart';
+import '../auth/auth_service.dart';
 
 /// Enlace temporal para vincular la cuenta con el bot de Telegram.
 class TelegramLink {
@@ -25,6 +26,46 @@ class ProfileService {
       deepLink: response.data!['telegram_deep_link'] as String,
     );
   });
+
+  /// PATCH /users/me (RF-USR-06). Cambiar el correo exige [currentPassword].
+  Future<UserProfile> updateProfile({
+    String? fullName,
+    String? email,
+    String? currentPassword,
+  }) => apiGuard(() async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/users/me',
+      data: {
+        'full_name': ?fullName,
+        'email': ?email,
+        'current_password': ?currentPassword,
+      },
+    );
+    return UserProfile.fromJson(response.data!);
+  });
+
+  /// PUT /users/me/password (RF-USR-07). Cierra las demás sesiones.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) => apiGuard(
+    () => _dio.put<void>(
+      '/users/me/password',
+      data: {'current_password': currentPassword, 'new_password': newPassword},
+    ),
+  );
+
+  /// POST /users/me/deactivate (RF-USR-09). Revoca todas las sesiones.
+  Future<void> deactivate(String currentPassword) => apiGuard(
+    () => _dio.post<void>(
+      '/users/me/deactivate',
+      data: {'current_password': currentPassword},
+    ),
+  );
+
+  /// DELETE /users/me/telegram (RF-TEL-03).
+  Future<void> unlinkTelegram() =>
+      apiGuard(() => _dio.delete<void>('/users/me/telegram'));
 }
 
 final ProfileService profileService = ProfileService(apiDio);

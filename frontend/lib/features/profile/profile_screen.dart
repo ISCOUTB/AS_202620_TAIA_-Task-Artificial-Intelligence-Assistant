@@ -13,15 +13,13 @@ import '../auth/auth_shell.dart';
 import '../notifications/notifications_bell.dart';
 import '../shell/mascot_message.dart';
 import 'profile_service.dart';
+import 'widgets/account_dialogs.dart';
 import 'widgets/profile_card.dart';
 import 'widgets/profile_tile.dart';
 import 'widgets/telegram_sheet.dart';
 
-/// Pestaña de perfil: datos de la cuenta, asignaturas y horario, integración
-/// con Telegram y cierre de sesión.
-///
-/// Editar el perfil y eliminar la cuenta aparecen como "Próximamente": el
-/// backend todavía no tiene esos endpoints.
+/// Pestaña de perfil: datos de la cuenta (RF-USR-06, 07 y 09), asignaturas y
+/// horario, integración con Telegram (RF-TEL-01 y 03) y cierre de sesión.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.service, this.profileService});
 
@@ -119,10 +117,13 @@ class ProfileScreenState extends State<ProfileScreen>
   Future<void> _openTelegram() async {
     final user = _user;
     if (user != null && user.telegramLinked) {
-      await _showInfo(
-        'Telegram vinculado',
-        'Tu cuenta ya está vinculada con el bot de TAIA.',
+      final unlinked = await showUnlinkTelegramDialog(
+        context,
+        service: _profile,
       );
+      if (!mounted || unlinked != true) return;
+      await _load(silent: true);
+      _toast('Telegram desvinculado');
       return;
     }
     final linked = await showTelegramSheet(
@@ -135,32 +136,44 @@ class ProfileScreenState extends State<ProfileScreen>
     _toast('¡Telegram vinculado!');
   }
 
+  Future<void> _editProfile(UserProfile user) async {
+    final updated = await showEditProfileDialog(
+      context,
+      service: _profile,
+      user: user,
+    );
+    if (!mounted || updated == null) return;
+    setState(() => _user = updated);
+    _toast('Perfil actualizado');
+  }
+
+  Future<void> _changePassword() async {
+    final changed = await showChangePasswordDialog(context, service: _profile);
+    if (!mounted || changed != true) return;
+    _toast('Contraseña actualizada');
+  }
+
+  /// RF-USR-09: el servidor revoca todas las sesiones; aquí se borran los
+  /// tokens locales y se vuelve a la bienvenida.
+  Future<void> _deactivate() async {
+    setState(() => _expression = MascotExpression.surprised);
+    final done = await showDeactivateDialog(context, service: _profile);
+    if (!mounted) return;
+    if (done != true) {
+      setState(() => _expression = MascotExpression.wink);
+      return;
+    }
+    await _auth.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
+  }
+
   Future<void> _push(Widget screen) =>
       Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => screen));
-
-  Future<void> _showInfo(String title, String message) {
-    return showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: TaiaColors.ivoryMist,
-        title: Text(
-          title,
-          style: const TextStyle(color: taiaInk, fontWeight: FontWeight.w900),
-        ),
-        content: Text(message, style: const TextStyle(color: taiaInk)),
-        actions: [
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: TaiaColors.fieryRose,
-            ),
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _logout() async {
     setState(() => _expression = MascotExpression.surprised);
@@ -245,14 +258,13 @@ class ProfileScreenState extends State<ProfileScreen>
               ProfileTile(
                 icon: Icons.person_outline,
                 title: 'Editar perfil',
-                subtitle: 'Nombre y foto',
-                comingSoon: true,
-                onTap: () => _showInfo(
-                  'Editar perfil',
-                  'Todavía no se puede cambiar el nombre ni la foto desde la '
-                      'app: el servidor aún no lo permite. Lo dejaremos listo '
-                      'en cuanto esté disponible.',
-                ),
+                subtitle: 'Nombre y correo',
+                onTap: () => _editProfile(user),
+              ),
+              ProfileTile(
+                icon: Icons.lock_outline,
+                title: 'Cambiar contraseña',
+                onTap: _changePassword,
               ),
               ProfileTile(
                 icon: Icons.verified_user_outlined,
@@ -291,7 +303,7 @@ class ProfileScreenState extends State<ProfileScreen>
                 icon: Icons.send_outlined,
                 title: 'Telegram',
                 subtitle: user.telegramLinked
-                    ? 'Cuenta vinculada'
+                    ? 'Cuenta vinculada · toca para desvincular'
                     : 'Habla con TAIA desde el chat',
                 trailing: user.telegramLinked
                     ? const Icon(
@@ -326,16 +338,11 @@ class ProfileScreenState extends State<ProfileScreen>
                 onTap: _logout,
               ),
               ProfileTile(
-                icon: Icons.delete_outline,
-                title: 'Eliminar cuenta',
-                subtitle: 'Borra tu cuenta y tus datos',
+                icon: Icons.no_accounts_outlined,
+                title: 'Desactivar cuenta',
+                subtitle: 'Puedes reactivarla iniciando sesión en 30 días',
                 danger: true,
-                comingSoon: true,
-                onTap: () => _showInfo(
-                  'Eliminar cuenta',
-                  'La eliminación de la cuenta todavía no está disponible en '
-                      'el servidor. Cuando lo esté, la encontrarás aquí.',
-                ),
+                onTap: _deactivate,
               ),
             ],
           ),
