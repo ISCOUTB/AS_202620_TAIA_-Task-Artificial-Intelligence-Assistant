@@ -5,6 +5,7 @@ import '../../theme/taia_colors.dart';
 import '../shell/main_shell.dart';
 import 'auth_service.dart';
 import 'auth_shell.dart';
+import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -40,6 +41,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_loading && _expression != MascotExpression.happy) {
       setState(() => _expression = MascotExpression.happy);
     }
+  }
+
+  /// RF-USR-08: al volver con la contraseña cambiada, se pide iniciar sesión.
+  Future<void> _forgotPassword() async {
+    final reset = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => ForgotPasswordScreen(initialEmail: _email.text.trim()),
+      ),
+    );
+    if (!mounted || reset != true) return;
+    _password.clear();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Contraseña actualizada. Inicia sesión con la nueva.'),
+        ),
+      );
   }
 
   Future<void> _submit() async {
@@ -115,7 +134,15 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (v) =>
                   (v == null || v.isEmpty) ? 'Ingresa tu contraseña.' : null,
             ),
-            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: taiaInk),
+                onPressed: _loading ? null : _forgotPassword,
+                child: const Text('¿Olvidaste tu contraseña?'),
+              ),
+            ),
+            const SizedBox(height: 8),
             if (_error != null) AuthErrorText(_error!),
             AuthSubmitButton(
               label: 'Iniciar sesión',
