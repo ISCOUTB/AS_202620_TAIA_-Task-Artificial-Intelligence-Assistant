@@ -36,7 +36,7 @@ NOW = datetime(2026, 10, 1, 10, 0, tzinfo=BOGOTA_TZ)
 
 DICTIONARY_TABLES = {
     "users", "sessions", "refresh_tokens", "password_reset_tokens", "telegram_link_codes",
-    "failed_login_attempts", "subjects", "subject_aliases", "academic_periods", "schedule_blocks",
+    "failed_login_attempts", "password_reset_requests", "subjects", "subject_aliases", "academic_periods", "schedule_blocks",
     "tasks", "study_plans", "study_plan_days", "study_plan_subjects", "study_sessions",
     "reminders", "notifications", "conversations", "conversation_messages",
 }

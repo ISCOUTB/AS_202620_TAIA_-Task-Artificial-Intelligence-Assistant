@@ -21,6 +21,11 @@ os.environ.setdefault("TAIA_JWT_SECRET", secrets.token_urlsafe(48))
 for _groq_key in ("GROQ_API_KEY_1", "GROQ_API_KEY_2"):
     os.environ[_groq_key] = ""
 
+# Ninguna prueba envía correos reales (RF-USR-08): sin esto, las claves de Resend
+# del .env harían que la recuperación de contraseña usara el proveedor real.
+for _resend_key in ("RESEND_API", "RESEND_FROM"):
+    os.environ[_resend_key] = ""
+
 if TEST_DATABASE_URL:
     # Se ejecuta antes de que los módulos de prueba importen app.main.
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
@@ -67,7 +72,7 @@ def clean_db(db_session_factory):
         session.execute(
             text(
                 "TRUNCATE users, subjects, academic_periods, failed_login_attempts, "
-                "study_plans, reminders, conversations CASCADE"
+                "password_reset_requests, study_plans, reminders, conversations CASCADE"
             )
         )
     return db_session_factory

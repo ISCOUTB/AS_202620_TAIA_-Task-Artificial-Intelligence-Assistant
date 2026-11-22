@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,9 @@ from app.modules.reminders.application.ports.inbound.task_reminder_sync import g
 from app.modules.usuario.adapters.outbound.provider import (
     failed_login_attempt_repository as _failed_login_attempt_repository,
     password_hasher as _password_hasher,
+    password_reset_code_repository as _password_reset_code_repository,
+    password_reset_mailer as _password_reset_mailer,
+    password_reset_request_repository as _password_reset_request_repository,
     repository as _repository,
     session_repository as _session_repository,
     telegram_link_repository as _telegram_link_repository,
@@ -54,6 +57,12 @@ from app.modules.usuario.application.use_cases.register_user import (
     RegisterUserUseCase,
     UserAlreadyExistsError,
 )
+from app.modules.usuario.application.use_cases.reset_password import (
+    InvalidResetCodeError,
+    RequestPasswordResetUseCase,
+    ResetPasswordUseCase,
+    TooManyResetRequestsError,
+)
 from app.modules.usuario.domain.entities.usuario import Usuario
 from app.modules.usuario.domain.value_objects.email import InvalidEmailError
 
@@ -90,6 +99,18 @@ class UserUpdateRequest(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., min_length=1)
+    # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
+    new_password: str = Field(..., min_length=1)
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+    # RF-USR-08: el código de verificación tiene 6 dígitos.
+    code: str = Field(..., pattern=r"^[0-9]{6}$")
     # La longitud mínima la valida el caso de uso, con el mensaje de RF-USR-01.
     new_password: str = Field(..., min_length=1)
 
@@ -228,6 +249,60 @@ def refresh_session(payload: RefreshTokenRequest) -> LoginResponse:
             headers={"WWW-Authenticate": "Bearer"},
         ) from error
     return LoginResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
+
+
+@router.post(
+    "/password-reset",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        422: {"model": ErrorResponse, "description": "El correo no es válido."},
+        429: {"model": ErrorResponse, "description": "El correo agotó sus 3 solicitudes de las últimas 24 horas (RNF-03)."},
+        503: {"model": ErrorResponse, "description": "El servicio de correo no está configurado."},
+    },
+)
+def request_password_reset(payload: PasswordResetRequest, background_tasks: BackgroundTasks) -> Response:
+    """Envía un código de verificación al correo; responde lo mismo exista o no la cuenta (RF-USR-08).
+
+    El correo se envía después de responder, para que el tiempo de respuesta no revele si la cuenta existe.
+    """
+    mailer = _password_reset_mailer
+    if mailer is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El servicio de correo no está disponible. Intenta más tarde.",
+        )
+    use_case = RequestPasswordResetUseCase(
+        _repository, _password_reset_request_repository, _password_reset_code_repository, mailer
+    )
+    try:
+        email = use_case.execute(payload.email)
+    except TooManyResetRequestsError as error:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(error)) from error
+    except InvalidEmailError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    background_tasks.add_task(use_case.deliver, email)
+    return Response(status_code=status.HTTP_202_ACCEPTED)
+
+
+@router.post(
+    "/password-reset/confirm",
+    responses={
+        400: {"model": ErrorResponse, "description": "El correo o el código no son válidos."},
+        422: {"model": ErrorResponse, "description": "El correo o la nueva contraseña no son válidos."},
+    },
+)
+def confirm_password_reset(payload: PasswordResetConfirmRequest) -> Response:
+    """Restablece la contraseña con el código y cierra todas las sesiones (RF-USR-08)."""
+    use_case = ResetPasswordUseCase(
+        _repository, _password_reset_code_repository, _password_hasher, _session_repository
+    )
+    try:
+        use_case.execute(payload.email, payload.code, payload.new_password)
+    except InvalidResetCodeError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Response(status_code=status.HTTP_200_OK)
 
 
 @router.post(

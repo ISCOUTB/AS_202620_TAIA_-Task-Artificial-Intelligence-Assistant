@@ -137,6 +137,12 @@ class TaiaApiClient:
     def refresh_session_users_refresh_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/refresh", body, **{})
 
+    def request_password_reset_users_password_reset_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/users/password-reset", body, **{})
+
+    def confirm_password_reset_users_password_reset_confirm_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/users/password-reset/confirm", body, **{})
+
     def logout_user_users_logout_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users/logout", body, **{})
 
