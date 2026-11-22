@@ -143,9 +143,17 @@ def test_same_telegram_account_cannot_be_linked_to_two_users():
 
 @pytest.mark.parametrize("text", ["hola", "/start", "/ayuda codigo"])
 def test_webhook_ignores_messages_that_are_not_a_start_code(text):
+    """RF-TEL-04: sin vincular, el bot responde solo con las instrucciones y no vincula nada."""
+    from app.modules.usuario.adapters.inbound.telegram_webhook import NOT_LINKED_MESSAGE
+
     response = _send(_update(555555555, text))
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json() == {
+        "method": "sendMessage",
+        "chat_id": 555555555,
+        "text": NOT_LINKED_MESSAGE,
+    }
     assert repository.get_by_telegram_user_id(555555555) is None
 
 

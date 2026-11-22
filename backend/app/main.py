@@ -30,8 +30,6 @@ configure_academic_task_management(AcademicTaskManagementService(academic_reposi
 # arranca, en vez de responder 503 en cada peticion mientras /health dice ok.
 from app.modules.ai.adapters.outbound.academic_gateway import AcademicGatewayAdapter
 from app.modules.ai.adapters.outbound.fallback_llm import FallbackLLM
-from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
-from app.modules.ai.adapters.outbound.groq_llm import GroqLLM
 from app.modules.ai.adapters.outbound.sqlalchemy_conversation_store import (
     SqlAlchemyConversationStore,
 )
@@ -39,19 +37,22 @@ from app.modules.ai.adapters.inbound.api import (
     configure_ai_use_case,
     router as ai_router,
 )
+from app.modules.ai.application.ports.inbound.agent_chat import configure_agent_chat
 from app.modules.ai.application.use_cases.handle_message import HandleUserMessageUseCase
+from app.modules.ai.application.use_cases.telegram_chat import TelegramAgentChat
 from app.shared.adapters.outbound.database import get_session_factory
 
-# ADR-0011: Groq respalda a Gemini con cada credencial configurada, en orden.
-# Sin credenciales de Groq, el agente usa solo Gemini, como antes.
-llm = FallbackLLM([GeminiLLM.from_env(), *GroqLLM.all_from_env()])
-configure_ai_use_case(
-    HandleUserMessageUseCase(
-        llm=llm,
-        academic=AcademicGatewayAdapter(),
-        conversations=SqlAlchemyConversationStore(get_session_factory()),
-    )
+# Frente D · ADR-0013: Groq es el principal, con cada credencial configurada en
+# orden, y Gemini el respaldo. Sin credenciales de Groq, el agente usa solo Gemini.
+llm = FallbackLLM.from_env()
+ai_use_case = HandleUserMessageUseCase(
+    llm=llm,
+    academic=AcademicGatewayAdapter(),
+    conversations=SqlAlchemyConversationStore(get_session_factory()),
 )
+configure_ai_use_case(ai_use_case)
+# Frente D · RF-TEL-04: Telegram usa el mismo caso de uso, con el canal telegram.
+configure_agent_chat(TelegramAgentChat(ai_use_case))
 
 from app.modules.academic.adapters.inbound.api import router as academic_router
 from app.modules.academic.adapters.inbound.structure_api import (
