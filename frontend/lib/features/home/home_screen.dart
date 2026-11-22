@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
+import '../agent/agent_screen.dart';
+import '../agent/agent_service.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import 'home_data.dart';
@@ -13,12 +15,21 @@ import 'widgets/today_card.dart';
 import 'widgets/upcoming_deliveries.dart';
 import 'widgets/weekly_summary.dart';
 
-/// Pestaña de inicio: resumen del día, próximas entregas y resumen semanal.
+/// Pestaña de inicio: resumen del día, próximas entregas, resumen semanal y el
+/// botón con la mascota que abre la conversación con el agente (RF-AGT-01).
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.service, this.onSeeAllTasks});
+  const HomeScreen({
+    super.key,
+    this.service,
+    this.agentService,
+    this.onSeeAllTasks,
+  });
 
   /// Origen de los datos; si es null se usa el compartido de la app.
   final HomeService? service;
+
+  /// Servicio del agente; si es null se usa el compartido de la app.
+  final AgentService? agentService;
 
   /// Se llama al pulsar "Ver todas" (lleva a la pestaña de tareas).
   final VoidCallback? onSeeAllTasks;
@@ -68,11 +79,30 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _openAgent() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AgentScreen(service: widget.agentService),
+      ),
+    );
+    // El agente pudo crear o completar actividades.
+    if (mounted) await refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _data;
     return Scaffold(
       backgroundColor: TaiaColors.ivoryMist,
+      floatingActionButton: FloatingActionButton.large(
+        tooltip: 'Habla con TAIA',
+        backgroundColor: TaiaColors.fieryRose,
+        onPressed: _openAgent,
+        child: const Padding(
+          padding: EdgeInsets.all(10),
+          child: TaiaMascot(motion: 0.6, expression: MascotExpression.wink),
+        ),
+      ),
       body: SafeArea(
         child: data != null
             ? _content(data)
@@ -96,7 +126,8 @@ class HomeScreenState extends State<HomeScreen> {
       color: TaiaColors.fieryRose,
       onRefresh: () => _load(silent: true),
       child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        // Espacio abajo para que el botón del agente no tape el resumen.
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 112),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
