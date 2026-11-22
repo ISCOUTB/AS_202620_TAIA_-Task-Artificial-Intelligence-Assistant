@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -17,15 +18,32 @@ from app.modules.academic.application.ports.outbound.task_repository import Task
 from app.modules.academic.application.use_cases.manage_tasks import ManageTasksUseCase
 from app.modules.academic.domain.entities.subject import normalize_text
 from app.modules.academic.domain.entities.task import Task, TaskType, TaskStatus
+from app.modules.reminders.application.ports.inbound.task_reminder_sync import (
+    ReminderPlan,
+    TaskReminderReader,
+    TaskReminderSync,
+    TaskReminderView,
+    get_task_reminder_reader,
+)
 from app.shared.clock import Clock
+
+logger = logging.getLogger(__name__)
 
 
 class AcademicTaskManagementService(AcademicTaskManagement):
     """Fachada de aplicación que mantiene los repositorios dentro de Academic."""
 
-    def __init__(self, tasks: TaskRepository, subjects: SubjectRepository, clock: Clock | None = None) -> None:
-        self._use_case = ManageTasksUseCase(tasks, subjects, clock)
+    def __init__(
+        self,
+        tasks: TaskRepository,
+        subjects: SubjectRepository,
+        clock: Clock | None = None,
+        reminders: TaskReminderSync | None = None,
+        reminder_reader: TaskReminderReader | None = None,
+    ) -> None:
+        self._use_case = ManageTasksUseCase(tasks, subjects, clock, reminders)
         self._subjects = subjects
+        self._reminder_reader = reminder_reader
 
     def create_task(
         self,
@@ -35,17 +53,24 @@ class AcademicTaskManagementService(AcademicTaskManagement):
         due_at: datetime,
         type: str = "task",
         description: str | None = None,
+        *,
+        reminders: ReminderPlan | None = None,
     ) -> AcademicTaskData:
-        task = self._use_case.create(user_id, subject_id, title, due_at, TaskType(type), description)
+        """`reminders` solo lo usa la API; el agente no lo envía y recibe la política por defecto (RF-AGT-07)."""
+
+        task = self._use_case.create(user_id, subject_id, title, due_at, TaskType(type), description, reminders)
         return self._to_data(task, user_id)
 
     def list_tasks(self, user_id: UUID, query: AcademicTaskQuery | TaskQuery) -> AcademicTaskPage:
+        """Filtros de RF-TAR-04 aplicados en la consulta. Un `type` desconocido lanza `ValueError`."""
+
         if isinstance(query, AcademicTaskQuery):
             aliases = {"done": TaskStatus.COMPLETED, "completed": TaskStatus.COMPLETED,
                        "pending": TaskStatus.PENDING, "overdue": TaskStatus.OVERDUE}
             query = TaskQuery(
                 subject_id=query.subject_id,
                 status=aliases.get((query.status or "").lower()),
+                type=TaskType(query.type.lower()) if query.type else None,
                 due_from=query.due_from, due_to=query.due_to,
                 text=query.text, limit=query.limit, offset=query.offset,
             )
@@ -53,7 +78,7 @@ class AcademicTaskManagementService(AcademicTaskManagement):
         names = self._subject_names(user_id)
         now = self._use_case.now()
         return AcademicTaskPage(
-            items=[_to_data(task, user_id, names[task.subject_id], now) for task in tasks],
+            items=[to_task_data(task, user_id, names[task.subject_id], now) for task in tasks],
             total=total,
             limit=query.limit,
             offset=query.offset,
@@ -61,6 +86,13 @@ class AcademicTaskManagementService(AcademicTaskManagement):
 
     def get_task(self, task_id: UUID, user_id: UUID) -> AcademicTaskData:
         return self._to_data(self._use_case.get(task_id, user_id), user_id)
+
+    def get_task_detail(self, task_id: UUID, user_id: UUID) -> tuple[AcademicTaskData, list[TaskReminderView]]:
+        """Actividad propia con sus recordatorios, leídos por el puerto de Reminders (RF-TAR-05)."""
+
+        task = self.get_task(task_id, user_id)
+        reader = self._reminder_reader or _configured_reminder_reader()
+        return task, reader.list_for_task(user_id, task_id) if reader is not None else []
 
     def update_task(
         self,
@@ -101,10 +133,22 @@ class AcademicTaskManagementService(AcademicTaskManagement):
 
     def _to_data(self, task: Task, user_id: UUID) -> AcademicTaskData:
         subject = self._subjects.get(task.subject_id, user_id)
-        return _to_data(task, user_id, subject.name if subject else "", self._use_case.now())
+        return to_task_data(task, user_id, subject.name if subject else "", self._use_case.now())
 
 
-def _to_data(task: Task, user_id: UUID, subject_name: str, now: datetime) -> AcademicTaskData:
+def _configured_reminder_reader() -> TaskReminderReader | None:
+    """Mientras Reminders no esté integrado, el detalle sale sin recordatorios (PREGUNTAS P-C-02)."""
+
+    try:
+        return get_task_reminder_reader()
+    except RuntimeError:
+        logger.warning("La lectura de recordatorios no está configurada.")
+        return None
+
+
+def to_task_data(task: Task, user_id: UUID, subject_name: str, now: datetime) -> AcademicTaskData:
+    """Publica la tarea con su estado y su prioridad calculados en `now` (RF-TAR-03, RF-TAR-09)."""
+
     priority = task.priority(now)
     return AcademicTaskData(
         task_id=task.id,

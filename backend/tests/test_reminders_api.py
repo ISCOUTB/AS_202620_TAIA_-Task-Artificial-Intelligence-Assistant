@@ -44,8 +44,10 @@ def test_create_list_edit_and_delete_rf_rec_01_03_04_05():
         task_id, "Revisar entrega", "custom", "pending")
     reminder_id = body["id"]
 
-    listed = client.get("/reminders", headers=headers)
-    assert [item["id"] for item in listed.json()] == [reminder_id]
+    # La tarea ya trae los recordatorios automáticos de la política por defecto (RF-REC-02).
+    listed = client.get("/reminders", headers=headers).json()
+    assert [item["id"] for item in listed if item["origin"] == "custom"] == [reminder_id]
+    assert {item["origin"] for item in listed} == {"automatic", "custom"}
 
     edited = client.patch(f"/reminders/{reminder_id}", headers=headers,
                           json={"custom_message": "Revisar entrega final", "scheduled_at": future_iso(3)})

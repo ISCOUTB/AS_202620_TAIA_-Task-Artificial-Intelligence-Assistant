@@ -42,6 +42,16 @@ class InMemoryTaskRepository(TaskRepository):
         page = matching[query.offset : query.offset + query.limit]
         return [deepcopy(task) for task in page], len(matching)
 
+    def list_due_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        matching = (task for task in self._active(user_id) if start <= task.due_at < end)
+        return [deepcopy(task) for task in sorted(matching, key=lambda task: task.due_at)]
+
+    def list_completed_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        matching = (
+            task for task in self._active(user_id) if task.completed_at is not None and start <= task.completed_at < end
+        )
+        return [deepcopy(task) for task in sorted(matching, key=lambda task: task.completed_at)]
+
     def count_by_subject(self, subject_id: uuid.UUID) -> int:
         return sum(1 for task in self._tasks.values() if task.subject_id == subject_id)
 

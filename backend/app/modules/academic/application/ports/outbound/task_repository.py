@@ -47,6 +47,14 @@ class TaskRepository(ABC):
         """
 
     @abstractmethod
+    def list_due_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        """Tareas no eliminadas con `start <= due_at < end`, ordenadas por fecha límite (RF-TAR-11)."""
+
+    @abstractmethod
+    def list_completed_between(self, user_id: uuid.UUID, start: datetime, end: datetime) -> list[Task]:
+        """Tareas no eliminadas con `start <= completed_at < end` (RF-PRF-01)."""
+
+    @abstractmethod
     def count_by_subject(self, subject_id: uuid.UUID) -> int:
         """Todas las tareas de la asignatura, incluidas las eliminadas (RF-ASG-04)."""
 

@@ -1,4 +1,4 @@
-"""Adaptador HTTP de tareas y exámenes (RF-TAR-01, 03…10)."""
+"""Adaptador HTTP de tareas y exámenes (RF-TAR-01…10)."""
 
 from __future__ import annotations
 
@@ -13,24 +13,37 @@ from app.modules.academic.application.errors import (
     SubjectNotFoundError,
     TaskNotFoundError,
 )
-from app.modules.academic.application.ports.inbound.task_management import (
-    AcademicTaskData,
-    AcademicTaskManagement,
-    get_academic_task_management,
-)
+from app.modules.academic.application.ports.inbound.task_management import AcademicTaskData
 from app.modules.academic.application.ports.outbound.task_repository import TaskQuery
+from app.modules.academic.application.services.task_management import AcademicTaskManagementService
 from app.modules.academic.domain.entities.task import TaskStatus, TaskType
+from app.modules.reminders.application.ports.inbound.task_reminder_sync import (
+    ReminderMode,
+    ReminderPlan,
+    TaskReminderView,
+)
 from app.shared.adapters.inbound.auth import CurrentUserId
 from app.shared.clock import end_of_day_bogota
 
 router = APIRouter(prefix="/academic/tasks", tags=["academic"])
 
-
-def get_task_management() -> AcademicTaskManagement:
-    return get_academic_task_management()
+_service: AcademicTaskManagementService | None = None
 
 
-TaskManagement = Annotated[AcademicTaskManagement, Depends(get_task_management)]
+def configure_task_api(service: AcademicTaskManagementService) -> None:
+    """La compone `main.py` con la misma instancia que publica `AcademicTaskManagement`."""
+
+    global _service
+    _service = service
+
+
+def get_task_management() -> AcademicTaskManagementService:
+    if _service is None:
+        raise RuntimeError("La API de tareas académicas no está configurada.")
+    return _service
+
+
+TaskManagement = Annotated[AcademicTaskManagementService, Depends(get_task_management)]
 
 
 def _parse_due_at(value: Any) -> Any:
@@ -64,6 +77,22 @@ def _http_error(error: ValueError) -> HTTPException:
     return HTTPException(status_code=422, detail=str(error))
 
 
+class ReminderOptionRequest(BaseModel):
+    """Opción de recordatorios al crear una actividad (RF-TAR-02)."""
+
+    mode: ReminderMode = Field(
+        default="default",
+        description="`none`: sin recordatorios; `default`: política por defecto (RF-REC-02); `custom`: las fechas de `custom_at`.",
+    )
+    custom_at: list[datetime] = Field(
+        default_factory=list,
+        description="Solo con `custom`: entre una y 10 fechas futuras y anteriores a la fecha límite. Sin zona horaria, hora de Colombia.",
+    )
+
+    def to_plan(self) -> ReminderPlan:
+        return ReminderPlan(mode=self.mode, custom_at=tuple(self.custom_at))
+
+
 class TaskCreateRequest(BaseModel):
     """Esquema de entrada para registrar una tarea o un examen."""
 
@@ -72,6 +101,9 @@ class TaskCreateRequest(BaseModel):
     due_at: DueAt
     type: TaskType = TaskType.TASK
     description: str | None = Field(default=None, max_length=2000)
+    reminders: ReminderOptionRequest | None = Field(
+        default=None, description="Sin este campo se aplica la política por defecto (RF-TAR-02)."
+    )
 
 
 class TaskUpdateRequest(BaseModel):
@@ -116,6 +148,32 @@ class TaskResponse(BaseModel):
         )
 
 
+class TaskReminderResponse(BaseModel):
+    """Recordatorio de la actividad, tal como lo publica Reminders (RF-TAR-05, RF-REC-03)."""
+
+    id: uuid.UUID
+    scheduled_at: datetime
+    message: str
+    origin: str
+    status: str
+
+    @classmethod
+    def from_view(cls, reminder: TaskReminderView) -> "TaskReminderResponse":
+        return cls(
+            id=reminder.reminder_id,
+            scheduled_at=reminder.scheduled_at,
+            message=reminder.message,
+            origin=reminder.origin,
+            status=reminder.status,
+        )
+
+
+class TaskDetailResponse(TaskResponse):
+    """Detalle de una actividad con sus recordatorios, ordenados por `scheduled_at` (RF-TAR-05)."""
+
+    reminders: list[TaskReminderResponse]
+
+
 class TaskPageResponse(BaseModel):
     items: list[TaskResponse]
     total: int
@@ -125,7 +183,7 @@ class TaskPageResponse(BaseModel):
 
 @router.post("", status_code=201, responses={**NOT_FOUND, **INVALID})
 def register_task(payload: TaskCreateRequest, user_id: CurrentUserId, service: TaskManagement) -> TaskResponse:
-    """Registra una tarea o un examen en una asignatura activa (RF-TAR-01)."""
+    """Registra una tarea o un examen en una asignatura activa, con su opción de recordatorios (RF-TAR-01, RF-TAR-02)."""
 
     try:
         task = service.create_task(
@@ -135,6 +193,7 @@ def register_task(payload: TaskCreateRequest, user_id: CurrentUserId, service: T
             due_at=payload.due_at,
             type=payload.type.value,
             description=payload.description,
+            reminders=payload.reminders.to_plan() if payload.reminders else None,
         )
     except ValueError as error:
         raise _http_error(error) from error
@@ -179,13 +238,17 @@ def list_tasks(
 
 
 @router.get("/{task_id}", responses=NOT_FOUND)
-def get_task(task_id: uuid.UUID, user_id: CurrentUserId, service: TaskManagement) -> TaskResponse:
-    """Detalle de una tarea (RF-TAR-05)."""
+def get_task(task_id: uuid.UUID, user_id: CurrentUserId, service: TaskManagement) -> TaskDetailResponse:
+    """Detalle de una tarea con su prioridad, sus fechas y sus recordatorios (RF-TAR-05)."""
 
     try:
-        return TaskResponse.from_data(service.get_task(task_id, user_id))
+        task, reminders = service.get_task_detail(task_id, user_id)
     except ValueError as error:
         raise _http_error(error) from error
+    return TaskDetailResponse(
+        **TaskResponse.from_data(task).model_dump(),
+        reminders=[TaskReminderResponse.from_view(reminder) for reminder in reminders],
+    )
 
 
 @router.patch("/{task_id}", responses={**NOT_FOUND, **INVALID})

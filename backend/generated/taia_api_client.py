@@ -128,6 +128,12 @@ class TaiaApiClient:
     def set_academic_period_academic_period_put(self, body: object | None = None) -> object:
         return self._request("PUT", PATH_ACADEMIC_PERIOD, body, **{})
 
+    def get_calendar_academic_calendar_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/calendar", body, **{})
+
+    def get_profile_statistics_academic_statistics_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/statistics", body, **{})
+
     def register_user_users_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users", body, **{})
 

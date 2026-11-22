@@ -35,3 +35,11 @@ class SubjectHasTasksError(ValueError):
 
 class TaskNotFoundError(ValueError):
     """La tarea no existe, fue eliminada o no pertenece al usuario (RT-02)."""
+
+
+class InvalidReminderPlanError(ValueError):
+    """La opción de recordatorios de una actividad nueva no es válida (RF-TAR-02)."""
+
+
+class InvalidCalendarRangeError(ValueError):
+    """El rango de fechas pedido no es coherente (RF-TAR-11)."""
