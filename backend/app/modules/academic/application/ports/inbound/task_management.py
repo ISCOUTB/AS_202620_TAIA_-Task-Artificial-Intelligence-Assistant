@@ -14,6 +14,7 @@ class AcademicTaskQuery:
 
     subject_id: UUID | None = None
     status: str | None = None
+    type: str | None = None
     due_from: datetime | None = None
     due_to: datetime | None = None
     text: str | None = None

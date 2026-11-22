@@ -1,10 +1,16 @@
 """Pruebas de la API de tareas y exámenes (RF-TAR-01, 03…10, RF-ASG-02, RF-ASG-04, RT-02)."""
 
+import uuid
 from datetime import timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.modules.academic.application.ports.inbound.task_management import (
+    AcademicTaskQuery,
+    get_academic_task_management,
+)
 from app.shared.clock import now_bogota
 from tests.helpers import create_subject, future_iso, register_and_login
 
@@ -239,3 +245,32 @@ def test_subject_with_tasks_cannot_be_deleted_rf_asg_04():
 
     assert response.status_code == 409
     assert "archívala" in response.json()["detail"]
+
+
+def test_management_port_filters_by_type_in_the_query_rf_tar_04():
+    """`AcademicTaskQuery.type`, que usa el agente, filtra en la consulta y no la página (RF-TAR-04)."""
+
+    headers = register_and_login(client)
+    user_id = uuid.UUID(client.get("/users/me", headers=headers).json()["id"])
+    subject_id = create_subject(client, headers, "Cálculo")
+    for day in range(1, 4):
+        _post_task(headers, subject_id, f"Taller {day}", due_at=future_iso(days=day))
+    _post_task(headers, subject_id, "Parcial", due_at=future_iso(days=5), type="exam")
+    port = get_academic_task_management()
+
+    exams = port.list_tasks(user_id, AcademicTaskQuery(type="exam", limit=1))
+    tasks = port.list_tasks(user_id, AcademicTaskQuery(type="task"))
+    everything = port.list_tasks(user_id, AcademicTaskQuery())
+
+    assert ([t.title for t in exams.items], exams.total) == (["Parcial"], 1)
+    assert tasks.total == 3
+    assert {t.type for t in tasks.items} == {"task"}
+    assert everything.total == 4
+
+
+def test_management_port_rejects_unknown_type_rf_tar_04():
+    port = get_academic_task_management()
+    query = AcademicTaskQuery(type="quiz")
+
+    with pytest.raises(ValueError):
+        port.list_tasks(uuid.uuid4(), query)
