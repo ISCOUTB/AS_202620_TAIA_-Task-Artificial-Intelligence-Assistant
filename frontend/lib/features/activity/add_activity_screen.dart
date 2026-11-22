@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/bogota_time.dart';
 import '../../core/spanish_dates.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
@@ -47,7 +48,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   String? _subjectFieldError;
 
   TaskType _type = TaskType.task;
-  late DateTime _due = defaultDueDate(DateTime.now());
+  late DateTime _due = defaultDueDate(bogotaNow());
 
   bool _saving = false;
   String? _error;
@@ -120,7 +121,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   }
 
   Future<void> _pickDue() async {
-    final now = DateTime.now();
+    final now = bogotaNow();
     final firstDate = DateTime(now.year, now.month, now.day);
     final date = await showDatePicker(
       context: context,
@@ -149,7 +150,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
       setState(() => _expression = MascotExpression.surprised);
       return;
     }
-    if (!isFutureDue(_due, DateTime.now())) {
+    if (!isFutureDue(_due, bogotaNow())) {
       setState(() {
         _error = 'La fecha límite debe ser posterior al momento actual.';
         _expression = MascotExpression.surprised;
@@ -193,12 +194,12 @@ class AddActivityScreenState extends State<AddActivityScreen> {
       _created = null;
       _error = null;
       _type = TaskType.task;
-      _due = defaultDueDate(DateTime.now());
+      _due = defaultDueDate(bogotaNow());
       _expression = MascotExpression.wink;
     });
   }
 
-  bool get _dueInPast => !isFutureDue(_due, DateTime.now());
+  bool get _dueInPast => !isFutureDue(_due, bogotaNow());
 
   @override
   Widget build(BuildContext context) {

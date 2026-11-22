@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/bogota_time.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
@@ -207,7 +208,7 @@ class TasksScreenState extends State<TasksScreen> {
   }
 
   Widget _content(List<AcademicTask> items) {
-    final now = DateTime.now();
+    final now = bogotaNow();
     final visible = applyTaskFilters(
       items,
       status: _status,

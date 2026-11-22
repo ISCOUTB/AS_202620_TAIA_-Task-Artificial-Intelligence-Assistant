@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
 import '../activity_logic.dart';
@@ -19,7 +20,7 @@ class QuickDateChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = quickDates(DateTime.now());
+    final options = quickDates(bogotaNow());
     return Wrap(
       spacing: 8,
       runSpacing: 4,

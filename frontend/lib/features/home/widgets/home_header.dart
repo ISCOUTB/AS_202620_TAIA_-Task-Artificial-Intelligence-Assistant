@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
@@ -27,7 +28,7 @@ class HomeHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                formatLongDate(DateTime.now()),
+                formatLongDate(bogotaNow()),
                 style: TextStyle(
                   color: taiaInk.withValues(alpha: 0.7),
                   fontSize: 15,

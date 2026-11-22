@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
@@ -18,7 +19,7 @@ class UpcomingDeliveries extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
+    final now = bogotaNow();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

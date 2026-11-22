@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
@@ -18,7 +19,7 @@ class WeeklySummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxCount = counts.fold<int>(0, (m, n) => n > m ? n : m);
-    final todayIndex = DateTime.now().weekday - 1;
+    final todayIndex = bogotaNow().weekday - 1;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: BoxDecoration(

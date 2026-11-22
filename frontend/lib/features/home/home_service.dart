@@ -1,3 +1,4 @@
+import '../../core/bogota_time.dart';
 import '../auth/auth_service.dart';
 import '../reminders/reminder.dart';
 import '../reminders/reminders_service.dart';
@@ -8,19 +9,17 @@ import 'home_data.dart';
 /// Reúne en paralelo lo que necesita la pantalla de inicio.
 class HomeService {
   HomeService({
-    required AuthService auth,
-    required TasksService tasks,
-    required RemindersService reminders,
-  }) : _auth = auth,
-       _tasks = tasks,
-       _reminders = reminders;
+    required this._auth,
+    required this._tasks,
+    required this._reminders,
+  });
 
   final AuthService _auth;
   final TasksService _tasks;
   final RemindersService _reminders;
 
   Future<HomeData> load() async {
-    final now = DateTime.now();
+    final now = bogotaNow();
     const oneMs = Duration(milliseconds: 1);
     final dayStart = DateTime(now.year, now.month, now.day);
     final dayEnd = DateTime(now.year, now.month, now.day + 1).subtract(oneMs);

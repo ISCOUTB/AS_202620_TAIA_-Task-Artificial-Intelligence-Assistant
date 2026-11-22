@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
 import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
@@ -91,7 +92,7 @@ class TasksFilterBar extends StatelessWidget {
                   onDateChanged(selected, null);
                   return;
                 }
-                final now = DateTime.now();
+                final now = bogotaNow();
                 final day = await showDatePicker(
                   context: context,
                   initialDate: pickedDay ?? now,
