@@ -5,6 +5,7 @@ import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../activity/add_activity_screen.dart';
 import '../calendar/calendar_screen.dart';
+import '../notifications/push_registration.dart';
 import '../profile/profile_screen.dart';
 import '../tasks/tasks_screen.dart';
 import '../home/home_screen.dart';
@@ -30,6 +31,21 @@ class _MainShellState extends State<MainShell> {
   final _calendarKey = GlobalKey<CalendarScreenState>();
   final _addKey = GlobalKey<AddActivityScreenState>();
   final _profileKey = GlobalKey<ProfileScreenState>();
+
+  /// Con la sesión abierta se registra el dispositivo para push (RF-NOT-01).
+  final PushRegistration? _push = buildPushRegistration();
+
+  @override
+  void initState() {
+    super.initState();
+    _push?.start();
+  }
+
+  @override
+  void dispose() {
+    _push?.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
