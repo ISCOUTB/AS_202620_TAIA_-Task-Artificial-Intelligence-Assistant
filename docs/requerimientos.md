@@ -143,10 +143,12 @@ El sistema debe emitir tokens de acceso de corta duración (30 minutos) y tokens
 - El token de renovación es de un solo uso: al usarlo se emite uno nuevo y el anterior queda revocado (rotación).
 - Los tokens de renovación se almacenan como hash.
 - Si se usa un token de renovación ya revocado, se revocan todas las sesiones de ese usuario (posible robo).
+- La aplicación conserva la sesión al cerrarse: si al abrirla hay tokens guardados, entra directo sin pedir la contraseña. Si la renovación es rechazada, vuelve a la bienvenida.
 
 **Criterios de aceptación**
 - Renovar con un token válido → nuevo par de tokens. El token anterior ya no sirve.
 - Renovar con un token expirado o revocado → `401`.
+- Abrir la aplicación con una sesión guardada → entra a la pantalla principal sin pasar por el inicio de sesión.
 
 ### RF-USR-04 · Cerrar sesión
 **Prioridad:** MVP · **Estado:** Implementado
@@ -266,6 +268,14 @@ El sistema debe obtener del estudiante, al registrarse, la autorización previa,
 - Registro sin aceptar la política → `422`, y no se crea la cuenta.
 - Registro aceptando la política → `201`, con la fecha y la versión guardadas.
 
+### RF-USR-11 · Pantalla de configuración
+**Prioridad:** MVP · **Estado:** Implementado
+
+La aplicación debe tener una pantalla de configuración, separada del perfil, con las opciones de la cuenta (editar perfil, cambiar contraseña, política de datos), las integraciones (Telegram) y la sesión (cerrar sesión y desactivar la cuenta). El perfil muestra los datos del estudiante, sus estadísticas (RF-PRF-01) y sus datos académicos.
+
+**Criterio de aceptación**
+- Desde el perfil se abre la configuración, y las opciones de cuenta, Telegram y sesión ya no aparecen en el perfil.
+
 ---
 
 ## 4. Asignaturas y horario (ASG)
@@ -346,17 +356,38 @@ El sistema debe permitir:
 - Eliminar un bloque. Los bloques no tienen dependientes, así que se eliminan físicamente.
 
 ### RF-ASG-08 · Período académico
-**Prioridad:** Deseable · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
-El sistema debería permitir definir la fecha de inicio y de fin del período académico (semestre), para que el horario solo se muestre y se use en el plan de estudio dentro de ese rango.
+El sistema debe permitir definir la fecha de inicio y de fin del período académico (semestre, año escolar o curso), para que el horario solo se muestre y se use en el plan de estudio dentro de ese rango.
 
 **Reglas**
+- Los ciclos cambian según el estudiante, así que la aplicación sugiere las fechas a partir del tipo de estudiante y el estudiante siempre puede cambiarlas. El tipo de estudiante solo se usa para la sugerencia y no se guarda:
+
+  | Tipo de estudiante | Fechas sugeridas |
+  |---|---|
+  | Colegio | Del 1 de febrero al 30 de noviembre. |
+  | Universidad | Primer semestre: del 1 de febrero al 30 de junio. Segundo semestre: del 1 de agosto al 30 de noviembre. Se sugiere el semestre en curso. |
+  | Curso, técnico u otro | Sin sugerencia fija: desde hoy y tres meses después, para que el estudiante ponga las fechas reales. |
 - El período limita las vistas con fecha: el calendario (RF-TAR-11), las clases que consulta el agente (RF-AGT-13) y el plan de estudio. El horario semanal que el usuario edita (RF-ASG-07) no tiene fechas y se muestra completo.
 
 ### RF-ASG-09 · Alias de asignatura
 **Prioridad:** Deseable · **Estado:** Implementado
 
 El sistema debería permitir registrar alias cortos por asignatura (por ejemplo, "mate básicas" o "MB") para mejorar su reconocimiento en lenguaje natural (RF-AGT-10).
+
+### RF-ASG-10 · Configuración inicial obligatoria
+**Prioridad:** MVP · **Estado:** Implementado
+
+Al entrar por primera vez, la aplicación debe pedir al estudiante, en pasos, su tipo de estudiante, su período académico (RF-ASG-08) con las fechas sugeridas, sus asignaturas (RF-ASG-01) y su horario de clases (RF-ASG-06). Sin esos datos el plan de estudio (RF-EST-02) no puede calcular los huecos libres.
+
+**Reglas**
+- No se puede saltar. La configuración está completa cuando el estudiante tiene un período académico y al menos una asignatura activa; se deduce de esos datos y no se guarda aparte.
+- El horario de clases es opcional dentro de la configuración, porque un estudiante de un curso puede no tener clases fijas.
+- Una cuenta que entra sin la configuración completa, también una existente, pasa primero por ella.
+
+**Criterios de aceptación**
+- Una cuenta sin período académico entra a la configuración inicial y no a la pantalla principal.
+- Al terminar la configuración, la aplicación entra a la pantalla principal y no la vuelve a pedir.
 
 ---
 
@@ -603,10 +634,14 @@ Un proceso programado del backend debe revisar periódicamente (al menos cada mi
 - No se notifica si la actividad está completada o eliminada, ni si la cuenta está inactiva.
 - La comparación de horas usa instantes con zona (RT-03), nunca la hora local del servidor.
 - Un token FCM que el servicio reporte como inválido se elimina.
+- Un recordatorio que falla no detiene el envío de los demás: el fallo se registra con el identificador del recordatorio y el proceso sigue.
+- Si ya existe una notificación del recordatorio, no se crea otra y el recordatorio queda `sent`.
+- Con la aplicación abierta, Android no muestra la notificación por sí solo: la aplicación muestra el aviso y actualiza el contador de la bandeja.
 
 **Criterios de aceptación**
 - Un recordatorio programado para las 18:00 de Colombia se envía entre las 18:00 y las 18:01 de Colombia, independientemente de la zona horaria del servidor.
 - Si el proceso se ejecuta dos veces seguidas, se envía una sola notificación.
+- Si un recordatorio vencido falla, los demás recordatorios vencidos se envían en la misma ejecución.
 
 ### RF-NOT-03 · Bandeja de notificaciones
 **Prioridad:** MVP · **Estado:** Implementado
@@ -676,6 +711,9 @@ El agente interpreta lenguaje natural y lo traduce a operaciones **predefinidas*
 **Prioridad:** MVP · **Estado:** Implementado
 
 El agente debe atender en la aplicación y en Telegram con las mismas capacidades, excepto la generación del plan de estudio, que solo se inicia desde un botón de la aplicación (RF-EST-01).
+
+**Reglas**
+- El chat de la aplicación muestra siempre, bajo la barra de texto, que TAIA es una IA y puede equivocarse, y que la conversación es temporal: la lista de mensajes se borra al salir del chat. El contexto que conserva el backend (RF-AGT-15) no cambia.
 
 ### RF-AGT-02 · Intenciones soportadas (lista cerrada)
 **Prioridad:** MVP · **Estado:** Implementado
@@ -787,8 +825,12 @@ El agente responde preguntas como "¿qué tareas tengo esta semana?", "¿qué ex
 
 **Reglas**
 - Los filtros disponibles son asignatura, período (RT-03), estado y tipo.
+- El backend calcula las fechas relativas (hoy, mañana, esta semana de lunes a domingo, este mes, los próximos 7 días) y se las da al LLM ya resueltas. Si el mensaje nombra un día o un período, la consulta se filtra por ese rango.
 - La respuesta lista como máximo 10 actividades ordenadas por fecha límite, con su prioridad. Si hay más, indica cuántas faltan ("…y 4 más").
 - La respuesta se arma con plantillas fijas, sin una segunda llamada al LLM.
+
+**Criterio de aceptación**
+- "¿Qué tengo que hacer hoy?" y "¿Qué tengo que hacer mañana?" devuelven cada una solo las actividades de ese día.
 
 ### RF-AGT-12 · Resumen de actividades de un período
 **Prioridad:** MVP · **Estado:** Implementado
@@ -833,6 +875,10 @@ El agente conserva un contexto corto por usuario: los últimos 10 mensajes o 400
 - El contexto expira tras 30 minutos de inactividad.
 - El contexto sobrevive a reinicios del servidor (se persiste).
 - Aplica a ambos canales (app y Telegram).
+- Los mensajes anteriores se envían al LLM en cada interpretación, delimitados como dato (RF-AGT-18) y sin identificadores (RF-AGT-17), para que entienda continuaciones como "¿y mañana?".
+
+**Criterio de aceptación**
+- "¿Qué tengo que hacer hoy?" seguido de "¿Y mañana?" responde con las actividades de mañana.
 
 ### RF-AGT-16 · Umbral de confianza y límite de entrada
 **Prioridad:** MVP · **Estado:** Implementado
@@ -873,17 +919,29 @@ Si el proveedor de LLM falla o no está configurado, el agente responde que el s
 **Reglas**
 - Si el proveedor principal (Groq, [ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md)) falla con cada clave configurada y Gemini está configurado, el mensaje se intenta con Gemini. Solo si fallan todos se responde que el servicio no está disponible.
 - El respaldo aplica las mismas reglas que el principal: esquema JSON fijo, texto del usuario delimitado (RF-AGT-18) y validación de la salida.
+- Cada proveedor espera como máximo 8 s. Así la cadena completa (dos claves de Groq y Gemini) termina antes de los 30 s que espera la aplicación, y el estudiante ve la respuesta o el aviso de servicio no disponible, nunca un error de tiempo de espera.
 
 **Criterios de aceptación**
 - Groq falla y Gemini responde → el agente atiende el mensaje con la respuesta de Gemini.
 - Fallan todos los proveedores → mensaje de servicio no disponible, sin escribir nada.
+
+### RF-AGT-21 · Elegir entre dos respuestas
+**Prioridad:** Deseable · **Estado:** Pendiente
+
+De vez en cuando, no en cada mensaje, el agente podría ofrecer dos respuestas y dejar que el estudiante elija la que prefiere, para mejorar TAIA con esas elecciones (comparación de preferencias).
+
+**Reglas pendientes de decidir**
+- Cada comparación cuesta una segunda llamada al LLM, así que exige una excepción a RNF-10.
+- Las elecciones son datos personales: necesitan una tabla en el diccionario de datos y entrar en la política de datos (RF-USR-10).
+- Groq y Gemini no aprenden de las elecciones por sí solos. Hay que definir cómo se usan: por ejemplo, para elegir ejemplos del prompt o para evaluar los cambios de reglas con `tools/eval_llm.py`.
+- Queda para después de la sustentación de S16.
 
 ---
 
 ## 10. Plan de estudio (EST) y perfil con estadísticas (PRF)
 
 ### RF-EST-01 · Formulario de preferencias de estudio
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 Desde un botón de la aplicación, el usuario solicita al agente un plan de estudio completando un **formulario predeterminado**:
 
@@ -894,13 +952,19 @@ Desde un botón de la aplicación, el usuario solicita al agente un plan de estu
 | Franja horaria permitida | No | 06:00–22:00 (Colombia). |
 | Duración de cada sesión | No | 60 minutos. |
 | Asignaturas a incluir | No | Todas las activas. |
+| ¿Trabajas? Días y horas de trabajo | No | No trabaja. |
+| Otros compromisos fijos (cursos, deporte, transporte): días y horas | No | Ninguno. |
+| Máximo de minutos de estudio por día | No | Sin máximo, dentro de la franja. |
+| Momento del día en que rinde mejor | No | Cualquiera (mañana, tarde o noche). |
 
 **Reglas**
 - La franja horaria no puede empezar antes de las 05:00 ni terminar después de las 23:00.
 - El plan solo se solicita mediante este formulario, nunca por texto libre, para evitar horarios absurdos (por ejemplo, a las 3 a. m.).
+- El trabajo y los compromisos fijos se tratan como clases: ninguna sesión puede caer encima. El momento del día es una preferencia, no una restricción.
+- Al regenerar, el formulario se llena con las respuestas del plan anterior.
 
 ### RF-EST-02 · Generación del plan de estudio
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema genera un plan para los próximos 7 días a partir del horario de clases (RF-ASG-06), las actividades pendientes y su prioridad (RF-TAR-03) y las preferencias del formulario.
 
@@ -909,12 +973,28 @@ El sistema genera un plan para los próximos 7 días a partir del horario de cla
 - Ninguna sesión queda fuera de la franja ni de los días permitidos.
 - Ninguna sesión de una actividad queda después de su fecha límite.
 - Las actividades con prioridad alta se programan primero.
+- Ninguna sesión se solapa con el trabajo ni con los compromisos fijos, y un día no supera el máximo de minutos de estudio.
 - Si el LLM propone una sesión que viola una regla, se descarta o se reubica. Si no es posible, se informa al usuario.
+- El LLM recibe solo los huecos libres y las actividades numeradas (título, asignatura, fecha límite y prioridad), sin identificadores (RF-AGT-17), y devuelve qué actividad va en cada hueco. Si el LLM falla, el plan se arma con las mismas reglas sin él (RF-AGT-20).
+- Las actividades con prioridad alta reciben dos sesiones y las demás una. Si quedan huecos, cada asignatura incluida sin actividades pendientes recibe una sesión general.
+
+**Criterios de aceptación**
+- Un plan nunca tiene una sesión encima de una clase, del trabajo o de otra sesión, ni fuera de la franja o de los días permitidos.
+- Una actividad que vence antes del hueco libre no recibe sesiones en ese hueco.
+- Si el LLM no está disponible, el plan se genera igual.
 
 ### RF-EST-03 · Consultar, aceptar y regenerar el plan
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 El usuario puede ver el plan propuesto, aceptarlo (queda guardado y visible en el calendario), descartarlo o regenerarlo con otras preferencias. Solo hay un plan activo por usuario a la vez.
+
+**Reglas**
+- Generar un plan nuevo descarta el plan propuesto anterior. Aceptar un plan descarta el aceptado anterior, en la misma transacción.
+- El calendario (RF-TAR-11) muestra las sesiones del plan aceptado.
+
+**Criterios de aceptación**
+- Aceptar un plan → queda `accepted` y sus sesiones aparecen en el calendario.
+- Aceptar un segundo plan → el primero pasa a `discarded`.
 
 ### RF-PRF-01 · Perfil con estadísticas de rendimiento
 **Prioridad:** MVP · **Estado:** Implementado

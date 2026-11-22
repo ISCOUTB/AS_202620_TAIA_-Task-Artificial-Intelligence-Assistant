@@ -70,11 +70,13 @@ Esto no deja registros huérfanos, porque usuarios, tareas y asignaturas con act
 | Tipo | Valores | Uso |
 |---|---|---|
 | `task_type` | `task`, `exam` | `tasks.type` |
-| `weekday` | `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday` | `schedule_blocks.weekday`, `study_plan_days.weekday` |
+| `weekday` | `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday` | `schedule_blocks.weekday`, `study_plan_days.weekday`, `study_plan_busy_blocks.weekday` |
 | `reminder_origin` | `automatic`, `custom` | `reminders.origin` |
 | `reminder_status` | `pending`, `sent`, `cancelled` | `reminders.status` |
 | `study_plan_status` | `proposed`, `accepted`, `discarded` | `study_plans.status` |
 | `study_preference` | `between_classes`, `after_classes`, `both` | `study_plans.preference` |
+| `study_time_preference` | `morning`, `afternoon`, `evening`, `any` | `study_plans.preferred_time` |
+| `busy_block_kind` | `work`, `commitment` | `study_plan_busy_blocks.kind` |
 | `message_role` | `user`, `assistant` | `conversation_messages.role` |
 
 PostgreSQL ordena los `ENUM` por el orden de declaración. Por eso `weekday` se declara de lunes a domingo: así los horarios se ordenan bien sin columnas extra.
@@ -96,12 +98,13 @@ PostgreSQL ordena los `ENUM` por el orden de declaración. Por eso `weekday` se 
 | Usuario | `password_reset_requests` | Solicitudes de "olvidé mi contraseña" | RF-USR-08, RNF-03 | MVP |
 | Academic | `subjects` | Asignaturas | RF-ASG-01…05 | MVP |
 | Academic | `subject_aliases` | Alias de asignaturas | RF-ASG-09 | Deseable |
-| Academic | `academic_periods` | Período académico del usuario | RF-ASG-08 | Deseable |
+| Academic | `academic_periods` | Período académico del usuario | RF-ASG-08, RF-ASG-10 | MVP |
 | Academic | `schedule_blocks` | Bloques del horario de clases | RF-ASG-06, 07 | MVP |
 | Academic | `tasks` | Tareas y exámenes | RF-TAR-01…11 | MVP |
 | Academic | `study_plans` | Planes de estudio y preferencias del formulario | RF-EST-01…03 | MVP |
 | Academic | `study_plan_days` | Días disponibles de un plan | RF-EST-01 | MVP |
 | Academic | `study_plan_subjects` | Asignaturas incluidas en un plan | RF-EST-01 | MVP |
+| Academic | `study_plan_busy_blocks` | Trabajo y compromisos fijos de un plan | RF-EST-01, 02 | MVP |
 | Academic | `study_sessions` | Sesiones de estudio generadas | RF-EST-02, 03 | MVP |
 | Reminders | `reminders` | Recordatorios programados | RF-REC-01…07 | MVP |
 | Reminders | `notifications` | Notificaciones generadas por recordatorios | RF-NOT-02…04 | MVP |
@@ -129,6 +132,7 @@ erDiagram
     study_plans ||--o{ study_plan_days : "permite"
     study_plans ||--o{ study_plan_subjects : "incluye"
     subjects ||--o{ study_plan_subjects : "incluida en"
+    study_plans ||--o{ study_plan_busy_blocks : "ocupa"
     study_plans ||--o{ study_sessions : "contiene"
     subjects |o--o{ study_sessions : "estudia"
     tasks |o--o{ study_sessions : "prepara"
@@ -364,7 +368,7 @@ Alias cortos para reconocer la asignatura en lenguaje natural (RF-ASG-09, RF-AGT
 - `FOREIGN KEY (subject_id) REFERENCES subjects (id) ON DELETE CASCADE`
 - `UNIQUE (subject_id, normalized_alias)`
 
-### 6.3 `academic_periods` (Deseable)
+### 6.3 `academic_periods`
 
 Período académico vigente del usuario (RF-ASG-08). Cada usuario tiene uno como máximo.
 
@@ -443,6 +447,8 @@ Plan de estudio con las preferencias del formulario (RF-EST-01…03). El plan cu
 | `window_start` | `time` | No | `'06:00'` | Inicio de la franja permitida (hora de Colombia). |
 | `window_end` | `time` | No | `'22:00'` | Fin de la franja permitida (hora de Colombia). |
 | `session_minutes` | `smallint` | No | `60` | Duración de cada sesión. |
+| `max_daily_minutes` | `smallint` | Sí | | Máximo de minutos de estudio por día. Nulo: sin máximo. |
+| `preferred_time` | `study_time_preference` | No | `'any'` | Momento del día en que el estudiante rinde mejor. Es una preferencia, no una restricción. |
 | `start_date` | `date` | No | | Primer día del plan. |
 | `created_at` | `timestamptz` | No | `now()` | |
 | `updated_at` | `timestamptz` | No | `now()` | |
@@ -451,6 +457,7 @@ Plan de estudio con las preferencias del formulario (RF-EST-01…03). El plan cu
 - `PRIMARY KEY (id)`
 - `CHECK (window_start >= '05:00' AND window_end <= '23:00' AND window_end > window_start)`
 - `CHECK (session_minutes > 0)`
+- `CHECK (max_daily_minutes IS NULL OR max_daily_minutes >= session_minutes)`
 - Índice único `(user_id) WHERE status = 'accepted'`: un solo plan aceptado por usuario.
 
 **Reglas**
@@ -507,6 +514,25 @@ Sesiones de estudio de un plan (RF-EST-02). Una sesión prepara una tarea concre
 
 **Reglas**
 - Las reglas de RF-EST-02 las valida el caso de uso de Academic antes de guardar: sin solapamiento con clases ni con otras sesiones, dentro de la franja y de los días permitidos, y antes de la fecha límite.
+
+### 6.10 `study_plan_busy_blocks`
+
+Horas de trabajo y otros compromisos fijos que el estudiante declara en el formulario (RF-EST-01). Se tratan como clases: ninguna sesión puede caer encima (RF-EST-02).
+
+| Columna | Tipo | Nulo | Por defecto | Descripción |
+|---|---|---|---|---|
+| `id` | `uuid` | No | | Clave primaria. |
+| `study_plan_id` | `uuid` | No | | FK a `study_plans.id`. |
+| `kind` | `busy_block_kind` | No | | Trabajo o compromiso fijo. |
+| `weekday` | `weekday` | No | | Día de la semana. |
+| `start_time` | `time` | No | | Inicio (hora de Colombia). |
+| `end_time` | `time` | No | | Fin (hora de Colombia). |
+
+**Restricciones**
+- `PRIMARY KEY (id)`
+- `FOREIGN KEY (study_plan_id) REFERENCES study_plans (id) ON DELETE CASCADE`
+- `CHECK (end_time > start_time)`
+- Índice `(study_plan_id)`
 
 ---
 
