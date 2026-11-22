@@ -74,7 +74,7 @@ def test_academic_owns_status_translation_and_enforces_ownership(status, expecte
     gateway = AcademicGatewayAdapter(service)
     for title in ["Pendiente", "Terminada"]:
         task = gateway.create_task(str(owner), NewTask(
-            title=title, subject="Matemáticas", due_at=now_bogota() + timedelta(days=3)))
+            title=title, subject_id=str(subject.id), due_at=now_bogota() + timedelta(days=3)))
         if title == "Terminada":
             service.complete_task(uuid.UUID(task.id), owner)
     filters = TaskFilters(status=status)

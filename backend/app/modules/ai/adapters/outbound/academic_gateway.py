@@ -57,7 +57,10 @@ class AcademicGatewayAdapter(AcademicGateway):
 
     def create_task(self, user_id: str, data: NewTask) -> TaskView:
         owner = _parse_user_id(user_id)
-        subject_id = _parse_id(data.subject_id) if data.subject_id else self._subject_by_name(owner, data.subject)
+        # El agente crea con el `subject_id` de `match_subjects`; no hay creación por nombre (P-D-08).
+        if not data.subject_id:
+            raise TaskDataRejected("Indica la asignatura de la tarea.")
+        subject_id = _parse_id(data.subject_id)
         try:
             task = self._academic.create_task(
                 user_id=owner,
@@ -156,18 +159,6 @@ class AcademicGatewayAdapter(AcademicGateway):
             )
             for item in classes
         ]
-
-    def _subject_by_name(self, owner: uuid.UUID, text: str | None) -> uuid.UUID:
-        """Compatibilidad con quien crea por nombre exacto o alias (test_s8_closure)."""
-
-        if not text:
-            raise TaskDataRejected("Indica la asignatura de la tarea.")
-        subject = self._academic.find_subject(owner, text)
-        if subject is None:
-            raise TaskDataRejected(
-                f'No encontré la asignatura "{text}". Regístrala primero en la aplicación.'
-            )
-        return subject.subject_id
 
     def _insights_port(self) -> AcademicInsights:
         if self._insights is not None:
