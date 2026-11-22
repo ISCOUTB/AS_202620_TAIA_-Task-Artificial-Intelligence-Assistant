@@ -136,6 +136,23 @@ academic_calendar = AcademicCalendarUseCase(
 )
 configure_task_api(academic_task_management)
 configure_calendar_use_case(academic_calendar)
+
+# Plan de estudio (RF-EST-01…03): Academic valida y guarda; AI solo sugiere con el LLM.
+from app.modules.academic.adapters.inbound.study_plan_api import (
+    configure_study_plan_use_case,
+    router as academic_study_plan_router,
+)
+from app.modules.academic.adapters.outbound.ai_study_session_advisor import AiStudySessionAdvisor
+from app.modules.academic.adapters.outbound.repository_provider import get_study_plan_repository
+from app.modules.academic.application.use_cases.manage_study_plan import ManageStudyPlanUseCase
+from app.modules.ai.application.ports.inbound.study_plan_advisor import configure_study_plan_advisor
+from app.modules.ai.application.use_cases.advise_study_plan import AdviseStudyPlanUseCase
+
+configure_study_plan_advisor(AdviseStudyPlanUseCase(llm))
+configure_study_plan_use_case(ManageStudyPlanUseCase(
+    get_study_plan_repository(), academic_repository, get_subject_repository(), academic_calendar,
+    AiStudySessionAdvisor(),
+))
 configure_academic_insights(AcademicInsightsService(academic_repository, get_subject_repository(), academic_calendar))
 configure_statistics_use_case(
     ProfileStatisticsUseCase(academic_repository, get_subject_repository(), get_academic_period_repository())
@@ -203,6 +220,7 @@ app.include_router(academic_schedule_router)
 app.include_router(academic_period_router)
 app.include_router(academic_calendar_router)  # Frente C
 app.include_router(academic_statistics_router)  # Frente C
+app.include_router(academic_study_plan_router)
 app.include_router(usuario_router)
 app.include_router(telegram_webhook_router)
 app.include_router(ai_router)

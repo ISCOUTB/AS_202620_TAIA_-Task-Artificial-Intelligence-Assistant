@@ -134,6 +134,18 @@ class TaiaApiClient:
     def get_profile_statistics_academic_statistics_get(self, body: object | None = None) -> object:
         return self._request("GET", "/academic/statistics", body, **{})
 
+    def generate_study_plan_academic_study_plans_post(self, body: object | None = None) -> object:
+        return self._request("POST", "/academic/study-plans", body, **{})
+
+    def get_current_study_plan_academic_study_plans_current_get(self, body: object | None = None) -> object:
+        return self._request("GET", "/academic/study-plans/current", body, **{})
+
+    def accept_study_plan_academic_study_plans__plan_id__accept_post(self, body: object | None = None, plan_id: object | None = None) -> object:
+        return self._request("POST", "/academic/study-plans/{plan_id}/accept", body, **{'plan_id': plan_id})
+
+    def discard_study_plan_academic_study_plans__plan_id__discard_post(self, body: object | None = None, plan_id: object | None = None) -> object:
+        return self._request("POST", "/academic/study-plans/{plan_id}/discard", body, **{'plan_id': plan_id})
+
     def register_user_users_post(self, body: object | None = None) -> object:
         return self._request("POST", "/users", body, **{})
 

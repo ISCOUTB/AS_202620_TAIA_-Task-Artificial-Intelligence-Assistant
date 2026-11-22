@@ -1546,6 +1546,238 @@
         }
       }
     },
+    "/academic/study-plans": {
+      "post": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Generate Study Plan",
+        "description": "Genera un plan propuesto para los próximos 7 días y descarta el propuesto anterior (RF-EST-02).",
+        "operationId": "generate_study_plan_academic_study_plans_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos no son válidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/academic/study-plans/current": {
+      "get": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Get Current Study Plan",
+        "description": "El plan activo: el propuesto más reciente o, si no hay, el aceptado (RF-EST-03).",
+        "operationId": "get_current_study_plan_academic_study_plans_current_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/academic/study-plans/{plan_id}/accept": {
+      "post": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Accept Study Plan",
+        "description": "Acepta el plan propuesto y descarta el aceptado anterior (RF-EST-03).",
+        "operationId": "accept_study_plan_academic_study_plans__plan_id__accept_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con datos existentes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/academic/study-plans/{plan_id}/discard": {
+      "post": {
+        "tags": [
+          "academic"
+        ],
+        "summary": "Discard Study Plan",
+        "description": "Descarta el plan (RF-EST-03).",
+        "operationId": "discard_study_plan_academic_study_plans__plan_id__discard_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyPlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o no pertenece al usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto con datos existentes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "post": {
         "tags": [
@@ -2961,6 +3193,43 @@
         ],
         "title": "AliasResponse"
       },
+      "BusyBlockBody": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/BusyBlockKind"
+          },
+          "weekday": {
+            "$ref": "#/components/schemas/Weekday"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "time",
+            "title": "End Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "weekday",
+          "start_time",
+          "end_time"
+        ],
+        "title": "BusyBlockBody",
+        "description": "Trabajo o compromiso fijo semanal, en hora de Colombia."
+      },
+      "BusyBlockKind": {
+        "type": "string",
+        "enum": [
+          "work",
+          "commitment"
+        ],
+        "title": "BusyBlockKind"
+      },
       "CalendarResponse": {
         "properties": {
           "start": {
@@ -2986,6 +3255,13 @@
             },
             "type": "array",
             "title": "Classes"
+          },
+          "study_sessions": {
+            "items": {
+              "$ref": "#/components/schemas/StudySessionResponse"
+            },
+            "type": "array",
+            "title": "Study Sessions"
           }
         },
         "type": "object",
@@ -2993,10 +3269,11 @@
           "start",
           "end",
           "tasks",
-          "classes"
+          "classes",
+          "study_sessions"
         ],
         "title": "CalendarResponse",
-        "description": "Eventos del rango: actividades por fecha límite (con `type` para los exámenes) y clases."
+        "description": "Eventos del rango: actividades por fecha límite (con `type` para los exámenes), clases y\nsesiones del plan de estudio aceptado (RF-EST-03)."
       },
       "Channel": {
         "type": "string",
@@ -3725,6 +4002,272 @@
         ],
         "title": "StatusCountsResponse"
       },
+      "StudyPlanRequest": {
+        "properties": {
+          "preference": {
+            "$ref": "#/components/schemas/StudyPreference"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Weekday"
+            },
+            "type": "array",
+            "title": "Days",
+            "description": "Vacío: todos los días."
+          },
+          "window_start": {
+            "type": "string",
+            "format": "time",
+            "title": "Window Start",
+            "default": "06:00:00"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "time",
+            "title": "Window End",
+            "default": "22:00:00"
+          },
+          "session_minutes": {
+            "type": "integer",
+            "maximum": 240.0,
+            "minimum": 15.0,
+            "title": "Session Minutes",
+            "default": 60
+          },
+          "subject_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Subject Ids",
+            "description": "Vacío: todas las activas."
+          },
+          "busy_blocks": {
+            "items": {
+              "$ref": "#/components/schemas/BusyBlockBody"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Busy Blocks"
+          },
+          "max_daily_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 960.0,
+                "minimum": 15.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Minutes"
+          },
+          "preferred_time": {
+            "$ref": "#/components/schemas/StudyTimePreference",
+            "default": "any"
+          }
+        },
+        "type": "object",
+        "required": [
+          "preference"
+        ],
+        "title": "StudyPlanRequest",
+        "description": "Formulario de RF-EST-01. Lo que no se envía toma su valor por defecto."
+      },
+      "StudyPlanResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "accepted",
+              "discarded"
+            ],
+            "title": "Status"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "preference": {
+            "$ref": "#/components/schemas/StudyPreference"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Weekday"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "time",
+            "title": "Window End"
+          },
+          "session_minutes": {
+            "type": "integer",
+            "title": "Session Minutes"
+          },
+          "subject_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Subject Ids"
+          },
+          "busy_blocks": {
+            "items": {
+              "$ref": "#/components/schemas/BusyBlockBody"
+            },
+            "type": "array",
+            "title": "Busy Blocks"
+          },
+          "max_daily_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Minutes"
+          },
+          "preferred_time": {
+            "$ref": "#/components/schemas/StudyTimePreference"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/StudySessionResponse"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "unscheduled": {
+            "items": {
+              "$ref": "#/components/schemas/UnscheduledTaskResponse"
+            },
+            "type": "array",
+            "title": "Unscheduled",
+            "description": "Actividades que no cupieron en ningún hueco. Solo se informan al generar el plan."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "start_date",
+          "preference",
+          "days",
+          "window_start",
+          "window_end",
+          "session_minutes",
+          "subject_ids",
+          "busy_blocks",
+          "max_daily_minutes",
+          "preferred_time",
+          "sessions",
+          "unscheduled"
+        ],
+        "title": "StudyPlanResponse"
+      },
+      "StudyPreference": {
+        "type": "string",
+        "enum": [
+          "between_classes",
+          "after_classes",
+          "both"
+        ],
+        "title": "StudyPreference",
+        "description": "Dónde se buscan huecos: entre clases, después de clases o en ambos."
+      },
+      "StudySessionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "starts_at",
+          "ends_at",
+          "task_id",
+          "subject_id",
+          "title",
+          "subject_name"
+        ],
+        "title": "StudySessionResponse"
+      },
+      "StudyTimePreference": {
+        "type": "string",
+        "enum": [
+          "morning",
+          "afternoon",
+          "evening",
+          "any"
+        ],
+        "title": "StudyTimePreference",
+        "description": "Momento del día en que el estudiante rinde mejor. Es una preferencia, no una restricción."
+      },
       "SubjectCreateRequest": {
         "properties": {
           "name": {
@@ -4322,6 +4865,25 @@
           "unread_count"
         ],
         "title": "UnreadCountResponse"
+      },
+      "UnscheduledTaskResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "title"
+        ],
+        "title": "UnscheduledTaskResponse"
       },
       "UserCreateRequest": {
         "properties": {

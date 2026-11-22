@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,8 +12,10 @@ from pydantic import BaseModel
 from app.modules.academic.adapters.inbound.api import ErrorResponse, TaskResponse
 from app.modules.academic.application.errors import InvalidCalendarRangeError
 from app.modules.academic.application.ports.inbound.academic_insights import ClassOccurrence
+from app.modules.academic.adapters.inbound.study_plan_api import StudyPlans, StudySessionResponse
 from app.modules.academic.application.use_cases.academic_calendar import AcademicCalendarUseCase
 from app.shared.adapters.inbound.auth import CurrentUserId
+from app.shared.clock import BOGOTA_TZ
 
 router = APIRouter(prefix="/academic/calendar", tags=["academic"])
 
@@ -57,18 +59,21 @@ class ClassOccurrenceResponse(BaseModel):
 
 
 class CalendarResponse(BaseModel):
-    """Eventos del rango: actividades por fecha límite (con `type` para los exámenes) y clases."""
+    """Eventos del rango: actividades por fecha límite (con `type` para los exámenes), clases y
+    sesiones del plan de estudio aceptado (RF-EST-03)."""
 
     start: date
     end: date
     tasks: list[TaskResponse]
     classes: list[ClassOccurrenceResponse]
+    study_sessions: list[StudySessionResponse]
 
 
 @router.get("", responses=INVALID_RANGE)
 def get_calendar(
     user_id: CurrentUserId,
     calendar: CalendarUseCase,
+    plans: StudyPlans,
     start: Annotated[date, Query(description="Primer día del rango (AAAA-MM-DD, hora de Colombia).")],
     end: Annotated[date, Query(description="Último día del rango, incluido. Como máximo 31 días contando los dos extremos.")],
 ) -> CalendarResponse:
@@ -83,4 +88,16 @@ def get_calendar(
         end=result.end,
         tasks=[TaskResponse.from_data(task) for task in result.tasks],
         classes=[ClassOccurrenceResponse.from_occurrence(occurrence) for occurrence in result.classes],
+        study_sessions=[
+            StudySessionResponse(
+                id=item.session.id, starts_at=item.session.starts_at, ends_at=item.session.ends_at,
+                task_id=item.session.task_id, subject_id=item.session.subject_id,
+                title=item.title, subject_name=item.subject_name,
+            )
+            for item in plans.calendar_sessions(
+                user_id,
+                datetime.combine(start, time(0, 0), tzinfo=BOGOTA_TZ),
+                datetime.combine(end + timedelta(days=1), time(0, 0), tzinfo=BOGOTA_TZ),
+            )
+        ],
     )

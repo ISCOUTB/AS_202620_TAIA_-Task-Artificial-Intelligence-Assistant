@@ -27,9 +27,10 @@ task_type_enum = Enum(
     values_callable=lambda members: [member.value for member in members],
 )
 
-# Aún no tienen enumeración de dominio: se agrega en la fase 10 (plan de estudio).
 study_plan_status_enum = Enum("proposed", "accepted", "discarded", name="study_plan_status")
 study_preference_enum = Enum("between_classes", "after_classes", "both", name="study_preference")
+study_time_preference_enum = Enum("morning", "afternoon", "evening", "any", name="study_time_preference")
+busy_block_kind_enum = Enum("work", "commitment", name="busy_block_kind")
 
 
 class SubjectModel(Base):
@@ -134,6 +135,10 @@ class StudyPlanModel(Base):
             name="window_within_limits",
         ),
         CheckConstraint("session_minutes > 0", name="session_minutes_positive"),
+        CheckConstraint(
+            "max_daily_minutes IS NULL OR max_daily_minutes >= session_minutes",
+            name="max_daily_minutes_fits_session",
+        ),
         # Un solo plan aceptado por usuario.
         Index(
             "uq_study_plans_user_id_accepted",
@@ -151,6 +156,8 @@ class StudyPlanModel(Base):
     window_start: Mapped[time] = mapped_column(Time, server_default=text("'06:00'"))
     window_end: Mapped[time] = mapped_column(Time, server_default=text("'22:00'"))
     session_minutes: Mapped[int] = mapped_column(SmallInteger, server_default=text("60"))
+    max_daily_minutes: Mapped[int | None] = mapped_column(SmallInteger)
+    preferred_time: Mapped[str] = mapped_column(study_time_preference_enum, server_default="any")
     start_date: Mapped[date] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -196,3 +203,17 @@ class StudySessionModel(Base):
     subject_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey(_SUBJECTS_ID, ondelete="CASCADE"))
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class StudyPlanBusyBlockModel(Base):
+    """Trabajo o compromiso fijo de un plan; ninguna sesión cae encima (RF-EST-01, RF-EST-02)."""
+
+    __tablename__ = "study_plan_busy_blocks"
+    __table_args__ = (CheckConstraint("end_time > start_time", name="ends_after_starts"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    study_plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(_STUDY_PLANS_ID, ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(busy_block_kind_enum)
+    weekday: Mapped[Weekday] = mapped_column(weekday_enum)
+    start_time: Mapped[time] = mapped_column(Time)
+    end_time: Mapped[time] = mapped_column(Time)

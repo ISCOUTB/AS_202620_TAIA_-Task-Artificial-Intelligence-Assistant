@@ -43,3 +43,11 @@ class InvalidReminderPlanError(ValueError):
 
 class InvalidCalendarRangeError(ValueError):
     """El rango de fechas pedido no es coherente (RF-TAR-11)."""
+
+
+class StudyPlanNotFoundError(ValueError):
+    """El plan no existe o no pertenece al usuario (RT-02)."""
+
+
+class StudyPlanStateError(ValueError):
+    """La operación no aplica al estado actual del plan (RF-EST-03)."""
