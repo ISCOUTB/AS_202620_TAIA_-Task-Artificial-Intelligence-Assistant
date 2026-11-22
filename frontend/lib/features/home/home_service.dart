@@ -1,22 +1,15 @@
 import '../../core/bogota_time.dart';
 import '../auth/auth_service.dart';
-import '../reminders/reminder.dart';
-import '../reminders/reminders_service.dart';
 import '../tasks/task.dart';
 import '../tasks/tasks_service.dart';
 import 'home_data.dart';
 
 /// Reúne en paralelo lo que necesita la pantalla de inicio.
 class HomeService {
-  HomeService({
-    required this._auth,
-    required this._tasks,
-    required this._reminders,
-  });
+  HomeService({required this._auth, required this._tasks});
 
   final AuthService _auth;
   final TasksService _tasks;
-  final RemindersService _reminders;
 
   Future<HomeData> load() async {
     final now = bogotaNow();
@@ -41,7 +34,6 @@ class HomeService {
         _tasks.list(dueFrom: dayStart, dueTo: dayEnd, limit: 100),
         _tasks.list(status: TaskStatus.pending, limit: 10),
         _tasks.list(dueFrom: weekStart, dueTo: weekEnd, limit: 100),
-        _reminders.list(),
       ],
       // Si una falla, se informa de inmediato en vez de esperar a las demás.
       eagerError: true,
@@ -53,7 +45,6 @@ class HomeService {
       upcoming: (results[2]! as TaskPage).items,
       weekTasks: (results[3]! as TaskPage).items,
       weekStart: weekStart,
-      reminders: results[4]! as List<Reminder>,
     );
   }
 }
@@ -61,5 +52,4 @@ class HomeService {
 final HomeService homeService = HomeService(
   auth: authService,
   tasks: tasksService,
-  reminders: remindersService,
 );

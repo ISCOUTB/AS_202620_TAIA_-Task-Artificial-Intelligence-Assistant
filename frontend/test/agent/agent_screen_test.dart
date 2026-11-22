@@ -7,7 +7,6 @@ import 'package:taia/features/agent/agent_service.dart';
 import 'package:taia/features/auth/auth_service.dart';
 import 'package:taia/features/home/home_screen.dart';
 import 'package:taia/features/home/home_service.dart';
-import 'package:taia/features/reminders/reminders_service.dart';
 import 'package:taia/features/tasks/tasks_service.dart';
 
 import '../support/fake_api.dart';
@@ -151,7 +150,6 @@ void main() {
             service: HomeService(
               auth: AuthService(dio: dio, tokens: TokenStorage()),
               tasks: TasksService(dio),
-              reminders: RemindersService(dio),
             ),
             agentService: AgentService(dio),
           ),

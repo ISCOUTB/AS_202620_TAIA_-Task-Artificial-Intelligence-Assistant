@@ -10,7 +10,6 @@ import '../auth/auth_shell.dart';
 import 'home_data.dart';
 import 'home_service.dart';
 import 'widgets/home_header.dart';
-import 'widgets/notifications_sheet.dart';
 import 'widgets/today_card.dart';
 import 'widgets/upcoming_deliveries.dart';
 import 'widgets/weekly_summary.dart';
@@ -131,12 +130,7 @@ class HomeScreenState extends State<HomeScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: HomeHeader(
-              firstName: data.firstName,
-              pendingReminders: data.reminders.length,
-              onBellPressed: () =>
-                  showNotificationsSheet(context, data.reminders),
-            ),
+            child: HomeHeader(firstName: data.firstName),
           ),
           const SizedBox(height: 16),
           Padding(

@@ -10,7 +10,7 @@ import '../academic/schedule_screen.dart';
 import '../academic/subjects_screen.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
-import '../home/widgets/reminders_bell.dart';
+import '../notifications/notifications_bell.dart';
 import '../shell/mascot_message.dart';
 import 'profile_service.dart';
 import 'widgets/profile_card.dart';
@@ -398,7 +398,7 @@ class _Header extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const RemindersBell(),
+            const NotificationsBell(),
             Container(
               width: 84,
               padding: const EdgeInsets.all(8),

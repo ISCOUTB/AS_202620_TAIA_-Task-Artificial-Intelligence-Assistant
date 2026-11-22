@@ -2,21 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../../core/bogota_time.dart';
 import '../../../core/spanish_dates.dart';
-import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
+import '../../notifications/notifications_bell.dart';
+import '../../notifications/notifications_service.dart';
 
-/// Fecha, saludo y campanita con el número de recordatorios pendientes.
+/// Fecha, saludo y campanita con el número de notificaciones sin leer.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
     super.key,
     required this.firstName,
-    required this.pendingReminders,
-    required this.onBellPressed,
+    this.notificationsService,
   });
 
   final String firstName;
-  final int pendingReminders;
-  final VoidCallback onBellPressed;
+  final NotificationsService? notificationsService;
 
   @override
   Widget build(BuildContext context) {
@@ -46,45 +45,7 @@ class HomeHeader extends StatelessWidget {
             ],
           ),
         ),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              tooltip: 'Recordatorios',
-              iconSize: 28,
-              color: taiaInk,
-              onPressed: onBellPressed,
-              icon: const Icon(Icons.notifications_none_rounded),
-            ),
-            if (pendingReminders > 0)
-              Positioned(
-                top: 4,
-                right: 2,
-                child: IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 18),
-                    decoration: BoxDecoration(
-                      color: TaiaColors.fieryRose,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      pendingReminders > 9 ? '9+' : '$pendingReminders',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        NotificationsBell(service: notificationsService),
       ],
     );
   }

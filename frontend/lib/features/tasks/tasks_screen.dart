@@ -8,8 +8,7 @@ import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
-import '../home/widgets/notifications_sheet.dart';
-import '../reminders/reminders_service.dart';
+import '../notifications/notifications_bell.dart';
 import 'subjects_service.dart';
 import 'task.dart';
 import 'task_filters.dart';
@@ -21,16 +20,10 @@ import 'widgets/tasks_filter_bar.dart';
 /// Pestaña de tareas: lista agrupada por día, con búsqueda y filtros. Al tocar
 /// una tarea se abre la hoja de edición.
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({
-    super.key,
-    this.tasksService,
-    this.subjectsService,
-    this.remindersService,
-  });
+  const TasksScreen({super.key, this.tasksService, this.subjectsService});
 
   final TasksService? tasksService;
   final SubjectsService? subjectsService;
-  final RemindersService? remindersService;
 
   @override
   State<TasksScreen> createState() => TasksScreenState();
@@ -52,8 +45,6 @@ class TasksScreenState extends State<TasksScreen> {
 
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjects => widget.subjectsService ?? subjectsService;
-  RemindersService get _reminders =>
-      widget.remindersService ?? remindersService;
 
   @override
   void initState() {
@@ -160,18 +151,6 @@ class TasksScreenState extends State<TasksScreen> {
     }
   }
 
-  Future<void> _openReminders() async {
-    try {
-      final all = await _reminders.list();
-      if (!mounted) return;
-      final pending = all.where((r) => r.isPending).toList()
-        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-      await showNotificationsSheet(context, pending);
-    } on ApiException catch (e) {
-      if (mounted) _toast(e.message);
-    }
-  }
-
   bool get _hasActiveFilters =>
       _search.text.trim().isNotEmpty || _date != DateFilter.any;
 
@@ -237,11 +216,7 @@ class TasksScreenState extends State<TasksScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          _Header(
-            unfinished: unfinished,
-            expression: expression,
-            onBell: _openReminders,
-          ),
+          _Header(unfinished: unfinished, expression: expression),
           const SizedBox(height: 20),
           TasksFilterBar(
             searchController: _search,
@@ -284,15 +259,10 @@ class TasksScreenState extends State<TasksScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.unfinished,
-    required this.expression,
-    required this.onBell,
-  });
+  const _Header({required this.unfinished, required this.expression});
 
   final int unfinished;
   final MascotExpression expression;
-  final VoidCallback onBell;
 
   @override
   Widget build(BuildContext context) {
@@ -340,13 +310,7 @@ class _Header extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            IconButton(
-              tooltip: 'Recordatorios',
-              iconSize: 28,
-              color: taiaInk,
-              onPressed: onBell,
-              icon: const Icon(Icons.notifications_none_rounded),
-            ),
+            const NotificationsBell(),
             Container(
               width: 84,
               padding: const EdgeInsets.all(8),

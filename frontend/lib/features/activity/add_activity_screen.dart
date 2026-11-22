@@ -7,7 +7,7 @@ import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
-import '../home/widgets/reminders_bell.dart';
+import '../notifications/notifications_bell.dart';
 import '../tasks/subject.dart';
 import '../tasks/subjects_service.dart';
 import '../tasks/task.dart';
@@ -332,10 +332,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
               style: TextStyle(color: Colors.red.shade700),
             ),
           ),
-          TextButton(
-            onPressed: _loadSubjects,
-            child: const Text('Reintentar'),
-          ),
+          TextButton(onPressed: _loadSubjects, child: const Text('Reintentar')),
         ],
       );
     }
@@ -496,7 +493,7 @@ class _Header extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const RemindersBell(),
+            const NotificationsBell(),
             Container(
               width: 84,
               padding: const EdgeInsets.all(8),

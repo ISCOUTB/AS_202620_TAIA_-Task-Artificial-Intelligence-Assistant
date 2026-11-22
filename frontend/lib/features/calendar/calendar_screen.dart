@@ -8,8 +8,7 @@ import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
-import '../home/widgets/notifications_sheet.dart';
-import '../reminders/reminders_service.dart';
+import '../notifications/notifications_bell.dart';
 import '../shell/mascot_message.dart';
 import '../tasks/subjects_service.dart';
 import '../tasks/task.dart';
@@ -23,16 +22,10 @@ import 'widgets/calendar_mode_toggle.dart';
 /// Pestaña de calendario: vista por mes o por semana. Al elegir un día se ven
 /// sus actividades, y al tocar una se abre la hoja de edición.
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({
-    super.key,
-    this.tasksService,
-    this.subjectsService,
-    this.remindersService,
-  });
+  const CalendarScreen({super.key, this.tasksService, this.subjectsService});
 
   final TasksService? tasksService;
   final SubjectsService? subjectsService;
-  final RemindersService? remindersService;
 
   @override
   State<CalendarScreen> createState() => CalendarScreenState();
@@ -52,8 +45,6 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjects => widget.subjectsService ?? subjectsService;
-  RemindersService get _reminders =>
-      widget.remindersService ?? remindersService;
 
   @override
   void initState() {
@@ -174,18 +165,6 @@ class CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  Future<void> _openReminders() async {
-    try {
-      final all = await _reminders.list();
-      if (!mounted) return;
-      final pending = all.where((r) => r.isPending).toList()
-        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-      await showNotificationsSheet(context, pending);
-    } on ApiException catch (e) {
-      if (mounted) _toast(e.message);
-    }
-  }
-
   /// "NOVIEMBRE 2026" o, en la vista semanal, "2 – 8 DE NOVIEMBRE".
   String get _rangeLabel {
     if (_mode == CalendarMode.month) {
@@ -275,13 +254,7 @@ class CalendarScreenState extends State<CalendarScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton(
-                    tooltip: 'Recordatorios',
-                    iconSize: 28,
-                    color: taiaInk,
-                    onPressed: _openReminders,
-                    icon: const Icon(Icons.notifications_none_rounded),
-                  ),
+                  const NotificationsBell(),
                   CalendarModeToggle(mode: _mode, onChanged: _setMode),
                 ],
               ),

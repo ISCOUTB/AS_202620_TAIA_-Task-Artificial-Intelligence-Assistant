@@ -1,4 +1,3 @@
-import '../reminders/reminder.dart';
 import '../tasks/task.dart';
 
 /// Estado del día para la tarjeta principal.
@@ -13,20 +12,18 @@ class HomeData {
     required this.upcoming,
     required this.weekCounts,
     required this.weekTotal,
-    required this.reminders,
   });
 
   /// Arma los datos a partir de lo que devuelve la API.
   ///
   /// [weekTasks] son las tareas con entrega entre [weekStart] (lunes) y el
-  /// domingo; [reminders] se filtran a los pendientes.
+  /// domingo.
   factory HomeData.build({
     required String fullName,
     required List<AcademicTask> todayTasks,
     required List<AcademicTask> upcoming,
     required List<AcademicTask> weekTasks,
     required DateTime weekStart,
-    required List<Reminder> reminders,
   }) {
     final weekEnd = DateTime(
       weekStart.year,
@@ -40,8 +37,6 @@ class HomeData {
         counts[due.weekday - 1]++;
       }
     }
-    final pending = reminders.where((r) => r.isPending).toList()
-      ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     final parts = fullName.trim().split(RegExp(r'\s+'));
     return HomeData(
       firstName: parts.first,
@@ -52,7 +47,6 @@ class HomeData {
       upcoming: upcoming,
       weekCounts: counts,
       weekTotal: counts.fold(0, (sum, n) => sum + n),
-      reminders: pending,
     );
   }
 
@@ -68,9 +62,6 @@ class HomeData {
   /// Tareas por día de la semana actual, de lunes (0) a domingo (6).
   final List<int> weekCounts;
   final int weekTotal;
-
-  /// Recordatorios pendientes, del más cercano al más lejano.
-  final List<Reminder> reminders;
 
   int get todayPending => todayTotal - todayDone;
 
