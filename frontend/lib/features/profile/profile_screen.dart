@@ -13,6 +13,7 @@ import '../auth/auth_shell.dart';
 import '../notifications/notifications_bell.dart';
 import '../shell/mascot_message.dart';
 import 'profile_service.dart';
+import 'statistics_screen.dart';
 import 'widgets/account_dialogs.dart';
 import 'widgets/profile_card.dart';
 import 'widgets/profile_tile.dart';
@@ -281,6 +282,12 @@ class ProfileScreenState extends State<ProfileScreen>
           ProfileSection(
             title: 'ACADÉMICO',
             tiles: [
+              ProfileTile(
+                icon: Icons.insights_outlined,
+                title: 'Estadísticas',
+                subtitle: '¿Cómo voy esta semana, este mes o este período?',
+                onTap: () => _push(const StatisticsScreen()),
+              ),
               ProfileTile(
                 icon: Icons.menu_book_outlined,
                 title: 'Asignaturas',
