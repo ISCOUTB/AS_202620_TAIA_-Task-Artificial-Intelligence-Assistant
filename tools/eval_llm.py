@@ -4,7 +4,7 @@ Uso:
     python tools/eval_llm.py                 # exige GEMINI_API_KEY
     python tools/eval_llm.py --dry-run       # valida el dataset, sin llamar al modelo
     python tools/eval_llm.py --json salida.json
-    python tools/eval_llm.py --proveedor groq   # respaldo de ADR-0011, exige GROQ_API_KEY_1
+    python tools/eval_llm.py --proveedor groq   # principal desde ADR-0013, exige GROQ_API_KEY_1
 
 A diferencia de `tools/eval_confirmacion.py`, que mide la porcion determinista
 sin red, este guion si llama a Gemini. Sin `GEMINI_API_KEY` no inventa cifras:
@@ -35,7 +35,7 @@ import subprocess
 import sys
 import time
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -108,17 +108,29 @@ def validar(filas: list[dict]) -> dict:
     }
 
 
+# Intenciones cuyos campos van en "filters" y no en "task" (RF-AGT-11 y RF-AGT-13).
+_INTENCIONES_CON_FILTROS = {"query_tasks", "query_schedule"}
+# Etiquetas del dataset que no tienen el mismo nombre en Interpretation (S16).
+_RUTAS_PROPIAS = {
+    "task_hint": "task_hint",
+    "generated_title": "task.title_generated",
+    "period_start": "period.start",
+    "period_end": "period.end",
+}
+
+
 def campos_esperados(fila: dict) -> dict:
     """Etiquetas existentes; intención y campos se puntúan por separado."""
     expected = {}
-    for key in ("title", "due_at", "subject", "description", "task_hint",
-                "status", "due_from", "due_to"):
+    for key in ("title", "due_at", "subject", "description", "type", "task_hint",
+                "status", "due_from", "due_to", "generated_title", "period_start",
+                "period_end"):
         if key not in fila:
             continue
-        if key == "task_hint":
-            path = key
+        if key in _RUTAS_PROPIAS:
+            path = _RUTAS_PROPIAS[key]
         else:
-            parent = "filters" if fila["intent"] == "query_tasks" else "task"
+            parent = "filters" if fila["intent"] in _INTENCIONES_CON_FILTROS else "task"
             path = f"{parent}.{key}"
         expected[path] = fila[key]
     return expected
@@ -141,7 +153,7 @@ def comparar_campos(fila: dict, resultado) -> list[dict]:
         actual = resultado
         for part in path.split("."):
             actual = getattr(actual, part, None)
-        if isinstance(actual, datetime):
+        if isinstance(actual, (datetime, date)):
             actual = actual.isoformat()
         equal = _valores_iguales(path, actual, expected)
         comparisons.append({"campo": path, "esperado": expected,
@@ -231,6 +243,13 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
     campos = [campo for caso in casos for campo in caso["campos"]]
     correctos = sum(c["correcto"] for c in campos)
     exactitud_campos = correctos / len(campos) if campos else None
+    por_campo: dict[str, dict] = {}
+    for campo in campos:
+        detalle = por_campo.setdefault(campo["campo"], {"esperados": 0, "correctos": 0})
+        detalle["esperados"] += 1
+        detalle["correctos"] += campo["correcto"]
+    for detalle in por_campo.values():
+        detalle["exactitud"] = round(detalle["correctos"] / detalle["esperados"], 4)
 
     return {
         "alcance": "adaptador LLM; sin confirmación, persistencia ni canal",
@@ -241,6 +260,7 @@ def evaluar(filas: list[dict], precio_input: float | None, precio_output: float 
             "esperados": len(campos), "correctos": correctos,
             "exactitud": exactitud_campos, "umbral": 0.90,
             "supera_umbral_extraccion": exactitud_campos >= 0.90 if campos else None,
+            "por_campo": dict(sorted(por_campo.items())),
             "mensajes_evaluados": len(validas), "mensajes_requeridos": 100,
             "cumple_escenario": None,
             "motivo": "S1 exige campos registrados en PostgreSQL en 100 mensajes representativos; este arnés solo mide extracción.",
@@ -305,7 +325,7 @@ def main() -> int:
     parser.add_argument("--precio-input", type=float)
     parser.add_argument("--precio-output", type=float)
     parser.add_argument("--proveedor", choices=("gemini", "groq"), default="gemini",
-                        help="groq mide solo el respaldo, con GROQ_API_KEY_1 y sin cadena.")
+                        help="groq mide solo Groq, con GROQ_API_KEY_1 y sin cadena.")
     args = parser.parse_args()
     if any(p is not None and (not math.isfinite(p) or p < 0)
            for p in (args.precio_input, args.precio_output)):
