@@ -919,7 +919,7 @@ Si el proveedor de LLM falla o no está configurado, el agente responde que el s
 **Reglas**
 - Si el proveedor principal (Groq, [ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md)) falla con cada clave configurada y Gemini está configurado, el mensaje se intenta con Gemini. Solo si fallan todos se responde que el servicio no está disponible.
 - El respaldo aplica las mismas reglas que el principal: esquema JSON fijo, texto del usuario delimitado (RF-AGT-18) y validación de la salida.
-- Cada proveedor espera como máximo 8 s. Así la cadena completa (dos claves de Groq y Gemini) termina antes de los 30 s que espera la aplicación, y el estudiante ve la respuesta o el aviso de servicio no disponible, nunca un error de tiempo de espera.
+- Cada clave de Groq espera como máximo 8 s y Gemini 15 s, porque es más lento. Así la cadena completa termina en 31 s como máximo, antes de los 40 s que espera la aplicación, y el estudiante ve la respuesta o el aviso de servicio no disponible, nunca un error de tiempo de espera.
 
 **Criterios de aceptación**
 - Groq falla y Gemini responde → el agente atiende el mensaje con la respuesta de Gemini.

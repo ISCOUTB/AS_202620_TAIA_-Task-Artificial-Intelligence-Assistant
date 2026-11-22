@@ -33,10 +33,11 @@ _BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 # este valor por defecto, un clon sin GEMINI_MODEL recibia 404. Ver
 # docs/arc42/11-riesgos-y-deudas-tecnicas.md, seccion 11.7.
 _DEFAULT_MODEL = "gemini-3.5-flash-lite"
-# FallbackLLM prueba hasta tres proveedores en serie (ADR-0013) y la app espera
-# 30 s. Con 20 s por proveedor la cadena podia tardar 60 s y la app mostraba un
-# error mientras el backend seguia trabajando. Con 8 s, la cadena cabe en 30 s.
-_DEFAULT_TIMEOUT = 8.0
+# Gemini es el ultimo respaldo de la cadena (ADR-0013) y el mas lento: en la
+# evaluacion del 2026-11-22 su p95 fue 8,1 s, y con 8 s se cortaban respuestas.
+# Con 15 s, mas 8 s por cada clave de Groq, la cadena tarda como maximo 31 s y
+# la app espera 40 s, asi que el estudiante nunca ve un error de tiempo agotado.
+_DEFAULT_TIMEOUT = 15.0
 # RF-AGT-14: la ayuda acota el razonamiento, que cuenta contra maxOutputTokens.
 # "minimal" es el nivel mas bajo que acepta gemini-3.5-flash-lite.
 _HELP_THINKING = {"thinkingLevel": "minimal"}

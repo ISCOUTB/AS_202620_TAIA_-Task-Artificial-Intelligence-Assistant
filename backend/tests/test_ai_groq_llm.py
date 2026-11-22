@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pytest
 
+from app.modules.ai.adapters.outbound.gemini_llm import GeminiLLM
 from app.modules.ai.adapters.outbound.groq_llm import GroqLLM
 from app.modules.ai.application.ports.llm import LLMError
 from app.modules.ai.domain.messages import Channel, IncomingRequest, Intent
@@ -198,11 +199,17 @@ def test_help_cut_by_length_is_flagged_as_truncated_rf_agt_14():
     assert llm.last_usage().truncated is True
 
 
+# `receiveTimeout` del cliente Flutter (frontend/lib/core/api_client.dart).
+APP_WAIT_SECONDS = 40
+
+
 def test_default_client_timeout_lets_the_chain_fit_the_app_wait_rf_agt_20():
-    """Tres proveedores en serie (dos claves de Groq y Gemini) caben en los 30 s de la app."""
+    """Tres proveedores en serie (dos claves de Groq y Gemini) caben en los 40 s de la app."""
     llm = GroqLLM(api_key="test-key")
+    gemini = GeminiLLM(api_key="test-key")
     try:
         assert llm._client.timeout == httpx.Timeout(8.0)
-        assert 3 * 8.0 < 30
+        assert 2 * 8.0 + gemini._client.timeout.read < APP_WAIT_SECONDS
     finally:
         llm.close()
+        gemini.close()

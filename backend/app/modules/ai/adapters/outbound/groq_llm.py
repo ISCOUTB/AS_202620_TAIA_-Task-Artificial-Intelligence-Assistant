@@ -29,9 +29,10 @@ from app.modules.ai.domain.messages import IncomingRequest, Intent, Interpretati
 
 _URL = "https://api.groq.com/openai/v1/chat/completions"
 _DEFAULT_MODEL = "openai/gpt-oss-120b"
-# FallbackLLM prueba hasta tres proveedores en serie (ADR-0013) y la app espera
-# 30 s. Con 20 s por proveedor la cadena podia tardar 60 s y la app mostraba un
-# error mientras el backend seguia trabajando. Con 8 s, la cadena cabe en 30 s.
+# FallbackLLM prueba hasta tres proveedores en serie (ADR-0013). Con 20 s por
+# proveedor la cadena podia tardar 60 s y la app mostraba un error mientras el
+# backend seguia trabajando. Groq responde rapido (p95 de 1,4 s el 2026-11-22):
+# 8 s por clave, mas 15 s de Gemini, caben en los 40 s que espera la app.
 _DEFAULT_TIMEOUT = 8.0
 # gpt-oss razona antes de responder y esos tokens cuentan contra
 # max_completion_tokens: con poco margen, la respuesta saldria cortada.

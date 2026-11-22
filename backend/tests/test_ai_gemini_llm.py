@@ -217,7 +217,7 @@ def test_timeout_raises_llm_error_rf_agt_20():
 def test_default_client_timeout_lets_the_chain_fit_the_app_wait_rf_agt_20():
     llm = GeminiLLM(api_key="test-key")
     try:
-        assert llm._client.timeout == httpx.Timeout(8.0)
+        assert llm._client.timeout == httpx.Timeout(15.0)
     finally:
         llm.close()
 

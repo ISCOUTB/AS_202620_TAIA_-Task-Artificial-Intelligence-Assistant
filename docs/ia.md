@@ -1512,7 +1512,7 @@ El equipo reportó que la sesión no se guardaba, que no llegaban notificaciones
 
 * Envío de recordatorios: un recordatorio que falla ya no detiene el lote (en producción, `IntegrityError` en cada ejecución); la notificación se inserta con `ON CONFLICT DO NOTHING` y el log registra la restricción (RF-NOT-02).
 * App: el splash entra directo con la sesión guardada (RF-USR-03); aviso y contador al llegar una notificación con la app abierta (RF-NOT-02).
-* Agente: los mensajes anteriores se envían al LLM como dato delimitado (RF-AGT-15); el backend calcula las fechas relativas y la regla de consultas filtra por el día nombrado (RF-AGT-11); 8 s por proveedor (RF-AGT-20).
+* Agente: los mensajes anteriores se envían al LLM como dato delimitado (RF-AGT-15); el backend calcula las fechas relativas y la regla de consultas filtra por el día nombrado (RF-AGT-11); 8 s por clave de Groq y 15 s para Gemini, con la app esperando 40 s (RF-AGT-20).
 * App: estadísticas en el perfil (RF-PRF-01), pantalla de configuración (RF-USR-11), aviso bajo la barra del chat (RF-AGT-01) y configuración inicial obligatoria con fechas sugeridas por tipo de estudiante (RF-ASG-10, RF-ASG-08).
 * Plan de estudio: migración `0007` (`study_plan_busy_blocks`, `max_daily_minutes`, `preferred_time`), huecos libres y colocación con las reglas de RF-EST-02 en Academic, sugerencia del LLM por el puerto `StudyPlanAdvisor` de AI sin identificadores, rutas `/academic/study-plans`, sesiones aceptadas en el calendario, y formulario y vista en la app (RF-EST-01 a 03).
 
