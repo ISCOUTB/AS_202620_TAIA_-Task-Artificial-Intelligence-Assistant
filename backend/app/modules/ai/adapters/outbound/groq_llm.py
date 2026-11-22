@@ -1,4 +1,4 @@
-"""Adaptador de salida hacia Groq, proveedor de respaldo de ADR-0011.
+"""Adaptador de salida hacia Groq, proveedor principal desde ADR-0013.
 
 Unico archivo del modulo que conoce el formato de la API de Groq (compatible
 con chat completions de OpenAI). Como GeminiLLM, traduce todo fallo a LLMError
@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from app.modules.ai.adapters.outbound.interpretation_contract import (
+    DEFAULT_HELP_MAX_TOKENS,
     HELP_INSTRUCTIONS,
     MAX_HELP_CHARS,
     as_data,
@@ -32,12 +33,14 @@ _MAX_COMPLETION_TOKENS = 1024
 _KEY_VARIABLES = ("GROQ_API_KEY_1", "GROQ_API_KEY_2")
 
 
-def _nullable_object(fields: tuple[str, ...]) -> dict[str, Any]:
+def _nullable_object(fields: tuple[str, ...], booleans: tuple[str, ...] = ()) -> dict[str, Any]:
+    properties: dict[str, Any] = {field: {"type": ["string", "null"]} for field in fields}
+    properties.update({field: {"type": ["boolean", "null"]} for field in booleans})
     return {
         "type": ["object", "null"],
         "additionalProperties": False,
-        "required": list(fields),
-        "properties": {field: {"type": ["string", "null"]} for field in fields},
+        "required": [*fields, *booleans],
+        "properties": properties,
     }
 
 
@@ -46,13 +49,16 @@ def _nullable_object(fields: tuple[str, ...]) -> dict[str, Any]:
 _INTERPRETATION_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["intent", "confidence", "task", "task_hint", "filters"],
+    "required": ["intent", "confidence", "task", "task_hint", "filters", "period"],
     "properties": {
         "intent": {"type": "string", "enum": [intent.value for intent in Intent]},
         "confidence": {"type": "number"},
-        "task": _nullable_object(("title", "due_at", "subject", "description")),
+        "task": _nullable_object(
+            ("title", "due_at", "subject", "description", "type"), booleans=("title_generated",)
+        ),
         "task_hint": {"type": ["string", "null"]},
-        "filters": _nullable_object(("text", "subject", "status", "due_from", "due_to")),
+        "filters": _nullable_object(("text", "subject", "status", "type", "due_from", "due_to")),
+        "period": _nullable_object(("start", "end")),
     },
 }
 
@@ -66,11 +72,13 @@ class GroqLLM(LLMPort):
         model: str = _DEFAULT_MODEL,
         client: httpx.Client | None = None,
         timeout: float = _DEFAULT_TIMEOUT,
+        help_max_tokens: int = DEFAULT_HELP_MAX_TOKENS,
     ) -> None:
         if not api_key:
             raise ValueError("falta la API key de Groq")
         self._api_key = api_key
         self._model = model
+        self._help_max_tokens = help_max_tokens
         self._client = client or httpx.Client(timeout=timeout)
         self._last_usage: LLMUsage | None = None
 
@@ -78,8 +86,8 @@ class GroqLLM(LLMPort):
     def all_from_env(cls) -> list["GroqLLM"]:
         """Un adaptador por cada credencial configurada, en orden.
 
-        Sin credenciales devuelve una lista vacia: el respaldo es opcional y el
-        sistema funciona solo con Gemini (ADR-0011).
+        Sin credenciales devuelve una lista vacia: Groq es opcional y el sistema
+        funciona solo con Gemini (ADR-0011, ADR-0013).
         """
 
         model = os.getenv("GROQ_MODEL") or _DEFAULT_MODEL
@@ -112,6 +120,7 @@ class GroqLLM(LLMPort):
             instructions=HELP_INSTRUCTIONS,
             message=as_data("Pregunta", question),
             temperature=0.2,
+            max_tokens=self._help_max_tokens,
         ).strip()
         if not answer:
             raise LLMError("respuesta vacia")
@@ -128,6 +137,7 @@ class GroqLLM(LLMPort):
         message: str,
         temperature: float,
         response_format: dict[str, Any] | None = None,
+        max_tokens: int = _MAX_COMPLETION_TOKENS,
     ) -> str:
         """Llama a chat completions y devuelve el texto de la respuesta.
 
@@ -142,7 +152,8 @@ class GroqLLM(LLMPort):
                 {"role": "user", "content": message},
             ],
             "temperature": temperature,
-            "max_completion_tokens": _MAX_COMPLETION_TOKENS,
+            "max_completion_tokens": max_tokens,
+            # RF-AGT-14: el razonamiento se acota al nivel mas bajo de gpt-oss.
             "reasoning_effort": "low",
         }
         if response_format is not None:

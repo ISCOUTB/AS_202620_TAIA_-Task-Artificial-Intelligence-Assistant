@@ -143,3 +143,56 @@ def test_all_from_env_skips_empty_keys(monkeypatch):
 
     monkeypatch.setenv("GROQ_API_KEY_2", "  ")
     assert GroqLLM.all_from_env() == []
+
+
+def _capture(answer):
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _reply(answer)
+
+    return seen, handler
+
+
+def test_strict_schema_carries_type_generated_title_and_period_rf_agt_05_rf_agt_06():
+    seen, handler = _capture({"intent": "unknown", "confidence": 0.1})
+
+    _groq(handler).interpret(REQUEST, NOW)
+
+    schema = seen["body"]["response_format"]["json_schema"]["schema"]
+    assert "period" in schema["required"]
+    assert {"complete_task", "summary", "query_schedule"} <= set(schema["properties"]["intent"]["enum"])
+    task = schema["properties"]["task"]
+    assert {"type", "title_generated"} <= set(task["required"])
+    assert task["properties"]["title_generated"] == {"type": ["boolean", "null"]}
+    assert schema["properties"]["period"]["required"] == ["start", "end"]
+
+
+def test_help_limits_completion_tokens_and_reasoning_rf_agt_14():
+    seen, handler = _capture("TAIA registra tus tareas.")
+
+    _groq(handler).answer_system_help("que haces")
+
+    body = seen["body"]
+    assert body["max_completion_tokens"] == 1024
+    assert body["reasoning_effort"] == "low"
+    assert "response_format" not in body
+    assert "Ayuda de TAIA" in body["messages"][0]["content"]
+
+
+def test_help_output_limit_is_configurable_rf_agt_14():
+    seen, handler = _capture("TAIA registra tus tareas.")
+    llm = GroqLLM(api_key="test-key", client=httpx.Client(transport=httpx.MockTransport(handler)), help_max_tokens=300)
+
+    llm.answer_system_help("que haces")
+
+    assert seen["body"]["max_completion_tokens"] == 300
+
+
+def test_help_cut_by_length_is_flagged_as_truncated_rf_agt_14():
+    llm = _groq(lambda request: _reply("TAIA te permite crear tar", finish="length"))
+
+    llm.answer_system_help("que haces")
+
+    assert llm.last_usage().truncated is True

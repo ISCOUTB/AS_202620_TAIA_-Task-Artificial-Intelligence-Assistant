@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from app.modules.ai.adapters.outbound.interpretation_contract import (
+    DEFAULT_HELP_MAX_TOKENS,
     HELP_INSTRUCTIONS,
     MAX_HELP_CHARS,
     as_data,
@@ -29,6 +30,13 @@ _BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 # docs/arc42/11-riesgos-y-deudas-tecnicas.md, seccion 11.7.
 _DEFAULT_MODEL = "gemini-3.5-flash-lite"
 _DEFAULT_TIMEOUT = 20.0
+# RF-AGT-14: la ayuda acota el razonamiento, que cuenta contra maxOutputTokens.
+# "minimal" es el nivel mas bajo que acepta gemini-3.5-flash-lite.
+_HELP_THINKING = {"thinkingLevel": "minimal"}
+
+
+def _nullable(kind: str) -> dict[str, Any]:
+    return {"type": kind, "nullable": True}
 
 
 _INTERPRETATION_SCHEMA: dict[str, Any] = {
@@ -43,22 +51,33 @@ _INTERPRETATION_SCHEMA: dict[str, Any] = {
             "type": "OBJECT",
             "nullable": True,
             "properties": {
-                "title": {"type": "STRING", "nullable": True},
-                "due_at": {"type": "STRING", "nullable": True},
-                "subject": {"type": "STRING", "nullable": True},
-                "description": {"type": "STRING", "nullable": True},
+                "title": _nullable("STRING"),
+                "title_generated": _nullable("BOOLEAN"),
+                "due_at": _nullable("STRING"),
+                "subject": _nullable("STRING"),
+                "description": _nullable("STRING"),
+                "type": _nullable("STRING"),
             },
         },
-        "task_hint": {"type": "STRING", "nullable": True},
+        "task_hint": _nullable("STRING"),
         "filters": {
             "type": "OBJECT",
             "nullable": True,
             "properties": {
-                "text": {"type": "STRING", "nullable": True},
-                "subject": {"type": "STRING", "nullable": True},
-                "status": {"type": "STRING", "nullable": True},
-                "due_from": {"type": "STRING", "nullable": True},
-                "due_to": {"type": "STRING", "nullable": True},
+                "text": _nullable("STRING"),
+                "subject": _nullable("STRING"),
+                "status": _nullable("STRING"),
+                "type": _nullable("STRING"),
+                "due_from": _nullable("STRING"),
+                "due_to": _nullable("STRING"),
+            },
+        },
+        "period": {
+            "type": "OBJECT",
+            "nullable": True,
+            "properties": {
+                "start": _nullable("STRING"),
+                "end": _nullable("STRING"),
             },
         },
     },
@@ -75,11 +94,13 @@ class GeminiLLM(LLMPort):
         model: str = _DEFAULT_MODEL,
         client: httpx.Client | None = None,
         timeout: float = _DEFAULT_TIMEOUT,
+        help_max_tokens: int = DEFAULT_HELP_MAX_TOKENS,
     ) -> None:
         if not api_key:
             raise ValueError("falta la API key de Gemini")
         self._api_key = api_key
         self._model = model
+        self._help_max_tokens = help_max_tokens
         self._client = client or httpx.Client(timeout=timeout)
         self._last_usage: LLMUsage | None = None
 
@@ -118,7 +139,11 @@ class GeminiLLM(LLMPort):
         text = self._generate(
             instructions=HELP_INSTRUCTIONS,
             message=as_data("Pregunta", question),
-            config={"temperature": 0.2, "maxOutputTokens": 400},
+            config={
+                "temperature": 0.2,
+                "maxOutputTokens": self._help_max_tokens,
+                "thinkingConfig": _HELP_THINKING,
+            },
         )
         answer = text.strip()
         if not answer:
