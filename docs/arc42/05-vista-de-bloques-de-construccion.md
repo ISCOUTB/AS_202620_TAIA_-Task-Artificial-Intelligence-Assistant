@@ -2,612 +2,153 @@
 
 ## 5.1. Vista general del sistema
 
-TAIA se implementa actualmente como un **monolito modular**. Los cuatro módulos principales del backend son:
+TAIA se implementa como un **monolito modular** ([ADR-0001](../adr/0001-estilo-arquitectonico.md), [ADR-0008](../adr/0008-mantener-monolito-sin-extraer-modulos.md)). Los cuatro módulos del backend viven en `backend/app/modules/`:
 
-* **Usuario:** identidad, autenticación, autorización y vinculación con Telegram.
-* **Academic:** gestión de información académica, actualmente centrada en tareas.
-* **AI:** procesamiento de mensajes mediante un LLM y coordinación de operaciones académicas.
-* **Reminders:** creación, consulta, edición, finalización y envío de recordatorios asociados a tareas académicas.
+* **Usuario:** identidad, sesión, perfil, consentimiento, dispositivos y vinculación con Telegram.
+* **Academic:** asignaturas, horario, período, actividades (tareas y exámenes), calendario, estadísticas y plan de estudio.
+* **Reminders:** recordatorios, su envío automático por FCM y la bandeja de notificaciones.
+* **AI:** el agente conversacional, que interpreta mensajes con un LLM y opera sobre Academic.
 
-Cada módulo organiza sus responsabilidades en capas de entrada, aplicación, dominio y adaptadores cuando existe una dependencia externa o un puerto que deba aislarse.
-
-### Ejemplo vista general Módulo Academic
+Cada módulo tiene tres capas. `domain` contiene las entidades y no importa SQLAlchemy. `application` contiene los puertos y los casos de uso. `adapters` contiene la entrada (HTTP, webhook) y la salida (repositorios SQLAlchemy, proveedores externos). Los modelos ORM se convierten a entidades de dominio con *mappers*.
 
 ```text
-                         API TAIA
-                            │
-                            ▼
-                  ┌───────────────────┐
-                  │ Módulo Academic   │
-                  │                   │
-                  │ ┌───────────────┐ │
-                  │ │   Adapters    │ │
-                  │ │    / API      │ │
-                  │ └───────┬───────┘ │
-                  │         │         │
-                  │         ▼         │
-                  │ ┌───────────────┐ │
-                  │ │ Application   │ │
-                  │ │ Use Cases     │ │
-                  │ └───────┬───────┘ │
-                  │         │         │
-                  │         ▼         │
-                  │ ┌───────────────┐ │
-                  │ │    Domain     │ │
-                  │ │     Task      │ │
-                  │ └───────┬───────┘ │
-                  │         │         │
-                  │         ▼         │
-                  │ ┌───────────────┐ │
-                  │ │ Repository    │ │
-                  │ │     Port      │ │
-                  │ └───────┬───────┘ │
-                  └──────────┼────────┘
-                             │
-                             ▼
-                  InMemoryTaskRepository
+             HTTP / webhook
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │ adapters/inbound     │   rutas FastAPI, webhook de Telegram
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ application          │   casos de uso y puertos
+        │  ports/inbound  ◄────┼── usados por otros módulos
+        │  ports/outbound      │
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ domain               │   entidades y reglas
+        └──────────────────────┘
+                   ▲
+        ┌──────────┴───────────┐
+        │ adapters/outbound    │   SQLAlchemy, Groq/Gemini, FCM, Resend
+        └──────────────────────┘
 ```
-
-### Motivation
-
-La separación permite que el caso de uso de registro de tareas dependa de una abstracción de persistencia y no de una implementación concreta.
-
-Esto permite que el adaptador utilizado actualmente en memoria pueda ser reemplazado posteriormente por un adaptador para PostgreSQL sin modificar las reglas principales del dominio.
-
-La estructura busca que las reglas principales permanezcan dentro de los módulos y que las dependencias externas se conecten mediante adaptadores.
 
 ## 5.2. Bloques de construcción contenidos
 
 ### 5.2.1 Módulo Usuario
 
-### Responsabilidad
+**Responsabilidad.** Registrar y autenticar al estudiante, mantener la sesión (JWT de acceso y token de renovación), gestionar el perfil, el consentimiento de datos, la desactivación de la cuenta, la recuperación de contraseña, los tokens FCM de los dispositivos y la vinculación con Telegram.
 
-El módulo **Usuario** administra la identidad de los estudiantes y proporciona el contexto de autenticación utilizado por los demás módulos.
-
-Sus responsabilidades principales son:
-
-* Registrar usuarios.
-* Validar credenciales.
-* Generar y validar tokens JWT.
-* Obtener el usuario autenticado.
-* Proporcionar el identificador del usuario a otros módulos mediante una dependencia de autenticación.
-* Generar enlaces temporales para vincular una cuenta de Telegram.
-* Confirmar la vinculación de Telegram.
-* Evitar que una cuenta de Telegram sea vinculada a más de un usuario.
-
-### Estructura
-
-```text
-Usuario
-│
-├── adapters/
-│   ├── inbound/
-│   │   └── api.py
-│   │
-│   └── outbound/
-│       ├── in_memory_user_repository.py
-│       ├── in_memory_telegram_link_repository.py
-│       ├── jwt_token_service.py
-│       └── pbkdf2_password_hasher.py
-│
-├── application/
-│   ├── ports/
-│   └── use_cases/
-│       ├── register_user.py
-│       ├── login_user.py
-│       ├── get_current_user.py
-│       └── link_telegram.py
-│
-└── domain/
-    ├── entities/
-    │   └── usuario.py
-    └── value_objects/
-        └── email.py
-```
-
-### Bloques principales
-
-| Bloque                           | Responsabilidad                                                        |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| `Usuario API`                    | Expone las operaciones HTTP relacionadas con usuarios y autenticación. |
-| `RegisterUserUseCase`            | Registra un nuevo usuario y valida que el correo no esté registrado.   |
-| `LoginUserUseCase`               | Valida credenciales y genera el JWT.                                   |
-| `GetCurrentUserUseCase`          | Recupera el usuario asociado al token autenticado.                     |
-| `CreateTelegramLinkUseCase`      | Genera un token temporal para vincular Telegram.                       |
-| `ConfirmTelegramLinkUseCase`     | Valida el token y asocia el `telegram_user_id` al usuario.             |
-| `Usuario`                        | Entidad de dominio que representa al estudiante.                       |
-| `Email`                          | Value Object utilizado para representar y validar el correo.           |
-| `UserRepository`                 | Puerto utilizado para abstraer la persistencia de usuarios.            |
-| `TelegramLinkRepository`         | Puerto para almacenar tokens temporales de vinculación.                |
-| `JwtTokenService`                | Adaptador encargado de crear y validar tokens JWT.                     |
-| `Pbkdf2PasswordHasher`           | Adaptador encargado del hash y verificación de contraseñas.            |
-| `InMemoryUserRepository`         | Persistencia temporal utilizada en el corte actual.                    |
-| `InMemoryTelegramLinkRepository` | Persistencia temporal de los tokens de vinculación.                    |
-
-### Interfaz utilizada por otros módulos
-
-El módulo expone el contrato de aplicación `IdentityService`, que permite a Academic, AI y Reminders autenticar un token y consultar el `telegram_user_id` sin depender del adaptador HTTP de Usuario.
-
-La autenticación HTTP permanece en el adaptador inbound de Usuario; los demás contextos consumen la interfaz de aplicación.
-
----
+| Bloque | Responsabilidad |
+| --- | --- |
+| `adapters/inbound/api.py` | Rutas `/users`. |
+| `adapters/inbound/telegram_webhook.py` | `POST /telegram/webhook`: vincula con `/start <código>` y pasa los demás mensajes al agente (RF-TEL-04). |
+| `register_user`, `login_user`, `manage_sessions` | Registro, inicio de sesión con límite de intentos, renovación y cierre de sesión. |
+| `manage_account`, `reset_password` | Perfil, contraseña, desactivación y recuperación por correo. |
+| `manage_devices`, `link_telegram` | Tokens FCM y vinculación con Telegram. |
+| `IdentityService` (puerto de entrada) | Autentica el JWT para los demás módulos. |
+| `UserDeviceDirectory` (puerto de entrada) | Da a Reminders los tokens FCM y si la cuenta está activa. |
+| Adaptadores de salida | Repositorios SQLAlchemy, `JwtTokenService`, `Pbkdf2PasswordHasher`, `ResendPasswordResetMailer`. |
 
 ### 5.2.2 Módulo Academic
 
-### Responsabilidad
+**Responsabilidad.** La información académica del estudiante: asignaturas con alias y archivado, bloques de horario, período académico, actividades con prioridad calculada y estado `overdue`, calendario, estadísticas del perfil y plan de estudio.
 
-El módulo **Academic** administra la información académica que pertenece al estudiante.
-
-En el estado actual, el principal agregado gestionado es `Task`.
-
-Sus operaciones implementadas son:
-
-* Registrar una tarea.
-* Consultar las tareas del usuario.
-* Actualizar una tarea.
-* Marcar una tarea como completada.
-
-### Estructura
-
-```text
-Academic
-│
-├── adapters/
-│   ├── inbound/
-│   │   └── api.py
-│   │
-│   └── outbound/
-│       ├── in_memory_task_repository.py
-│       └── repository_provider.py
-│
-├── application/
-│   ├── ports/
-│   │
-│   └── use_cases/
-│       ├── register_task.py
-│       ├── list_tasks.py
-│       ├── update_task.py
-│       └── complete_task.py
-│
-└── domain/
-    └── entities/
-        └── task.py
-```
-
-### Bloques principales
-
-| Bloque                   | Responsabilidad                                                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `Academic API`           | Recibe solicitudes HTTP relacionadas con tareas.                                                                             |
-| `RegisterTaskUseCase`    | Registra una nueva tarea para el usuario autenticado.                                                                        |
-| `ListTasksUseCase`       | Recupera únicamente las tareas pertenecientes al usuario autenticado.                                                        |
-| `UpdateTaskUseCase`      | Actualiza los datos permitidos de una tarea.                                                                                 |
-| `CompleteTaskUseCase`    | Cambia el estado de una tarea a completada.                                                                                  |
-| `Task`                   | Entidad de dominio que representa una tarea académica.                                                                       |
-| `TaskRepository`         | Puerto de persistencia utilizado por los casos de uso.                                                                       |
-| `InMemoryTaskRepository` | Implementación temporal del repositorio.                                                                                     |
-| `repository_provider`    | Proporciona una instancia compartida del repositorio para los componentes que necesitan acceder al mismo conjunto de tareas. |
-
-### Interfaz HTTP
-
-Actualmente se exponen:
-
-```text
-POST  /academic/tasks
-GET   /academic/tasks
-PATCH /academic/tasks/{task_id}
-PATCH /academic/tasks/{task_id}/complete
-```
-
-Todas las operaciones utilizan el usuario autenticado obtenido desde el módulo Usuario.
-
-### Aislamiento de datos
-
-El identificador del usuario se propaga hasta los casos de uso:
-
-```text
-JWT
- │
- ▼
-IdentityService
- │
- ▼
-Academic API
- │
- ▼
-Use Case
- │
- ▼
-TaskRepository
-```
-
-De esta manera, la consulta y modificación de tareas se realizan dentro del contexto del estudiante autenticado.
-
----
+| Bloque | Responsabilidad |
+| --- | --- |
+| `api.py`, `structure_api.py`, `calendar_api.py`, `statistics_api.py`, `study_plan_api.py` | Rutas `/academic/...`. |
+| `manage_tasks`, `manage_subjects`, `manage_schedule`, `manage_academic_period` | Casos de uso de actividades, asignaturas, horario y período. |
+| `academic_calendar`, `profile_statistics` | Calendario y estadísticas. |
+| `manage_study_plan`, `study_planner.py` | Genera, acepta y descarta el plan de estudio (RF-EST-01 a 03). |
+| `AcademicTaskManagement`, `AcademicInsights` (puertos de entrada) | Los usan AI y Reminders. |
+| `ai_study_session_advisor.py` (adaptador de salida) | Pide a AI el consejo del plan mediante `StudyPlanAdvisor`. |
+| Repositorios SQLAlchemy | Tareas, asignaturas, horario, período y plan. |
 
 ### 5.2.3 Módulo AI
 
-### Responsabilidad
+**Responsabilidad.** El agente conversacional. Recibe el mensaje desde la app o desde Telegram, lo interpreta con el LLM, valida la salida, pide confirmación antes de escribir (RF-AGT-04) y ejecuta la operación mediante los puertos de Academic. El LLM no accede a la persistencia, no recibe identificadores de usuario y ningún identificador que produzca se usa para acceder a datos.
 
-El módulo **AI** proporciona la interfaz de asistente conversacional de TAIA.
-
-Su responsabilidad es recibir mensajes del usuario, mantener el contexto mínimo necesario de la conversación, solicitar al LLM una interpretación y ejecutar las operaciones académicas correspondientes mediante un puerto.
-
-El LLM no accede directamente al repositorio académico.
-
-### Estructura
-
-```text
-AI
-│
-├── adapters/
-│   ├── inbound/
-│   │   └── api.py
-│   │
-│   └── outbound/
-│       ├── academic_gateway.py
-│       ├── gemini_llm.py
-│       ├── fake_llm.py
-│       └── in_memory_conversation_store.py
-│
-├── application/
-│   ├── dto.py
-│   ├── replies.py
-│   │
-│   ├── ports/
-│   │   ├── academic_gateway.py
-│   │   ├── conversation_store.py
-│   │   └── llm.py
-│   │
-│   └── use_cases/
-│       └── handle_message.py
-│
-└── domain/
-    ├── conversation.py
-    └── messages.py
-```
-
-### Bloques principales
-
-| Bloque                      | Responsabilidad                                                                     |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `AI API`                    | Recibe mensajes HTTP autenticados.                                                  |
-| `HandleUserMessageUseCase`  | Coordina la interpretación y ejecución de una solicitud.                            |
-| `LLM Port`                  | Abstrae el proveedor de inteligencia artificial.                                    |
-| `GeminiLLM`                 | Adaptador del proveedor Gemini.                                                     |
-| `FakeLLM`                   | Implementación utilizada en pruebas.                                                |
-| `AcademicGateway`           | Puerto mediante el cual AI interactúa con Academic.                                 |
-| `AcademicGatewayAdapter`    | Traduce las operaciones del contexto AI hacia los casos de uso del módulo Academic. |
-| `ConversationStore`         | Puerto utilizado para mantener el estado de conversación.                           |
-| `InMemoryConversationStore` | Implementación temporal del almacenamiento de conversaciones.                       |
-| `Conversation`              | Representa el contexto de una conversación.                                         |
-| `IncomingRequest`           | Representa el mensaje recibido por el asistente.                                    |
-
-### Interfaz HTTP
-
-```text
-POST /ai/message
-```
-
-El endpoint exige autenticación.
-
-La entrada contiene:
-
-```text
-text
-channel
-```
-
-y la salida contiene:
-
-```text
-text
-awaiting_confirmation
-```
-
-### Aislamiento arquitectónico
-
-El recorrido de AI hacia Academic se realiza mediante:
-
-```text
-AI
- │
- ▼
-AcademicGateway
- │
- ▼
-AcademicGatewayAdapter
- │
- ▼
-Academic Use Cases
- │
- ▼
-TaskRepository
-```
-
-El LLM no conoce:
-
-* `TaskRepository`
-* `InMemoryTaskRepository`
-* la entidad `Task`
-* los detalles internos de persistencia.
-
-Esto permite sustituir Gemini sin modificar las reglas del dominio académico.
-
----
+| Bloque | Responsabilidad |
+| --- | --- |
+| `adapters/inbound/api.py` | `POST /ai/message`. |
+| `handle_message.py`, `telegram_chat.py` | Coordinan interpretación, confirmación y ejecución para la app y para Telegram. |
+| `advise_study_plan.py` | Publica `StudyPlanAdvisor` para Academic. |
+| `LLM` (puerto de salida) | Abstrae el proveedor. |
+| `FallbackLLM` | Groq con cada clave configurada y después Gemini; si fallan todos, falla cerrado ([ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md), [ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)). |
+| `GroqLLM`, `GeminiLLM`, `interpretation_contract.py` | Adaptadores de cada proveedor y contrato común: reglas, texto del estudiante delimitado como dato y validación de la salida. |
+| `AcademicGateway` | Traduce las operaciones del agente a `AcademicTaskManagement` y `AcademicInsights`. |
+| `SqlAlchemyConversationStore` | Contexto conversacional acotado (RF-AGT-15). |
 
 ### 5.2.4 Módulo Reminders
 
-### Responsabilidad
+**Responsabilidad.** Los recordatorios de cada actividad, por defecto (RF-REC-02) y personalizados, sincronizados con el ciclo de vida de la actividad (RF-REC-06). También el envío automático y la bandeja de notificaciones.
 
-El módulo **Reminders** administra recordatorios asociados a tareas académicas.
-
-Sus responsabilidades actuales son:
-
-* Crear recordatorios.
-* Consultar recordatorios.
-* Consultar un recordatorio específico.
-* Editar recordatorios.
-* Eliminar recordatorios.
-* Marcar recordatorios como completados.
-* Validar la existencia y pertenencia de la tarea académica asociada.
-* Construir notificaciones.
-* Enviar notificaciones mediante Telegram.
-
-### Estructura
-
-```text
-Reminders
-│
-├── adapters/
-│   ├── inbound/
-│   │   └── http_controller.py
-│   │
-│   └── outbound/
-│       ├── academic_task_lookup_adapter.py
-│       ├── in_memory_reminder_repository.py
-│       ├── repository_provider.py
-│       ├── notification_provider.py
-│       ├── telegram_bot_client.py
-│       └── telegram_notification_sender.py
-│
-├── application/
-│   ├── ports/
-│   │   ├── inbound/
-│   │   │   └── reminder_ports.py
-│   │   │
-│   │   └── outbound/
-│   │       ├── academic_task_lookup.py
-│   │       ├── notification_sender.py
-│   │       └── reminder_repository.py
-│   │
-│   └── use_cases/
-│       ├── create_reminder.py
-│       ├── list_reminders.py
-│       ├── get_reminder.py
-│       ├── edit_reminder.py
-│       ├── delete_reminder.py
-│       ├── mark_reminder_completed.py
-│       ├── schedule_notification.py
-│       └── send_notification.py
-│
-└── domain/
-    └── entities/
-        ├── reminder.py
-        ├── notification.py
-        └── reminder_schedule.py
-```
-
-### Bloques principales
-
-| Bloque                         | Responsabilidad                                                           |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `Reminders HTTP Controller`    | Expone las operaciones HTTP de recordatorios.                             |
-| `CreateReminderUseCase`        | Valida y crea un recordatorio.                                            |
-| `ListRemindersUseCase`         | Recupera los recordatorios del usuario.                                   |
-| `GetReminderUseCase`           | Recupera un recordatorio verificando pertenencia.                         |
-| `EditReminderUseCase`          | Actualiza un recordatorio no completado.                                  |
-| `DeleteReminderUseCase`        | Elimina un recordatorio verificando pertenencia.                          |
-| `MarkReminderCompletedUseCase` | Marca un recordatorio como completado.                                    |
-| `ScheduleNotificationUseCase`  | Construye una notificación a partir del recordatorio.                     |
-| `SendNotificationUseCase`      | Envía una notificación mediante el puerto correspondiente.                |
-| `ReminderRepository`           | Puerto de persistencia de recordatorios.                                  |
-| `InMemoryReminderRepository`   | Persistencia temporal del módulo.                                         |
-| `AcademicTaskLookup`           | Puerto para verificar tareas académicas relacionadas.                     |
-| `AcademicTaskLookupAdapter`    | Conecta Reminders con el repositorio/capa de consulta de Academic.        |
-| `NotificationSender`           | Puerto de salida para el envío de notificaciones.                         |
-| `TelegramNotificationSender`   | Implementación del envío mediante Telegram.                               |
-| `TelegramBotApiClient`         | Cliente que encapsula la comunicación con Telegram Bot API.               |
-| `Reminder`                     | Entidad de dominio del recordatorio.                                      |
-| `Notification`                 | Entidad utilizada para representar una notificación preparada para envío. |
-| `ReminderSchedule`             | Estructura relacionada con la organización de recordatorios.              |
-
-### Interfaces HTTP
-
-```text
-POST   /reminders
-GET    /reminders
-GET    /reminders/{reminder_id}
-PATCH  /reminders/{reminder_id}
-DELETE /reminders/{reminder_id}
-POST   /reminders/{reminder_id}/complete
-POST   /reminders/{reminder_id}/notify
-```
-
-### Integración con Academic
-
-Un recordatorio puede estar asociado a una tarea académica.
-
-La creación no confía únicamente en el `task_id` recibido por HTTP. El caso de uso utiliza:
-
-```text
-Reminders
-   │
-   ▼
-AcademicTaskLookup
-   │
-   ▼
-AcademicTaskLookupAdapter
-   │
-   ▼
-Academic
-```
-
-El adaptador comprueba que la tarea:
-
-1. exista;
-2. pertenezca al usuario autenticado.
-
-Si la condición no se cumple, el recordatorio no se crea.
-
-### Integración con Telegram
-
-El envío se desacopla mediante:
-
-```text
-SendNotificationUseCase
-        │
-        ▼
-NotificationSender
-        │
-        ▼
-TelegramNotificationSender
-        │
-        ▼
-TelegramBotApiClient
-        │
-        ▼
-Telegram Bot API
-```
-
-El caso de uso no conoce los detalles HTTP de Telegram.
-
----
+| Bloque | Responsabilidad |
+| --- | --- |
+| `http_controller.py` | Rutas `/reminders`. |
+| `notifications_controller.py` | Rutas `/notifications` (bandeja, no leídas, marcar como leídas). |
+| `reminder_dispatch_loop.py` | Proceso asyncio que corre en el *lifespan* de la API y cada 60 s llama al despacho ([ADR-0012](../adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md)). |
+| `dispatch_due_reminders.py` | Toma cada recordatorio vencido una sola vez (`claim`, un `UPDATE` condicional), crea la notificación y la envía con hasta 3 reintentos. Sin dispositivos o sin FCM, queda en la bandeja (RF-NOT-04). |
+| `TaskReminderSync` (puerto de entrada) | Academic y Usuario lo llaman al crear, cambiar, completar o eliminar una actividad y al desactivar la cuenta. |
+| `PushSender` / `FcmPushSender` | Envío por Firebase Cloud Messaging. Sin `FIREBASE_CREDENTIALS_JSON` queda desactivado y la API arranca igual. |
+| `AcademicTaskLookupAdapter` | Consulta la actividad mediante `AcademicTaskManagement`. |
+| Repositorios SQLAlchemy | Recordatorios y notificaciones. |
 
 ## 5.3. Integración entre los cuatro módulos
 
-Los módulos forman un monolito modular y se comunican mediante interfaces y adaptadores.
+Un módulo nunca importa los adaptadores ni los repositorios de otro: solo los puertos de entrada que publica el módulo propietario. `tools/audit_boundaries.py` lo comprueba en el CI.
 
 ```text
-                         ┌───────────────┐
-                         │    Usuario    │
-                         │               │
-                         │ JWT / Identity│
-                         └───────┬───────┘
-                                 │
-                       authenticated user_id
-                                 │
-                ┌────────────────┼────────────────┐
-                │                │                │
-                ▼                ▼                ▼
-         ┌────────────┐   ┌────────────┐   ┌────────────┐
-         │ Academic   │   │     AI     │   │ Reminders  │
-         │            │   │            │   │            │
-         │ Tasks      │◄──│ Gateway    │──►│ Reminders  │
-         │ Repository │   │ LLM        │   │ Notification│
-         └─────┬──────┘   └────────────┘   └─────┬──────┘
-               │                                  │
-               │                                  │
-               ▼                                  ▼
-       InMemoryTaskRepository             Telegram adapter
-                                              │
-                                              ▼
-                                      Telegram Bot API
+                      ┌────────────────────┐
+     JWT ────────────►│      Usuario       │◄──── Telegram (webhook)
+                      │ IdentityService    │
+                      │ UserDeviceDirectory│
+                      └──┬──────────────▲──┘
+            AgentChat    │              │ UserDeviceDirectory
+                         ▼              │
+   ┌──────────┐  AcademicTaskManagement ┌──────────────┐
+   │    AI    │────────────────────────►│   Academic   │
+   │          │◄────────────────────────│              │
+   └────┬─────┘     StudyPlanAdvisor    └──┬────────▲──┘
+        │                  TaskReminderSync │        │ AcademicTaskManagement
+        ▼                                   ▼        │
+   Groq -> Gemini                         ┌──────────┴───┐
+                                          │  Reminders   │──► FCM
+                                          └──────────────┘
 ```
 
-Las relaciones principales son:
-
-| Origen    | Destino  | Mecanismo                           |
-| --------- | -------- | ----------------------------------- |
-| Academic  | Usuario  | `IdentityService`                  |
-| AI        | Usuario  | `IdentityService`                  |
-| Reminders | Usuario  | `IdentityService`                  |
-| AI        | Academic | `AcademicGateway`                   |
-| Reminders | Academic | `AcademicTaskLookup`                |
-| Reminders | Telegram | `NotificationSender`                |
-| Usuario   | Telegram | vinculación mediante token temporal |
-| AI        | Gemini   | `LLM` port / `GeminiLLM`            |
-
----
+| Origen | Destino | Puerto |
+| --- | --- | --- |
+| Academic, AI, Reminders | Usuario | `IdentityService` (autenticación compartida en `app/shared/adapters/inbound/auth.py`) |
+| Usuario (webhook) | AI | `AgentChat` |
+| AI | Academic | `AcademicTaskManagement`, `AcademicInsights` |
+| Academic | AI | `StudyPlanAdvisor` |
+| Academic, Usuario | Reminders | `TaskReminderSync` |
+| Reminders | Academic | `AcademicTaskManagement` |
+| Reminders | Usuario | `UserDeviceDirectory` |
 
 ## 5.4. Composición de la aplicación
 
-El punto de composición del backend se encuentra en `backend/app/main.py`.
-
-Actualmente se registran los routers:
+El punto de composición es `backend/app/main.py`. Crea los repositorios, el proveedor LLM y el emisor FCM, configura los casos de uso, registra los routers y arranca el bucle de recordatorios en el *lifespan*.
 
 ```text
 FastAPI
- │
- ├── /users
- ├── /academic/tasks
- ├── /ai
- ├── /reminders
- └── /health
+ ├── /users, /telegram/webhook        Usuario
+ ├── /academic/...                    Academic
+ ├── /ai/message                      AI
+ ├── /reminders, /notifications       Reminders
+ └── /health                          Salud
 ```
 
-```python
-app.include_router(academic_router)
-app.include_router(usuario_router)
-app.include_router(ai_router)
-app.include_router(reminders_router)
-```
+La aplicación es una única unidad desplegable ([arc42 §7](07-vista-de-despliegue.md)). El contrato completo está en [`openapi.json`](../api/openapi.json).
 
-La aplicación continúa siendo una única unidad desplegable.
+## 5.5. Persistencia
 
----
+Cada módulo persiste en PostgreSQL con repositorios SQLAlchemy en sus adaptadores de salida, sobre un `Base` compartido en `app/shared/`. Cada tabla tiene un único módulo propietario y no hay claves foráneas entre módulos ([ADR-0009](../adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md), [diccionario de datos](../diccionario_datos.md)). El esquema se versiona con Alembic.
 
-## 5.5. Persistencia actual
-
-El corte actual utiliza implementaciones en memoria.
-
-```text
-Usuario
-   └── InMemoryUserRepository
-
-Academic
-   └── InMemoryTaskRepository
-
-AI
-   └── InMemoryConversationStore
-
-Reminders
-   └── InMemoryReminderRepository
-```
-
-Estas implementaciones permiten ejecutar pruebas y recorridos completos sin depender todavía de PostgreSQL.
-
-Los puertos de persistencia permiten sustituir posteriormente estas implementaciones por adaptadores basados en PostgreSQL sin modificar las reglas principales de los casos de uso.
-
----
+Los repositorios en memoria se conservan para las pruebas unitarias.
 
 ## 5.6. Límites actuales de los bloques
 
-La arquitectura actual debe distinguir entre componentes implementados y componentes previstos.
-
-### Implementado
-
-* API FastAPI.
-* Módulo Usuario.
-* Autenticación JWT.
-* Vinculación de Telegram.
-* Módulo Academic.
-* Registro, consulta, actualización y finalización de tareas.
-* Módulo AI.
-* Gateway entre AI y Academic.
-* Adaptador para Gemini.
-* Almacenamiento de conversación en memoria.
-* Módulo Reminders.
-* CRUD de recordatorios.
-* Asociación de recordatorios con tareas académicas.
-* Construcción y envío de notificaciones mediante Telegram.
-* Repositorios en memoria.
-
-### Pendiente o sujeto a evolución
-
-* Persistencia definitiva en PostgreSQL.
-* Scheduler persistente para disparar automáticamente los recordatorios al llegar `scheduled_at`.
-* Implementación completa de la aplicación Flutter.
-* Integración productiva de todos los flujos de Telegram como canal de entrada.
-* Validación de rendimiento en infraestructura desplegada.
-* Evolución de las capacidades avanzadas de IA como RAG, embeddings o búsqueda semántica.
+Lo implementado y lo pendiente se lleva por requisito en [requerimientos.md](../requerimientos.md). Al cierre quedan como *Parcial* RF-REC-03 (filtros de `/reminders`) y RF-TEL-01 (el bot no informa el resultado de la vinculación), y como *Pendiente* RF-REC-07 y RF-AGT-21. Las capacidades avanzadas de IA (RAG, embeddings, búsqueda semántica) quedan fuera del MVP.

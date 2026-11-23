@@ -10,8 +10,9 @@ Dentro de los módulos que interactúan con sistemas externos se utilizará el p
 
 Las principales dependencias externas consideradas son:
 
-- Telegram Bot API como canal de comunicación.
-- Gemini como proveedor inicial de inteligencia artificial.
+- Telegram Bot API como canal conversacional.
+- Gemini como proveedor inicial de inteligencia artificial. Desde [ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md), Groq es el principal y Gemini el respaldo.
+- Firebase Cloud Messaging para las notificaciones push.
 - PostgreSQL como mecanismo de persistencia.
 
 La lógica de negocio no dependerá directamente de las APIs concretas de estos proveedores cuando exista una probabilidad relevante de sustitución.

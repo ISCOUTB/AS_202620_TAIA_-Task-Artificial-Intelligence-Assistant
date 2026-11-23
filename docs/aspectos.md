@@ -1,209 +1,41 @@
 # Aspectos del sistema
 
-Evidencia adicional de A-03 y A-05:
-[cierre local de E-02/E-05, regresiones y límites de las mediciones](cierre_matriz_local.md),
-[ADR-0006](adr/0006-fronteras-y-evaluacion-verificable.md) y
-[pruebas de frontera y propiedad](../backend/tests/test_s8_closure.py).
+Tabla de trazabilidad de cada aspecto, desde el requisito hasta la evidencia. Los requisitos son los de [requerimientos.md](requerimientos.md); los escenarios de calidad, los de [escenarios_calidad.md](calidad/escenarios_calidad.md).
 
-Actualización verificable de A-03/A-05:
-[regresión del 500 de conversaciones y corrección local](evaluacion_ia/diagnostico_conversations_null.md),
-[aislamiento HTTP: 100/100 comprobaciones](evaluacion_ia/aislamiento_c9dae4fb4f.json).
-Este último resultado no cubre consultas con LLM. El resultado histórico del
-modelo mide intención en 39 mensajes y latencia del adaptador, no S1/S3 completos;
-el costo por operación no corresponde al escenario S5 (sustitución de proveedor).
+| ID | Aspecto | Requisito | C4 | ADR | Código | Pruebas | Evidencia |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [A-01](#a-01-captura-inteligente-de-información-académica) | [Captura inteligente de información académica](#a-01-captura-inteligente-de-información-académica) | [RF-AGT-05](requerimientos.md#rf-agt-05--crear-actividad-por-lenguaje-natural), [RF-AGT-04](requerimientos.md#rf-agt-04--confirmación-determinista-de-acciones-de-escritura), [RF-TEL-04](requerimientos.md#rf-tel-04--conversar-con-el-agente-desde-telegram), [RF-TAR-01](requerimientos.md#rf-tar-01--crear-actividad-tarea-o-examen) | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md), [C4-C3](c4/C4-C3.md) | [ADR-0005](adr/0005-normalizacion-confirmacion-espanol.md), [ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md) | [`ai/`](../backend/app/modules/ai/), [`telegram_webhook.py`](../backend/app/modules/usuario/adapters/inbound/telegram_webhook.py), [`academic/`](../backend/app/modules/academic/) | [`test_ai_create_task_confirmation.py`](../backend/tests/test_ai_create_task_confirmation.py), [`test_telegram_agent_chat.py`](../backend/tests/test_telegram_agent_chat.py), [`test_academic_tasks_api.py`](../backend/tests/test_academic_tasks_api.py) | [S1](calidad/escenarios_calidad.md#escenario-1--registro-correcto-de-información-académica): [contraste con el umbral](evaluacion_ia/contraste_umbrales.md), [confirmación](evaluacion_confirmacion.json) |
+| [A-02](#a-02-usuarios-y-autenticación) | [Usuarios y autenticación](#a-02-usuarios-y-autenticación) | [RF-USR-01](requerimientos.md#rf-usr-01--registrar-usuario), [RF-USR-02](requerimientos.md#rf-usr-02--iniciar-sesión), [RF-USR-03](requerimientos.md#rf-usr-03--mantener-y-renovar-la-sesión), [RT-01](requerimientos.md#rt-01--autenticación-jwt-obligatoria) | [C4-C2](c4/C4-C2.md), [C4-C3](c4/C4-C3.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`usuario/`](../backend/app/modules/usuario/), [`auth.py`](../backend/app/shared/adapters/inbound/auth.py) | [`test_usuario_register.py`](../backend/tests/test_usuario_register.py), [`test_usuario_sessions.py`](../backend/tests/test_usuario_sessions.py), [`test_usuario_login_rate_limit.py`](../backend/tests/test_usuario_login_rate_limit.py) | [S4](calidad/escenarios_calidad.md#escenario-4--acceso-unicamente-a-datos-del-propio-estudiante), [modelo de amenazas](modelo_amenazas.md) |
+| [A-03](#a-03-asistente-inteligente-e-interpretación-de-solicitudes) | [Asistente inteligente e interpretación de solicitudes](#a-03-asistente-inteligente-e-interpretación-de-solicitudes) | [RF-AGT-02](requerimientos.md#rf-agt-02--intenciones-soportadas-lista-cerrada), [RF-AGT-11](requerimientos.md#rf-agt-11--consultar-actividades-por-lenguaje-natural), [RF-AGT-18](requerimientos.md#rf-agt-18--protección-contra-inyección-sql-y-prompt), [RF-AGT-20](requerimientos.md#rf-agt-20--degradación-si-el-llm-no-está-disponible) | [C4-C2](c4/C4-C2.md), [C4-C3](c4/C4-C3.md) | [ADR-0007](adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md), [ADR-0011](adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md), [ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md) | [`fallback_llm.py`](../backend/app/modules/ai/adapters/outbound/fallback_llm.py), [`interpretation_contract.py`](../backend/app/modules/ai/adapters/outbound/interpretation_contract.py), [`handle_message.py`](../backend/app/modules/ai/application/use_cases/handle_message.py) | [`test_ai_fallback_llm.py`](../backend/tests/test_ai_fallback_llm.py), [`test_ai_groq_llm.py`](../backend/tests/test_ai_groq_llm.py), [`test_ai_prompt_injection.py`](../backend/tests/test_ai_prompt_injection.py), [`test_ai_agent_intents.py`](../backend/tests/test_ai_agent_intents.py) | [S3](calidad/escenarios_calidad.md#escenario-3--respuesta-del-asistente-ante-un-mensaje) y [S5](calidad/escenarios_calidad.md#escenario-5--sustitucion-del-modelo-de-ia): [Groq](evaluacion_ia/resultado_groq_s1_100_con_dia.json) y [Gemini](evaluacion_ia/resultado_gemini_s1_100_con_dia.json) sobre el mismo conjunto, [modos de fallo](modos_fallo_s11.md) |
+| [A-04](#a-04-recordatorios-y-notificaciones) | [Recordatorios y notificaciones](#a-04-recordatorios-y-notificaciones) | [RF-REC-01](requerimientos.md#rf-rec-01--crear-recordatorio-personalizado), [RF-REC-02](requerimientos.md#rf-rec-02--política-de-recordatorios-por-defecto), [RF-NOT-02](requerimientos.md#rf-not-02--envío-automático-de-notificaciones), [RF-NOT-03](requerimientos.md#rf-not-03--bandeja-de-notificaciones) | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md), [C4-C3](c4/C4-C3.md) | [ADR-0012](adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md) | [`reminders/`](../backend/app/modules/reminders/), [`dispatch_due_reminders.py`](../backend/app/modules/reminders/application/use_cases/dispatch_due_reminders.py), [`fcm_push_sender.py`](../backend/app/modules/reminders/adapters/outbound/fcm_push_sender.py) | [`test_reminders_api.py`](../backend/tests/test_reminders_api.py), [`test_reminders_dispatch.py`](../backend/tests/test_reminders_dispatch.py), [`test_reminders_dispatch_loop.py`](../backend/tests/test_reminders_dispatch_loop.py), [`test_notifications_fcm.py`](../backend/tests/test_notifications_fcm.py) | [S2](calidad/escenarios_calidad.md#escenario-2--entrega-puntual-de-recordatorios), [idempotencia del envío](modos_fallo_s11.md#envío-de-una-notificación) |
+| [A-05](#a-05-integración-y-aislamiento-entre-módulos) | [Integración y aislamiento entre módulos](#a-05-integración-y-aislamiento-entre-módulos) | [RT-02](requerimientos.md#rt-02--aislamiento-de-datos-por-usuario), [RF-AGT-17](requerimientos.md#rf-agt-17--aislamiento-y-confidencialidad) | [C4-C3](c4/C4-C3.md) | [ADR-0006](adr/0006-fronteras-y-evaluacion-verificable.md), [ADR-0008](adr/0008-mantener-monolito-sin-extraer-modulos.md) | [`modules/`](../backend/app/modules/), [`audit_boundaries.py`](../tools/audit_boundaries.py) | [`test_ai_isolation.py`](../backend/tests/test_ai_isolation.py), [`test_s8_closure.py`](../backend/tests/test_s8_closure.py) | [S4](calidad/escenarios_calidad.md#escenario-4--acceso-unicamente-a-datos-del-propio-estudiante): [aislamiento HTTP 100/100](evaluacion_ia/aislamiento_c9dae4fb4f.json), [auditoría de fronteras](auditoria_erosion.md) |
+| [A-06](#a-06-persistencia-y-evolución-de-infraestructura) | [Persistencia y evolución de infraestructura](#a-06-persistencia-y-evolución-de-infraestructura) | [RF-TAR-01](requerimientos.md#rf-tar-01--crear-actividad-tarea-o-examen), [RF-ASG-01](requerimientos.md#rf-asg-01--registrar-asignatura), [RF-REC-06](requerimientos.md#rf-rec-06--sincronización-con-el-ciclo-de-vida-de-la-actividad) | [C4-C2](c4/C4-C2.md) | [ADR-0004](adr/0004-plataforma-base-de-datos.md), [ADR-0009](adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md), [ADR-0010](adr/0010-despliegue-con-dokploy-y-docker-compose.md) | [`sqlalchemy_task_repository.py`](../backend/app/modules/academic/adapters/outbound/sqlalchemy_task_repository.py), [`alembic/`](../backend/alembic/) | [`test_database_schema.py`](../backend/tests/test_database_schema.py), [`test_academic_tasks_sqlalchemy.py`](../backend/tests/test_academic_tasks_sqlalchemy.py), [`test_reminders_sqlalchemy.py`](../backend/tests/test_reminders_sqlalchemy.py) | [Diccionario de datos](diccionario_datos.md), [propiedad de los datos](propiedad_datos_s6.md) |
+| [A-07](#a-07-contrato-e-integración-de-la-api-principal) | [Contrato e integración de la API principal](#a-07-contrato-e-integración-de-la-api-principal) | [RT-05](requerimientos.md#rt-05--respuestas-de-error-uniformes), [RT-01](requerimientos.md#rt-01--autenticación-jwt-obligatoria) | [C4-C2](c4/C4-C2.md) | [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md) | [`openapi.json`](api/openapi.json), [`taia_api_client.py`](../backend/generated/taia_api_client.py), [`generate_api_client.py`](../tools/generate_api_client.py) | [`test_api_contract.py`](../backend/tests/test_api_contract.py) | [Fallo de contrato detectado](evidencia_s7_contract_failure.txt), [CI](../.github/workflows/ci.yml) |
 
-| ID   | Aspecto                                               | Requisito                                | C4                                         | ADR                                           | Código                                                                                                                                     | Pruebas                                                                                                                                                                                                                                   | Evidencia                                                                                       |
-| ---- | ----------------------------------------------------- | ---------------------------------------- | ------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| A-01 | Captura inteligente de información académica          | RF-01, RF-02                             | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/)                                                                        | [`test_academic_task_domain.py`](../backend/tests/test_academic_task_domain.py), [`test_academic_tasks_api.py`](../backend/tests/test_academic_tasks_api.py)                                                                      | [Prueba del corte vertical](../backend/tests/test_academic_tasks_api.py)                    |
-| A-02 | Usuarios y autenticación                              | RF-06, RF-07                             | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/usuario/`](../backend/app/modules/usuario/)                                                                          | [`test_usuario_register.py`](../backend/tests/test_usuario_register.py)                                                                                                                                                                             | [Pruebas de registro, autenticación y acceso autenticado](../backend/tests/test_usuario_register.py) |
-| A-03 | Asistente inteligente e interpretación de solicitudes | RF-01, RF-03, RF-04                      | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md), [ADR-0005](adr/0005-normalizacion-confirmacion-espanol.md), [ADR-0007](adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md), [ADR-0008](adr/0008-mantener-monolito-sin-extraer-modulos.md) | [`backend/app/modules/ai/`](../backend/app/modules/ai/), [`backend/app/modules/academic/`](../backend/app/modules/academic/)               | [`test_ai_academic_gateway.py`](../backend/tests/test_ai_academic_gateway.py), [`test_ai_api.py`](../backend/tests/test_ai_api.py), [`test_ai_create_task_confirmation.py`](../backend/tests/test_ai_create_task_confirmation.py), [`test_ai_gemini_llm.py`](../backend/tests/test_ai_gemini_llm.py), [`test_ai_handle_message.py`](../backend/tests/test_ai_handle_message.py), [`test_sql_persistence_replacements.py`](../backend/tests/test_sql_persistence_replacements.py) | [Pruebas del gateway académico y API de IA](../backend/tests/test_ai_academic_gateway.py), [confirmación de escrituras](../backend/tests/test_ai_create_task_confirmation.py), [evidencia roja y verde](evidencia_s8_post-fix.txt), [evaluación offline de la confirmación](evaluacion_confirmacion.json), [conjunto de evaluación del componente generativo](evaluacion_ia/dataset.jsonl) y [su resultado medido](evaluacion_ia/resultado_s1_s3.json): S1 82,05 %, S3 p95 1 618,8 ms, S5 0,000312 USD por operación; [medición sobre 100 casos](evaluacion_ia/resultado_s1_100.json): campos 91,8 % (umbral 90 %), p95 del modelo 2 191,0 ms; [contraste con los umbrales de S1 y S3](evaluacion_ia/contraste_umbrales.md); [modos de fallo de Gemini con su mitigación y prueba](modos_fallo_s11.md), [diseño de idempotencia de la confirmación](modos_fallo_s11.md#confirmación-de-una-acción-pendiente), [arc42 §11.12](arc42/11-riesgos-y-deudas-tecnicas.md#1112-fallos-parciales-de-las-integraciones-externas) |
-| A-04 | Recordatorios y notificaciones                        | RF-05, RF-07                             | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md), [ADR-0008](adr/0008-mantener-monolito-sin-extraer-modulos.md) | [`backend/app/modules/reminders/`](../backend/app/modules/reminders/), [`backend/app/modules/usuario/`](../backend/app/modules/usuario/)   | [`test_reminders_api.py`](../backend/tests/test_reminders_api.py), [`test_reminders_notifications.py`](../backend/tests/test_reminders_notifications.py), [`test_reminders_notify_api.py`](../backend/tests/test_reminders_notify_api.py) | [Pruebas de CRUD y notificación por Telegram](../backend/tests/test_reminders_notify_api.py); [modos de fallo del envío por Telegram](modos_fallo_s11.md#integración-secundaria-telegram-envío-de-notificaciones), [diseño de idempotencia del envío](modos_fallo_s11.md#envío-de-una-notificación) |
-| A-05 | Integración y aislamiento entre módulos               | RF-01, RF-02, RF-03, RF-04, RF-05, RF-06 | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md), [ADR-0008](adr/0008-mantener-monolito-sin-extraer-modulos.md) | [`backend/app/modules/`](../backend/app/modules/)                                                                                          | [`backend/tests/`](../backend/tests/)                                                                                                                                                                                                     | [Suite automatizada de integración y aislamiento](../backend/tests/); [por qué no aplica una saga](modos_fallo_s11.md#por-qué-no-aplica-una-saga), [decisión de no extraer módulos](adr/0008-mantener-monolito-sin-extraer-modulos.md) |
-| A-06 | Persistencia y evolución de infraestructura           | RF-01, RF-02, RF-05                      | [C4-C1](c4/C4-C1.md), [C4-C2](c4/C4-C2.md) | [ADR-0001](adr/0001-estilo-arquitectonico.md) | [`backend/app/modules/academic/`](../backend/app/modules/academic/), [`backend/app/modules/reminders/`](../backend/app/modules/reminders/) | [`test_academic_tasks_api.py`](../backend/tests/test_academic_tasks_api.py), [`test_reminders_api.py`](../backend/tests/test_reminders_api.py)                                                                                    | [Pruebas mediante repositorios en memoria y puertos](../backend/tests/)                         |
+## A-01. Captura inteligente de información académica
 
-| A-07 | Contrato e integración de la API principal | S7 — contrato OpenAPI 3.1, cliente generado y prueba de contrato | [C4-C2](c4/C4-C2.md) | [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md) | [`docs/api/openapi.json`](api/openapi.json), [`backend/generated/taia_api_client.py`](../backend/generated/taia_api_client.py), [`tools/generate_api_client.py`](../tools/generate_api_client.py) | [`test_api_contract.py`](../backend/tests/test_api_contract.py) | [`evidencia_s7_contract_failure.txt`](evidencia_s7_contract_failure.txt), [auditoria de fronteras](auditoria_erosion.md), [CI](../.github/workflows/ci.yml) |
+El estudiante registra una tarea o un examen escribiendo en lenguaje natural, desde la app (`POST /ai/message`) o desde el bot de Telegram (`POST /telegram/webhook`). El módulo AI interpreta el mensaje con el LLM, valida la salida y pide una confirmación antes de escribir (RF-AGT-04). La escritura la hace Academic mediante su puerto `AcademicTaskManagement`; AI nunca toca el repositorio de Academic. En Telegram, la identidad sale de la vinculación de la cuenta (RF-TEL-01), no del mensaje.
 
-## Descripción del aspecto A-01
+## A-02. Usuarios y autenticación
 
-**Nombre:** Captura inteligente de información académica
+El módulo `usuario` registra, autentica y mantiene la sesión con un token de acceso JWT y un token de renovación. Toda ruta exige JWT salvo las excepciones de RT-01, y los demás módulos obtienen la identidad mediante `IdentityService` y `CurrentUserId`. El inicio de sesión limita los intentos fallidos.
 
-**Usuario:** Estudiante universitario
+## A-03. Asistente inteligente e interpretación de solicitudes
 
-**Problema que resuelve:** Permite al estudiante registrar información académica mediante mensajes en lenguaje natural enviados al bot de Telegram, evitando la necesidad de abrir la aplicación móvil y completar formularios manualmente.
+El agente atiende una lista cerrada de intenciones (RF-AGT-02). `FallbackLLM` intenta Groq con cada clave configurada y después Gemini (ADR-0013, que reemplaza a ADR-0011); si fallan todos, falla cerrado y responde sin inventar datos (ADR-0007). Los dos proveedores comparten `interpretation_contract.py`, que delimita el texto del estudiante como dato y valida la salida. El LLM no recibe identificadores de usuario, y ningún identificador que produzca se usa para acceder a datos.
 
-**Resultado esperado:** El sistema interpreta el mensaje mediante Gemini, identifica la intención y transforma la información en datos estructurados. El backend valida la información y la almacena en PostgreSQL para que pueda ser consultada y gestionada posteriormente desde la aplicación Flutter.
+## A-04. Recordatorios y notificaciones
 
-**Estado de la implementación:** este incremento entrega un **corte vertical parcial** de A-01: registro y consulta de tareas académicas mediante HTTP (`POST /academic/tasks`, `GET /academic/tasks`), con un adaptador de persistencia en memoria. La interpretación mediante Gemini y el canal de Telegram, así como el adaptador de PostgreSQL, quedan como trabajo pendiente para entregas posteriores; el diseño hexagonal del módulo permite incorporarlos sustituyendo adaptadores sin modificar el dominio ni los casos de uso.
+Cada actividad recibe recordatorios por defecto (RF-REC-02), y el estudiante puede crear los suyos. Un proceso dentro de la API (ADR-0012) revisa cada 60 segundos los recordatorios vencidos, crea la notificación en la bandeja (RF-NOT-03) y la envía por Firebase Cloud Messaging a los dispositivos registrados (RF-NOT-01). Sin dispositivos, o sin credenciales de Firebase, la notificación queda en la bandeja (RF-NOT-04). Telegram ya no envía recordatorios: es un canal conversacional.
 
-## Escenario de calidad relacionado
+## A-05. Integración y aislamiento entre módulos
 
-[S1 — Registro correcto de información académica](calidad/escenarios_calidad.md#escenario-1--registro-correcto-de-información-académica)
+Usuario, Academic, Reminders y AI viven en `backend/app/modules/` y solo se comunican mediante los puertos de entrada del módulo propietario. Cada tabla tiene un único módulo que la escribe, sin claves foráneas entre módulos (ADR-0009). `tools/audit_boundaries.py` comprueba en el CI que ningún módulo importe los adaptadores de otro, y las pruebas de aislamiento verifican que los datos de otro usuario responden `404` (RT-02).
 
-## Decisión arquitectónica relacionada
+## A-06. Persistencia y evolución de infraestructura
 
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
+Cada módulo persiste en PostgreSQL con repositorios SQLAlchemy en sus adaptadores de salida, y los convierte a entidades de dominio con *mappers*. El esquema se versiona con Alembic, y el CI ejecuta `alembic check` contra un PostgreSQL de servicio. Los repositorios en memoria se conservan para las pruebas unitarias. La API se despliega como un contenedor en Dokploy (ADR-0010).
 
-**## Estado del corte vertical**
+## A-07. Contrato e integración de la API principal
 
-El corte vertical actual implementa el registro y consulta de tareas mediante la API HTTP del backend. El recorrido atraviesa el adaptador de API, los casos de uso de la aplicación, la entidad de dominio y el puerto de persistencia, utilizando `InMemoryTaskRepository` como adaptador de persistencia para el incremento actual.
-
-Las integraciones con Telegram, Gemini y PostgreSQL forman parte de la arquitectura objetivo y serán incorporadas en incrementos posteriores.
-
----
-
-## Descripción del aspecto A-02
-
-**Nombre:** Usuarios y autenticación
-
-**Usuario:** Estudiante universitario
-
-**Problema que resuelve:** Permite identificar al estudiante que utiliza TAIA y proteger las operaciones que trabajan con información académica personal.
-
-**Resultado esperado:** El estudiante puede registrarse, autenticarse y utilizar un token de acceso para ejecutar operaciones protegidas. El backend utiliza la identidad autenticada para asociar las operaciones y los datos al usuario correspondiente.
-
-**Estado de la implementación:** A-02 se encuentra implementado mediante el módulo `usuario`. El backend proporciona registro, autenticación, consulta del usuario autenticado y mecanismos de autorización utilizados por los demás módulos. La identificación del usuario se utiliza como frontera para acceder a la información académica y a los recordatorios.
-
-## Escenario de calidad relacionado
-
-[S4 — Acceso únicamente a datos del propio estudiante](calidad/escenarios_calidad.md#s4--acceso-únicamente-a-datos-del-propio-estudiante)
-
-## Decisión arquitectónica relacionada
-
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
-
-**## Estado de la implementación**
-
-El módulo `usuario` implementa el registro y autenticación de estudiantes mediante una API HTTP protegida. La identidad obtenida de la autenticación se utiliza como contexto de las operaciones posteriores.
-
-Las pruebas del módulo verifican el flujo de autenticación y el acceso mediante usuario autenticado.
-
----
-
-## Descripción del aspecto A-03
-
-**Nombre:** Asistente inteligente e interpretación de solicitudes
-
-**Usuario:** Estudiante universitario
-
-**Problema que resuelve:** Permite que el estudiante interactúe con TAIA mediante lenguaje natural sin tener que conocer directamente la estructura de los datos ni los endpoints del backend.
-
-**Resultado esperado:** El mensaje del estudiante es recibido por el módulo de IA, interpretado mediante el proveedor LLM y transformado en una operación que puede ser ejecutada por los módulos correspondientes. La IA permanece separada de las reglas principales del dominio.
-
-**Estado de la implementación:** A-03 cuenta con el módulo `ai`, una interfaz `LLM`, un adaptador para Gemini y un `AcademicGateway` que permite traducir operaciones de IA hacia los casos de uso académicos. La API `/ai/message` se encuentra implementada y protegida mediante autenticación. La ejecución con Gemini requiere la configuración de las credenciales del proveedor, por lo que el proveedor real se mantiene como integración configurable.
-
-## Escenario de calidad relacionado
-
-[S1 — Registro correcto de información académica](calidad/escenarios_calidad.md#escenario-1--registro-correcto-de-información-académica)
-
-[S5 — Sustitución del modelo de IA](calidad/escenarios_calidad.md#s5--sustitución-del-modelo-de-ia)
-
-## Decisión arquitectónica relacionada
-
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
-
-**## Estado de la implementación**
-
-El módulo AI actúa como frontera entre la interacción conversacional y la lógica académica. La dependencia con el proveedor LLM se mantiene detrás de un puerto. Para Academic, `AcademicGatewayAdapter` consume `AcademicTaskManagement` y traduce `AcademicTaskData` al modelo de AI, evitando acceder directamente al repositorio o a la entidad de dominio de Academic.
-
-La sustitución del proveedor de IA no requiere modificar directamente las entidades ni las reglas centrales del módulo académico.
-
----
-
-## Descripción del aspecto A-04
-
-**Nombre:** Recordatorios y notificaciones
-
-**Usuario:** Estudiante universitario
-
-**Problema que resuelve:** Permite asociar recordatorios a información académica y entregar una notificación al estudiante mediante un canal configurado.
-
-**Resultado esperado:** El estudiante puede crear, consultar, modificar, completar y eliminar recordatorios asociados a tareas académicas. Cuando corresponde, el sistema puede enviar explícitamente la notificación mediante Telegram.
-
-**Estado de la implementación:** A-04 se encuentra implementado mediante el módulo `reminders`. El módulo valida la existencia y pertenencia de la tarea académica asociada, administra el ciclo de vida del recordatorio y utiliza un puerto de notificación con un adaptador específico para Telegram.
-
-## Escenario de calidad relacionado
-
-[S2 — Entrega puntual de recordatorios](calidad/escenarios_calidad.md#s2--entrega-puntual-de-recordatorios)
-
-[S3 — Respuesta del asistente ante un mensaje](calidad/escenarios_calidad.md#s3--respuesta-del-asistente-ante-un-mensaje)
-
-[S4 — Acceso únicamente a datos del propio estudiante](calidad/escenarios_calidad.md#s4--acceso-únicamente-a-datos-del-propio-estudiante)
-
-## Decisión arquitectónica relacionada
-
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
-
-**## Estado de la implementación**
-
-El módulo `reminders` utiliza `InMemoryReminderRepository` como persistencia actual y un `NotificationSender` como puerto para desacoplar el envío de notificaciones. Para validar la tarea asociada, consume `AcademicTaskLookup` en lugar del repositorio de Academic.
-
-El adaptador `TelegramNotificationSender` conecta el sistema con Telegram mediante la API externa. En el incremento actual el envío es explícito mediante `POST /reminders/{id}/notify`; la ejecución automática exactamente en `scheduled_at` queda como evolución posterior.
-
----
-
-## Descripción del aspecto A-05
-
-**Nombre:** Integración y aislamiento entre módulos
-
-**Usuario:** Estudiante universitario
-
-**Problema que resuelve:** Permite que los módulos de TAIA colaboren sin concentrar toda la lógica en un único componente ni permitir accesos que ignoren el contexto del estudiante.
-
-**Resultado esperado:** Usuario, Academic, AI y Reminders mantienen responsabilidades separadas y colaboran mediante casos de uso, puertos, adaptadores y gateways. Las operaciones sobre información académica y recordatorios utilizan el identificador del estudiante autenticado.
-
-**Estado de la implementación:** A-05 se encuentra implementado mediante la organización modular del backend. `main.py` registra los routers de `academic`, `usuario`, `ai` y `reminders`, mientras que las dependencias entre módulos se realizan mediante interfaces y adaptadores específicos.
-
-## Escenario de calidad relacionado
-
-[S4 — Acceso únicamente a datos del propio estudiante](calidad/escenarios_calidad.md#s4--acceso-únicamente-a-datos-del-propio-estudiante)
-
-[S5 — Sustitución del modelo de IA](calidad/escenarios_calidad.md#s5--sustitución-del-modelo-de-ia)
-
-## Decisión arquitectónica relacionada
-
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
-
-**## Estado de la implementación**
-
-La arquitectura actual mantiene los módulos separados dentro de `backend/app/modules/`. La autenticación HTTP reutiliza `CurrentUserId` desde `backend/app/shared/adapters/inbound/auth.py` y la identidad compartida se obtiene mediante `IdentityService`; Reminders consulta Academic mediante `AcademicTaskLookup`; y AI ejecuta operaciones académicas mediante `AcademicTaskManagement` detrás de `AcademicGatewayAdapter`. Los repositorios y entidades internas permanecen encapsulados en sus contextos propietarios.
-
-La suite automatizada constituye la evidencia global de que los módulos pueden evolucionar manteniendo sus responsabilidades separadas.
-
----
-
-## Descripción del aspecto A-06
-
-**Nombre:** Persistencia y evolución de infraestructura
-
-**Usuario:** Equipo de desarrollo
-
-**Problema que resuelve:** Evita que los casos de uso y las reglas de dominio dependan directamente del mecanismo concreto utilizado para almacenar información.
-
-**Resultado esperado:** Los módulos utilizan puertos de persistencia que pueden ser implementados mediante diferentes adaptadores. Esto permite utilizar almacenamiento en memoria durante el desarrollo y sustituirlo posteriormente por PostgreSQL sin modificar las reglas centrales del dominio.
-
-**Estado de la implementación:** A-06 se encuentra implementado parcialmente mediante `TaskRepository` e `InMemoryTaskRepository` en Academic y `InMemoryReminderRepository` en Reminders. PostgreSQL forma parte de la arquitectura objetivo, pero todavía no constituye el adaptador de persistencia utilizado por el recorrido ejecutable actual.
-
-## Escenario de calidad relacionado
-
-[S3 — Respuesta del asistente ante un mensaje](calidad/escenarios_calidad.md#s3--respuesta-del-asistente-ante-un-mensaje)
-
-[S5 — Sustitución del modelo de IA](calidad/escenarios_calidad.md#s5--sustitución-del-modelo-de-ia)
-
-## Decisión arquitectónica relacionada
-
-[ADR-0001 — Monolito modular con organización hexagonal selectiva](adr/0001-estilo-arquitectonico.md)
-
-**## Estado de la implementación**
-
-La persistencia está aislada mediante puertos y adaptadores. En Academic, los casos de uso dependen de `TaskRepository` y utilizan actualmente `InMemoryTaskRepository`. En Reminders se utiliza `InMemoryReminderRepository`.
-
-Esta estructura permite que PostgreSQL sea incorporado posteriormente como un nuevo adaptador sin modificar las reglas principales de los casos de uso ni del dominio.
-
-
----
-
-## Evidencia S7 — Contrato de API e integración
-
-La integración HTTP de la API principal se formaliza mediante el [contrato OpenAPI 3.1 versión 1.0.0](api/openapi.json). La estrategia síncrona está justificada en [ADR-0002](adr/0002-estrategia-integracion-api-sincrona.md), el flujo de ejecución está documentado en [arc42 sección 6](arc42/06-vista-de-ejecucion.md) y el protocolo/formato de las interacciones está reflejado en el [C4 nivel 2](c4/C4-C2.md).
-
-La conformidad entre contrato e implementación se verifica en [`test_api_contract.py`](../backend/tests/test_api_contract.py). El cliente HTTP generado a partir del contrato se encuentra en [`backend/generated/taia_api_client.py`](../backend/generated/taia_api_client.py) y se regenera mediante [`tools/generate_api_client.py`](../tools/generate_api_client.py). El workflow de CI ejecuta explícitamente la prueba de contrato y comprueba que el cliente generado permanezca sincronizado.
+El contrato OpenAPI 3.1 se genera desde la aplicación y se publica en `docs/api/openapi.json`. El cliente generado se regenera con `tools/generate_api_client.py`, y `test_api_contract.py` comprueba que coincidan. Los errores siguen el formato `{"detail": "..."}` de RT-05. El flujo de ejecución está en [arc42 §6](arc42/06-vista-de-ejecucion.md).

@@ -8,7 +8,6 @@ TAIA se despliega como **un único contenedor** (monolito modular, [ADR-0001](..
 | Health check | `GET https://taia-sistema.iscoutb.dev/health` → `200 {"status": "ok"}` |
 | Métrica | `GET https://taia-sistema.iscoutb.dev/metrics`, con `Authorization: Bearer <JWT>` (RT-01) |
 | Documentación interactiva | `https://taia-sistema.iscoutb.dev/docs` |
-| Respaldo (alternativa del taller) | `https://taia-backend-latest.onrender.com`, con arranque en frío (53 s medidos el 2026-10-25) |
 
 ## 7.1. Infraestructura: una caja por pieza
 
@@ -27,32 +26,37 @@ TAIA se despliega como **un único contenedor** (monolito modular, [ADR-0001](..
 │  ┌────────────────────────────────────────────────┐  │  │ tico por commit  │
 │  │ [4] Contenedor backend (Docker Compose)        │  │  └──────────────────┘
 │  │ alembic upgrade head && uvicorn app.main:app   │  │
-│  │ Usuario | Academic | AI | Reminders            │  │  ┌──────────────────┐
-│  │ logs JSON a stdout, /health, /metrics          │  │  │ [6] Render       │
-│  └────────────────────────────────────────────────┘  │  │ Web Service Free │
-│  Environment de Dokploy ─► .env (env_file)           │  │ (respaldo)       │
-└──────┬──────────────────┬──────────────────┬─────────┘  └────────┬─────────┘
-       │ HTTPS            │ HTTPS            │ PostgreSQL          │ PostgreSQL
-       ▼                  ▼                  ▼                     ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────────────────────────────┐
-│ [7] Gemini   │   │ [8] Telegram │   │ [5] Supabase PostgreSQL              │
-│ API (Google) │   │ Bot API      │   │ plan Free, región us-west-2, pooler  │
-└──────────────┘   └──────────────┘   └──────────────────────────────────────┘
-
-[1] Cliente (navegador, Swagger, futura app Flutter) ──HTTPS──► [3] Traefik ──► [4]
+│  │ Usuario | Academic | AI | Reminders            │  │
+│  │ bucle de recordatorios cada 60 s (ADR-0012)    │  │
+│  │ logs JSON a stdout, /health, /metrics          │  │
+│  └────────────────────────────────────────────────┘  │
+│  Environment de Dokploy ─► .env (env_file)           │
+└──┬──────────────┬──────────────┬──────────────┬──────┘
+   │ HTTPS        │ HTTPS        │ HTTPS        │ PostgreSQL
+   ▼              ▼              ▼              ▼
+┌────────────┐ ┌────────────┐ ┌────────────┐ ┌───────────────────────────┐
+│ [6] Groq   │ │ [10] FCM   │ │ [11] Resend│ │ [5] Supabase PostgreSQL   │
+│ [7] Gemini │ │ (Firebase) │ │ (correo)   │ │ plan Free, us-west-2,     │
+│ (LLM)      │ │            │ │            │ │ pooler                    │
+└────────────┘ └─────┬──────┘ └────────────┘ └───────────────────────────┘
+                     │ push
+                     ▼
+[1] App Flutter ──HTTPS──► [3] Traefik ──► [4] ◄── webhook ── [8] Telegram
 ```
 
 | # | Pieza | Dónde se ejecuta | Qué hace | Definida en |
 |---|---|---|---|---|
-| 1 | Cliente | Equipo del usuario (navegador o Swagger); la app Flutter es la arquitectura objetivo | Consume la API por HTTPS | — |
+| 1 | App móvil | Teléfono del estudiante (Flutter) | Consume la API por HTTPS con JWT y recibe las notificaciones push | [`frontend/`](../../frontend/) |
 | 2 | GitHub Actions | Runners `ubuntu-latest` de GitHub | CI: pruebas contra un PostgreSQL 17 de servicio, construcción y arranque de la imagen, fronteras, cliente OpenAPI y Quality Gate. CD: si el CI de un push a `main` queda en verde y su SHA sigue siendo el último, llama al webhook de Dokploy | [`ci.yml`](../../.github/workflows/ci.yml), [`cd.yml`](../../.github/workflows/cd.yml) |
 | 3 | Servidor con Dokploy | Servidor administrado por el equipo | Clona `main`, construye la imagen, guarda las variables en Environment, publica el dominio con TLS mediante Traefik y muestra despliegues y logs | Configuración del servicio en Dokploy ([guía](../despliegue-dokploy.md)) |
 | 4 | API TAIA | Contenedor `backend` de Docker Compose, puerto interno 8000 sin publicar en el host, `restart: unless-stopped` | Aplica las migraciones al arrancar y sirve la API; health check de Compose cada 30 s sobre `/health` | [`docker-compose.yml`](../../docker-compose.yml), [`backend/Dockerfile`](../../backend/Dockerfile) |
 | 5 | Base de datos | Supabase PostgreSQL, plan Free, región `us-west-2` | Persistencia de los cuatro módulos en una base y un esquema compartidos (RNF-06, [ADR-0009](../adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md)) | Migraciones en `backend/alembic/` |
-| 6 | Respaldo en Render | Render Web Service Free | Alternativa del taller ([ADR-0003](../adr/0003-plataforma-despliegue-api.md)); responde, pero no es el entorno principal ni lo actualiza el CD | Panel de Render |
-| 7 | Gemini API | Google | Proveedor LLM del módulo AI | `GEMINI_API_KEY` en Environment |
-| 8 | Telegram Bot API | Telegram | Envío de notificaciones con `sendMessage`; recepción de updates del bot en `POST /telegram/webhook`, que por ahora solo confirma la vinculación | `TAIA_TELEGRAM_BOT_TOKEN` y `TAIA_WEBHOOK_SECRET` en Environment (opcionales), [`telegram_bot_client.py`](../../backend/app/modules/reminders/adapters/outbound/telegram_bot_client.py), [`telegram_webhook.py`](../../backend/app/modules/usuario/adapters/inbound/telegram_webhook.py) |
+| 6 | Groq API | Groq | Proveedor LLM principal ([ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md)) | `GROQ_API_KEY_1`, `GROQ_API_KEY_2` en Environment |
+| 7 | Gemini API | Google | Proveedor LLM de respaldo | `GEMINI_API_KEY` en Environment |
+| 8 | Telegram | Telegram | Envía los mensajes del bot a `POST /telegram/webhook`; la API responde en el cuerpo del webhook (vinculación y conversación con el agente) | `TAIA_TELEGRAM_BOT_TOKEN` y `TAIA_WEBHOOK_SECRET` en Environment (opcionales), [`telegram_webhook.py`](../../backend/app/modules/usuario/adapters/inbound/telegram_webhook.py) |
 | 9 | SonarCloud | Organización `isco-utb`, proyecto público | Análisis estático automático de cada commit; el job `quality-gate` del CI falla si el gate no está en `OK` | [`.sonarcloud.properties`](../../.sonarcloud.properties) |
+| 10 | Firebase Cloud Messaging | Google | Entrega las notificaciones push de los recordatorios ([ADR-0012](../adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md)) | `FIREBASE_CREDENTIALS_JSON` en Environment, [`fcm_push_sender.py`](../../backend/app/modules/reminders/adapters/outbound/fcm_push_sender.py) |
+| 11 | Resend | Resend | Envía el código de recuperación de contraseña | `RESEND_API` y `RESEND_FROM` en Environment, [`resend_password_reset_mailer.py`](../../backend/app/modules/usuario/adapters/outbound/resend_password_reset_mailer.py) |
 
 No hay broker de mensajes ni caché: las integraciones son HTTP síncronas ([ADR-0002](../adr/0002-estrategia-integracion-api-sincrona.md)) y las lecturas van directo a PostgreSQL ([arc42 §8.11](08-conceptos-transversales.md#811-caché)).
 
@@ -86,7 +90,10 @@ Las variables están declaradas en [`.env.example`](../../.env.example). En el d
 | `DATABASE_URL` | Sí; Compose no arranca sin ella | Environment de Dokploy |
 | `TAIA_JWT_SECRET` | Sí; Compose no arranca sin ella (RNF-02) | Environment de Dokploy |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | La clave sí: `app/main.py` compone el adaptador al importar | Environment de Dokploy |
-| `TAIA_TELEGRAM_BOT_TOKEN`, `TAIA_TELEGRAM_BOT_USERNAME` | No; sin ellas el bot no responde y el resto funciona (RNF-09) | Environment de Dokploy |
+| `GROQ_API_KEY_1`, `GROQ_API_KEY_2`, `GROQ_MODEL` | No; sin ellas solo se usa Gemini | Environment de Dokploy |
+| `FIREBASE_CREDENTIALS_JSON` | No; sin ella no hay push y las notificaciones quedan en la bandeja (RNF-09). Va en una sola línea | Environment de Dokploy |
+| `RESEND_API`, `RESEND_FROM` | No; sin ellas la recuperación de contraseña responde `503` | Environment de Dokploy |
+| `TAIA_TELEGRAM_BOT_TOKEN`, `TAIA_TELEGRAM_BOT_USERNAME`, `TAIA_WEBHOOK_SECRET` | No; sin ellas el bot no responde y el resto funciona (RNF-09) | Environment de Dokploy |
 | `DOKPLOY_WEBHOOK_URL` | Solo para `cd.yml` | Secreto de GitHub Actions |
 
 ## 7.4. Observabilidad
@@ -105,5 +112,6 @@ En local, `run.bat` levanta la misma aplicación con Uvicorn contra un PostgreSQ
 - **CD sin confirmación:** el workflow no espera a que Dokploy termine ni comprueba la revisión desplegada (ver §7.2).
 - **Supabase Free:** pausa el proyecto tras una semana sin actividad y la API falla hasta reactivarlo ([arc42 §11](11-riesgos-y-deudas-tecnicas.md)).
 - **Métrica volátil:** `/metrics` se pierde en cada reinicio; no hay un sistema de métricas persistente ni alertas.
-- **Sin scheduler:** no hay un proceso que dispare los recordatorios en su hora (S2, `RF-NOT-02`); el envío ocurre con `POST /reminders/{id}/notify`.
+- **Recordatorios en el mismo proceso:** el bucle de envío corre dentro de la API ([ADR-0012](../adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md)). Si la API está caída no se envía nada, y los vencidos salen en la primera vuelta después de arrancar. Con varias réplicas, `claim` evita los duplicados.
+- **Variables que se leen al arrancar:** cambiar una variable en Environment exige volver a desplegar o reiniciar el contenedor.
 - **Costo del servidor:** usar Dokploy no fija el costo del servidor que lo aloja; la facturación real debe verificarse ([costo_mensual.md](../costo_mensual.md), [ADR-0010](../adr/0010-despliegue-con-dokploy-y-docker-compose.md)).

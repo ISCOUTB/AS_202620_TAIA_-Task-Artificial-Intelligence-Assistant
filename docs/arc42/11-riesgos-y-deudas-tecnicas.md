@@ -138,7 +138,7 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 ## 11.12. Fallos parciales de las integraciones externas
 
-**Riesgo:** Las integraciones con Gemini y con Telegram pueden no responder, responder tarde o recibir la misma operación dos veces. El análisis completo, con la mitigación de cada caso, su ruta en el código y su prueba, está en [modos_fallo_s11.md](../modos_fallo_s11.md).
+**Riesgo:** Las integraciones con los proveedores LLM y con FCM pueden no responder, responder tarde o recibir la misma operación dos veces. El análisis completo, con la mitigación de cada caso, su ruta en el código y su prueba, está en [modos_fallo_s11.md](../modos_fallo_s11.md).
 
 **Impacto:** Sin mitigación, un fallo de Gemini dejaría al estudiante sin respuesta, y una operación repetida podría crear una tarea duplicada o enviar dos veces el mismo recordatorio.
 
@@ -146,16 +146,17 @@ Los siguientes riesgos y deudas técnicas se identifican a partir del estado act
 
 - Gemini no responde, devuelve `429`, `404` o `5xx`, o responde con una forma inválida: el adaptador lo traduce a `LLMError` y el asistente responde un mensaje fijo, sin escribir nada ([ADR-0007](../adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)).
 - Gemini responde tarde: timeout de 20 s en el cliente `httpx`, con el mismo resultado.
-- Telegram no responde o responde tarde: timeout de 5 s y respuesta `503` en `POST /reminders/{id}/notify`.
+- Groq no responde: `FallbackLLM` prueba la siguiente clave y después Gemini ([ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md)).
+- FCM falla: hasta 3 reintentos con espera creciente; un token inválido se borra; sin FCM la notificación queda en la bandeja ([modos_fallo_s11.md, estado en S16](../modos_fallo_s11.md#estado-en-s16)).
 - Confirmación repetida, seguida o simultánea: el caso de uso reclama la acción pendiente de forma atómica (`take_pending`, con `SELECT ... FOR UPDATE` en una transacción corta) y solo la petición que la reclama la ejecuta ([modos_fallo_s11.md, confirmación de una acción pendiente](../modos_fallo_s11.md#confirmación-de-una-acción-pendiente)). `RF-AGT-04`.
 
 **Deuda técnica:**
 
-- **Notificación reenviada.** `SendNotificationUseCase` no comprueba `push_sent_at` antes de enviar, así que un segundo `POST /reminders/{id}/notify` reenvía el mensaje. Diseño: aplicar la regla de `RF-NOT-02` y del diccionario de datos ([modos_fallo_s11.md, envío de una notificación](../modos_fallo_s11.md#envío-de-una-notificación)). Pendiente de implementar. Aun implementado, la garantía es «al menos una vez», porque `sendMessage` de Telegram no admite clave de idempotencia.
+- **Notificación duplicada.** Resuelta la parte del proceso: `claim` impide que dos ejecuciones del bucle notifiquen el mismo recordatorio. Queda la garantía «al menos una vez» frente a FCM: si un envío da error después de entregar, el reintento lo duplica.
 - **Timeout por encima de S3.** El timeout de 20 s supera el umbral de 7 s de S3; ADR-0007 lo acepta porque el p95 medido del modelo es 1 618,8 ms.
 - **Fallo sin registro.** El caso de uso captura `LLMError` sin escribir en el log (negativa de ADR-0007).
 
-**Pruebas:** los modos de Gemini "no responde", "responde tarde", `429`, respuesta malformada y confirmación repetida, seguida y simultánea, tienen prueba. Los fallos de Telegram solo están descritos ([modos_fallo_s11.md, qué está probado](../modos_fallo_s11.md#qué-está-probado-y-qué-solo-está-descrito)).
+**Pruebas:** los modos de Gemini "no responde", "responde tarde", `429`, respuesta malformada y confirmación repetida, seguida y simultánea, tienen prueba. Los fallos de FCM (reintentos, token inválido, sin credenciales) y la cadena Groq → Gemini también tienen prueba ([modos_fallo_s11.md, estado en S16](../modos_fallo_s11.md#estado-en-s16)).
 
 **Relación:** S1 — Registro correcto de información académica; S3 — Respuesta del asistente ante un mensaje; RNF-09; RF-AGT-20; RF-AGT-04; RF-NOT-02.
 

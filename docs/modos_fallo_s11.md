@@ -8,6 +8,28 @@ La decisión de fondo sobre el proveedor de lenguaje está en
 [ADR-0007](adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md); aquí se ordena por modo de
 fallo y se contrasta con el código y las pruebas.
 
+## Estado en S16
+
+Las tablas siguientes describen el sistema de S11. Desde entonces cambiaron dos integraciones:
+
+| Integración | Cambio | Mitigación vigente | Pruebas |
+|---|---|---|---|
+| Proveedor LLM | Groq es el principal y Gemini el respaldo ([ADR-0013](adr/0013-usar-groq-como-proveedor-llm-principal.md)). `FallbackLLM` prueba cada clave de Groq y después Gemini; si fallan todos, falla cerrado (ADR-0007). | [`fallback_llm.py`](../backend/app/modules/ai/adapters/outbound/fallback_llm.py) | [`test_ai_fallback_llm.py`](../backend/tests/test_ai_fallback_llm.py) |
+| Notificaciones | Salen por Firebase Cloud Messaging desde un proceso dentro de la API ([ADR-0012](adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md)). Telegram ya no envía recordatorios, y `POST /reminders/{id}/notify` ya no existe. | [`dispatch_due_reminders.py`](../backend/app/modules/reminders/application/use_cases/dispatch_due_reminders.py), [`fcm_push_sender.py`](../backend/app/modules/reminders/adapters/outbound/fcm_push_sender.py) | [`test_reminders_dispatch.py`](../backend/tests/test_reminders_dispatch.py), [`test_notifications_fcm.py`](../backend/tests/test_notifications_fcm.py) |
+
+Modos de fallo del envío por FCM:
+
+| Modo de fallo | Mitigación | Prueba |
+|---|---|---|
+| FCM falla | Hasta 3 reintentos con espera de 1, 2 y 4 s, solo a los tokens que fallaron. | `test_retries_up_to_3_times_with_growing_wait_rf_not_02`, `test_retries_only_failed_tokens_rf_not_02` |
+| Token inválido | Se borra el token del dispositivo. | `test_invalid_token_is_removed_rf_not_02` |
+| Sin credenciales o sin dispositivos | La notificación queda en la bandeja (RF-NOT-04) y el log dice por qué. | `test_without_fcm_configured_behaves_like_rf_not_04`, `test_log_says_why_no_push_was_sent_rf_not_04` |
+| El proceso corre dos veces | `ReminderRepository.claim` hace un `UPDATE` condicional: una sola notificación por recordatorio. | `test_running_twice_sends_one_notification_rf_not_02` |
+| Falla una ejecución del bucle | Se registra y el bucle sigue en la siguiente. | `test_loop_keeps_running_after_a_failure_adr_0012` |
+| Falla un recordatorio del lote | Se registra y se sigue con los demás. | Sin prueba propia |
+
+Sigue valiendo el límite de la sección [Envío de una notificación](#envío-de-una-notificación): la entrega es «al menos una vez», porque FCM tampoco confirma si un envío que dio error llegó.
+
 ## Integración principal: Gemini
 
 TAIA interpreta cada mensaje del estudiante con una llamada HTTP síncrona a la API REST de Gemini.
@@ -51,14 +73,14 @@ El envío de una notificación llama a `sendMessage` de la API de Telegram.
 
 | Pieza | Ruta |
 |---|---|
-| Cliente HTTP y timeout de 5 s | [`telegram_bot_client.py:11`](../backend/app/modules/reminders/adapters/outbound/telegram_bot_client.py), [`telegram_bot_client.py:28-31`](../backend/app/modules/reminders/adapters/outbound/telegram_bot_client.py) |
-| El adaptador convierte cualquier fallo en `False` | [`telegram_notification_sender.py:23-36`](../backend/app/modules/reminders/adapters/outbound/telegram_notification_sender.py) |
-| Envío y registro del intento | [`send_notification.py`](../backend/app/modules/reminders/application/use_cases/send_notification.py), [`sqlalchemy_reminder_repository.py:91-105`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py) |
+| Cliente HTTP y timeout de 5 s | [`telegram_bot_client.py:11`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/app/modules/reminders/adapters/outbound/telegram_bot_client.py), [`telegram_bot_client.py:28-31`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/app/modules/reminders/adapters/outbound/telegram_bot_client.py) |
+| El adaptador convierte cualquier fallo en `False` | [`telegram_notification_sender.py:23-36`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/app/modules/reminders/adapters/outbound/telegram_notification_sender.py) |
+| Envío y registro del intento | [`send_notification.py`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/app/modules/reminders/application/use_cases/send_notification.py), [`sqlalchemy_reminder_repository.py:91-105`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py) |
 | Respuesta `503` al cliente | [`http_controller.py:170-198`](../backend/app/modules/reminders/adapters/inbound/http_controller.py) (`POST /reminders/{id}/notify`) |
 
 | Modo de fallo | Efecto | Mitigación | Dónde está en el código | Estado | Prueba |
 |---|---|---|---|---|---|
-| **No responde** | `POST /reminders/{id}/notify` responde `503`; se registra el intento sin `push_sent_at`. | El error de `urllib` se traduce a `RuntimeError` y el adaptador devuelve `False`. | `telegram_bot_client.py:30-31`, `telegram_notification_sender.py:34-35`, `http_controller.py:191-198` | Implementada | [`test_telegram_sender_returns_false_when_user_has_no_telegram`](../backend/tests/test_reminders_notifications.py) cubre el camino de `False`; no hay prueba con la red caída. |
+| **No responde** | `POST /reminders/{id}/notify` responde `503`; se registra el intento sin `push_sent_at`. | El error de `urllib` se traduce a `RuntimeError` y el adaptador devuelve `False`. | `telegram_bot_client.py:30-31`, `telegram_notification_sender.py:34-35`, `http_controller.py:191-198` | Implementada | [`test_telegram_sender_returns_false_when_user_has_no_telegram`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/tests/test_reminders_notifications.py) cubre el camino de `False`; no hay prueba con la red caída. |
 | **Responde tarde** | Igual que "no responde" a los 5 s. | Timeout de 5 s en `urlopen`. | `telegram_bot_client.py:11`, `telegram_bot_client.py:28` | Implementada | Pendiente |
 | **Llega dos veces** | Si Telegram entregó el mensaje pero la respuesta se perdió por el timeout, un nuevo `POST .../notify` lo vuelve a enviar: el estudiante recibe el recordatorio duplicado. | Ninguna: el caso de uso envía sin comprobar `push_sent_at`. | `send_notification.py` | Pendiente; el diseño está en la sección [Idempotencia y transacciones](#idempotencia-y-transacciones). | Pendiente |
 
@@ -171,7 +193,7 @@ y, si la notificación existe, devuelve la existente en lugar de crear otra
 ([`sqlalchemy_reminder_repository.py:63-85`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py)),
 y la tabla tiene `UNIQUE (reminder_id)` ([`diccionario_datos.md`, §7.2](diccionario_datos.md)).
 Pero **enviarla no lo es**: `SendNotificationUseCase` llama a Telegram cada vez
-([`send_notification.py`](../backend/app/modules/reminders/application/use_cases/send_notification.py)).
+([`send_notification.py`](https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/blob/c35e9a6c37fc40ccdce9b98288481692722f6525/backend/app/modules/reminders/application/use_cases/send_notification.py)).
 El código escribe `push_sent_at` tras un envío exitoso
 ([`sqlalchemy_reminder_repository.py:101-102`](../backend/app/modules/reminders/adapters/outbound/sqlalchemy_reminder_repository.py)),
 pero no lo lee antes de enviar. Un segundo `POST /reminders/{id}/notify` reenvía el mensaje.
@@ -190,7 +212,7 @@ intentos ([`diccionario_datos.md`, §7.2](diccionario_datos.md)). En el código:
 ([API de bots de Telegram, `sendMessage`](https://core.telegram.org/bots/api#sendmessage)). Se
 acepta: un recordatorio duplicado molesta, pero no corrompe datos, y los intentos están acotados a 4.
 
-**Estado.** Pendiente de implementar.
+**Estado.** Implementado en S16 con FCM: ver [Estado en S16](#estado-en-s16).
 
 ### Operaciones que ya son idempotentes
 

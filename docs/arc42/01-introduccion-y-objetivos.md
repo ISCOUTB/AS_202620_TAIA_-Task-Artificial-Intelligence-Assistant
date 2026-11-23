@@ -47,12 +47,12 @@ de extender el sistema a otras. El volumen esperado en la primera etapa es de
 RF-08 es **deseable, no comprometido**: se abordará después del MVP y su
 ausencia no invalida el producto.
 
-El primer corte vertical es el aspecto A-01, que implementa actualmente el
-recorrido de registro de tareas mediante la API HTTP → caso de uso →
-dominio → repositorio en memoria. La integración con Telegram, la
-interpretación mediante el LLM, la persistencia en PostgreSQL y la
-visualización en la aplicación forman parte de la arquitectura objetivo y
-serán incorporadas en iteraciones posteriores.
+El primer corte vertical fue el aspecto A-01: registro de tareas mediante
+la API HTTP, con caso de uso, dominio y un repositorio en memoria. Al cierre
+del proyecto, el sistema entregado incluye la persistencia en PostgreSQL, la
+interpretación con Groq y Gemini, la conversación por Telegram, el envío de
+recordatorios por notificación push y la aplicación Flutter. Los requisitos
+detallados y su estado están en [requerimientos.md](../requerimientos.md).
 
 ## 1.2. Objetivos de calidad
 
