@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../mascot/mascot_expression.dart';
@@ -27,6 +29,11 @@ class _AgentScreenState extends State<AgentScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
 
+  /// TAIA "habla" un momento cuando llega su respuesta (RF-AGT-23).
+  bool _talking = false;
+  bool _wasSending = false;
+  Timer? _talkTimer;
+
   @override
   void initState() {
     super.initState();
@@ -40,10 +47,20 @@ class _AgentScreenState extends State<AgentScreen> {
       ..dispose();
     _input.dispose();
     _scroll.dispose();
+    _talkTimer?.cancel();
     super.dispose();
   }
 
   void _onChange() {
+    final replied = _wasSending && !_chat.sending && _chat.error == null;
+    _wasSending = _chat.sending;
+    if (replied) {
+      _talkTimer?.cancel();
+      _talking = true;
+      _talkTimer = Timer(const Duration(milliseconds: 1600), () {
+        if (mounted) setState(() => _talking = false);
+      });
+    }
     setState(() {});
     // Lleva la lista al último mensaje después de pintarlo.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -60,6 +77,7 @@ class _AgentScreenState extends State<AgentScreen> {
   MascotExpression get _expression {
     if (_chat.sending) return MascotExpression.thinking;
     if (_chat.error != null) return MascotExpression.surprised;
+    if (_talking) return MascotExpression.excited;
     return MascotExpression.laptop;
   }
 
@@ -79,6 +97,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 title: 'Habla con TAIA',
                 subtitle: 'Crea, consulta y completa tus actividades.',
                 expression: _expression,
+                opensChat: false,
               ),
             ),
             Expanded(
@@ -88,7 +107,7 @@ class _AgentScreenState extends State<AgentScreen> {
                       child: Align(
                         alignment: Alignment.topCenter,
                         child: EmptyStateCard(
-                          '¡Hola! Soy TAIA 🐙 Escríbeme, por ejemplo: '
+                          '¡Hola! Soy TAIA \u{1F419} Escríbeme, por ejemplo: '
                           '«¿Qué clases tengo mañana?» o «Dame el resumen de '
                           'tareas de este mes».',
                         ),

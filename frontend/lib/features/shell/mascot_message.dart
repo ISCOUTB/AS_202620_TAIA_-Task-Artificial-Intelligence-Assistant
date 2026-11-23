@@ -29,13 +29,8 @@ class MascotMessage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 200,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-              ),
+            SizedBox(
+              width: 168,
               child: TaiaMascot(motion: 0.6, expression: expression),
             ),
             const SizedBox(height: 16),

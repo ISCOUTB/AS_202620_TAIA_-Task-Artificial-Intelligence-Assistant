@@ -1,9 +1,10 @@
+
+import '../agent/taia_chat_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../mascot/mascot_expression.dart';
-import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
 import '../academic/schedule_screen.dart';
 import '../academic/subjects_screen.dart';
@@ -253,15 +254,7 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             const NotificationsBell(),
-            Container(
-              width: 84,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TaiaMascot(motion: 0.6, expression: expression),
-            ),
+            TaiaChatButton(expression: expression, size: 84),
           ],
         ),
       ],

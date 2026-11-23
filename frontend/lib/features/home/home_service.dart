@@ -34,6 +34,8 @@ class HomeService {
         _tasks.list(dueFrom: dayStart, dueTo: dayEnd, limit: 100),
         _tasks.list(status: TaskStatus.pending, limit: 10),
         _tasks.list(dueFrom: weekStart, dueTo: weekEnd, limit: 100),
+        // Solo interesa cuántas hay, para la burbuja de TAIA (RF-AGT-23).
+        _tasks.list(status: TaskStatus.overdue, limit: 1),
       ],
       // Si una falla, se informa de inmediato en vez de esperar a las demás.
       eagerError: true,
@@ -45,6 +47,7 @@ class HomeService {
       upcoming: (results[2]! as TaskPage).items,
       weekTasks: (results[3]! as TaskPage).items,
       weekStart: weekStart,
+      overdueCount: (results[4]! as TaskPage).total,
     );
   }
 }

@@ -1,3 +1,5 @@
+
+import '../agent/taia_chat_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -411,15 +413,7 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             const NotificationsBell(),
-            Container(
-              width: 84,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TaiaMascot(motion: 0.6, expression: expression),
-            ),
+            TaiaChatButton(expression: expression, size: 84),
           ],
         ),
       ],
@@ -546,13 +540,8 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 200,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-              ),
+            SizedBox(
+              width: 168,
               child: TaiaMascot(motion: 0.6, expression: expression),
             ),
             const SizedBox(height: 16),

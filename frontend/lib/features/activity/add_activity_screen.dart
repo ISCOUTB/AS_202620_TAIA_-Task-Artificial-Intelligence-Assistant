@@ -1,10 +1,11 @@
+
 import 'package:flutter/material.dart';
 
 import '../../core/bogota_time.dart';
 import '../../core/spanish_dates.dart';
 import '../../mascot/mascot_expression.dart';
-import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
+import '../agent/taia_chat_button.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../notifications/notifications_bell.dart';
@@ -508,9 +509,23 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se abre desde el "+" central como pantalla aparte (RNF-14).
+    final canPop = Navigator.of(context).canPop();
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (canPop) ...[
+          IconButton.filled(
+            tooltip: 'Volver',
+            onPressed: () => Navigator.of(context).maybePop(),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: taiaInk,
+            ),
+            icon: const Icon(Icons.arrow_back),
+          ),
+          const SizedBox(width: 12),
+        ],
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,15 +561,7 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             const NotificationsBell(),
-            Container(
-              width: 84,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TaiaMascot(motion: 0.6, expression: expression),
-            ),
+            TaiaChatButton(expression: expression, size: 84),
           ],
         ),
       ],

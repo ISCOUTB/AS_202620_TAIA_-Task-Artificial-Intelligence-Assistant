@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
+import '../agent/taia_chat_button.dart';
 import '../auth/auth_shell.dart';
 
 /// Cabecera de las pantallas que se abren encima de las pestañas: botón para
@@ -15,12 +16,16 @@ class PageHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.expression = MascotExpression.studying,
+    this.opensChat = true,
   });
 
   final String label;
   final String title;
   final String subtitle;
   final MascotExpression expression;
+
+  /// La mascota abre el chat (RF-AGT-23), salvo dentro del propio chat.
+  final bool opensChat;
 
   @override
   Widget build(BuildContext context) {
@@ -70,15 +75,12 @@ class PageHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 72,
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: TaiaMascot(motion: 0.6, expression: expression),
-        ),
+        opensChat
+            ? TaiaChatButton(expression: expression, size: 72)
+            : SizedBox.square(
+                dimension: 72,
+                child: TaiaMascot(motion: 0.6, expression: expression),
+              ),
       ],
     );
   }

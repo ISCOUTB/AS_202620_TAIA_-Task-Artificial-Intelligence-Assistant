@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
-import '../agent/agent_screen.dart';
 import '../agent/agent_service.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
@@ -13,6 +12,7 @@ import 'widgets/home_header.dart';
 import 'widgets/today_card.dart';
 import 'widgets/upcoming_deliveries.dart';
 import 'widgets/weekly_summary.dart';
+import 'widgets/taia_bubble.dart';
 
 /// Pestaña de inicio: resumen del día, próximas entregas, resumen semanal y el
 /// botón con la mascota que abre la conversación con el agente (RF-AGT-01).
@@ -78,29 +78,17 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _openAgent() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AgentScreen(service: widget.agentService),
-      ),
-    );
-    // El agente pudo crear o completar actividades.
-    if (mounted) await refresh();
-  }
-
   @override
   Widget build(BuildContext context) {
     final data = _data;
     return Scaffold(
       backgroundColor: TaiaColors.ivoryMist,
-      floatingActionButton: FloatingActionButton.large(
-        tooltip: 'Habla con TAIA',
-        backgroundColor: Colors.white,
-        onPressed: _openAgent,
-        child: const Padding(
-          padding: EdgeInsets.all(10),
-          child: TaiaMascot(motion: 0.6, expression: MascotExpression.laptop),
-        ),
+      // RF-AGT-23: TAIA con su burbuja, sin botón flotante blanco.
+      floatingActionButton: TaiaBubble(
+        text: data?.taiaBubble ?? '¿Te ayudo con algo hoy?',
+        service: widget.agentService,
+        // El agente pudo crear o completar actividades.
+        onClosed: () => refresh(),
       ),
       body: SafeArea(
         child: data != null
@@ -178,13 +166,8 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 200,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-              ),
+            SizedBox(
+              width: 168,
               child: TaiaMascot(motion: 0.6, expression: expression),
             ),
             const SizedBox(height: 16),

@@ -12,6 +12,7 @@ class HomeData {
     required this.upcoming,
     required this.weekCounts,
     required this.weekTotal,
+    this.overdueCount = 0,
   });
 
   /// Arma los datos a partir de lo que devuelve la API.
@@ -24,6 +25,7 @@ class HomeData {
     required List<AcademicTask> upcoming,
     required List<AcademicTask> weekTasks,
     required DateTime weekStart,
+    int overdueCount = 0,
   }) {
     final weekEnd = DateTime(
       weekStart.year,
@@ -47,6 +49,7 @@ class HomeData {
       upcoming: upcoming,
       weekCounts: counts,
       weekTotal: counts.fold(0, (sum, n) => sum + n),
+      overdueCount: overdueCount,
     );
   }
 
@@ -62,6 +65,25 @@ class HomeData {
   /// Tareas por día de la semana actual, de lunes (0) a domingo (6).
   final List<int> weekCounts;
   final int weekTotal;
+
+  /// Actividades vencidas sin completar.
+  final int overdueCount;
+
+  /// Frase de la burbuja de TAIA en el Inicio, con su voz (RF-AGT-23,
+  /// RF-AGT-22): primero lo vencido, luego lo de hoy.
+  String get taiaBubble {
+    if (overdueCount > 0) {
+      return overdueCount == 1
+          ? 'Tienes 1 actividad vencida. ¿La organizamos juntas?'
+          : 'Tienes $overdueCount actividades vencidas. ¿Las organizamos juntas?';
+    }
+    if (todayPending > 0) {
+      return todayPending == 1
+          ? 'Hoy te queda 1 pendiente. ¿Te ayudo a empezar?'
+          : 'Hoy te quedan $todayPending pendientes. ¿Te ayudo a empezar?';
+    }
+    return '¡Vas al día! Planeamos tu semana? \u{1F419}';
+  }
 
   int get todayPending => todayTotal - todayDone;
 

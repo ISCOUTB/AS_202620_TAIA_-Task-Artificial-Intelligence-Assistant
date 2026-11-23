@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/taia_colors.dart';
+import '../academic/schedule_service.dart';
+import '../academic/widgets/class_composer.dart';
+import '../activity/add_activity_screen.dart';
+import '../activity/widgets/new_subject_dialog.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
-import '../activity/add_activity_screen.dart';
 import '../calendar/calendar_screen.dart';
+import '../home/home_screen.dart';
 import '../notifications/push_registration.dart';
 import '../profile/profile_screen.dart';
+import '../tasks/subjects_service.dart';
 import '../tasks/tasks_screen.dart';
-import '../home/home_screen.dart';
+import 'create_sheet.dart';
 
-/// Contenedor de la app con la barra de navegación inferior.
-///
-/// Las cinco pestañas conservan su estado al cambiar entre ellas. Mientras se
-/// construyen las pantallas reales, cada una muestra un [TabPlaceholder].
+/// Pestañas de la barra inferior (RNF-14). El botón central "+" no es una
+/// pestaña: abre la hoja para crear.
+enum ShellTab { home, agenda, tasks, profile }
+
+/// Contenedor de la app con la barra de navegación inferior: Inicio, Agenda,
+/// "+", Tareas y Perfil (RNF-14). Las pestañas conservan su estado al cambiar
+/// entre ellas.
 class MainShell extends StatefulWidget {
   const MainShell({super.key, this.service});
 
@@ -25,12 +33,14 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  ShellTab _tab = ShellTab.home;
   final _homeKey = GlobalKey<HomeScreenState>();
   final _tasksKey = GlobalKey<TasksScreenState>();
   final _calendarKey = GlobalKey<CalendarScreenState>();
-  final _addKey = GlobalKey<AddActivityScreenState>();
   final _profileKey = GlobalKey<ProfileScreenState>();
+
+  /// Posición del "+" entre los destinos de la barra.
+  static const _createSlot = 2;
 
   /// Con la sesión abierta se registra el dispositivo para push (RF-NOT-01).
   final PushRegistration? _push = buildPushRegistration();
@@ -61,45 +71,105 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
+  void _goTo(ShellTab tab) {
+    if (tab != _tab) {
+      switch (tab) {
+        case ShellTab.home:
+          _homeKey.currentState?.refresh();
+        case ShellTab.agenda:
+          _calendarKey.currentState?.refresh();
+        case ShellTab.tasks:
+          _tasksKey.currentState?.refresh();
+        case ShellTab.profile:
+          _profileKey.currentState?.refresh();
+      }
+    }
+    setState(() => _tab = tab);
+  }
+
+  /// Algo nuevo puede cambiar el inicio, la agenda y las tareas.
+  void _refreshAfterCreate() {
+    _homeKey.currentState?.refresh();
+    _calendarKey.currentState?.refresh();
+    _tasksKey.currentState?.refresh();
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _create() async {
+    final option = await showCreateSheet(context);
+    if (!mounted || option == null) return;
+    switch (option) {
+      case CreateOption.activity:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (routeContext) => AddActivityScreen(
+              onSeeTasks: () {
+                Navigator.of(routeContext).pop();
+                _goTo(ShellTab.tasks);
+              },
+            ),
+          ),
+        );
+        if (mounted) _refreshAfterCreate();
+      case CreateOption.classBlock:
+        await _createClass();
+      case CreateOption.subject:
+        final subject = await showNewSubjectDialog(context);
+        if (!mounted || subject == null) return;
+        _toast('Listo, agregué ${subject.name}.');
+        _refreshAfterCreate();
+    }
+  }
+
+  Future<void> _createClass() async {
+    try {
+      final subjects = await subjectsService.list();
+      if (!mounted) return;
+      if (subjects.isEmpty) {
+        _toast('Primero crea una asignatura para ponerla en tu horario.');
+        return;
+      }
+      final result = await showClassComposer(
+        context,
+        service: scheduleService,
+        subjects: subjects,
+      );
+      if (!mounted || result == null) return;
+      _toast(describeComposerResult(result));
+      _refreshAfterCreate();
+    } on ApiException catch (e) {
+      if (mounted) _toast(e.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _index,
+        index: _tab.index,
         children: [
-          HomeScreen(
-            key: _homeKey,
-              onSeeAllTasks: () {
-              _tasksKey.currentState?.refresh();
-              setState(() => _index = 1);
-            },
-          ),
-          TasksScreen(key: _tasksKey),
+          HomeScreen(key: _homeKey, onSeeAllTasks: () => _goTo(ShellTab.tasks)),
           CalendarScreen(key: _calendarKey),
-          AddActivityScreen(
-            key: _addKey,
-            onSeeTasks: () {
-              _tasksKey.currentState?.refresh();
-              setState(() => _index = 1);
-            },
-          ),
+          TasksScreen(key: _tasksKey),
           ProfileScreen(key: _profileKey, service: widget.service),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: TaiaColors.ivoryMist,
         indicatorColor: TaiaColors.softPeach,
-        selectedIndex: _index,
+        selectedIndex: _tab.index < _createSlot ? _tab.index : _tab.index + 1,
         onDestinationSelected: (i) {
-          // Al entrar a Inicio o a Tareas se actualizan sus datos.
-          if (i != _index) {
-            if (i == 0) _homeKey.currentState?.refresh();
-            if (i == 1) _tasksKey.currentState?.refresh();
-            if (i == 2) _calendarKey.currentState?.refresh();
-            if (i == 3) _addKey.currentState?.refresh();
-            if (i == 4) _profileKey.currentState?.refresh();
+          if (i == _createSlot) {
+            _create();
+            return;
           }
-          setState(() => _index = i);
+          // Al entrar a una pestaña se actualizan sus datos.
+          _goTo(ShellTab.values[i < _createSlot ? i : i - 1]);
         },
         destinations: const [
           NavigationDestination(
@@ -108,22 +178,22 @@ class _MainShellState extends State<MainShell> {
             label: 'Inicio',
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_outlined, color: taiaInk),
-            selectedIcon: Icon(Icons.checklist, color: TaiaColors.fieryRose),
-            label: 'Tareas',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined, color: taiaInk),
             selectedIcon: Icon(
               Icons.calendar_month,
               color: TaiaColors.fieryRose,
             ),
-            label: 'Calendario',
+            label: 'Agenda',
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline, color: taiaInk),
-            selectedIcon: Icon(Icons.add_circle, color: TaiaColors.fieryRose),
-            label: 'Añadir',
+            icon: _CreateButton(),
+            tooltip: 'Crear',
+            label: 'Crear',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.checklist_outlined, color: taiaInk),
+            selectedIcon: Icon(Icons.checklist, color: TaiaColors.fieryRose),
+            label: 'Tareas',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline, color: taiaInk),
@@ -132,6 +202,31 @@ class _MainShellState extends State<MainShell> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// El "+" central: un círculo de color, distinto de las pestañas.
+class _CreateButton extends StatelessWidget {
+  const _CreateButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: const BoxDecoration(
+        color: TaiaColors.fieryRose,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x40F26A6C),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.add, color: Colors.white, size: 30),
     );
   }
 }
