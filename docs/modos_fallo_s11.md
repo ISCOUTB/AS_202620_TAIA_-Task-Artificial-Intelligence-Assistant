@@ -26,7 +26,7 @@ Modos de fallo del envío por FCM:
 | Sin credenciales o sin dispositivos | La notificación queda en la bandeja (RF-NOT-04) y el log dice por qué. | `test_without_fcm_configured_behaves_like_rf_not_04`, `test_log_says_why_no_push_was_sent_rf_not_04` |
 | El proceso corre dos veces | `ReminderRepository.claim` hace un `UPDATE` condicional: una sola notificación por recordatorio. | `test_running_twice_sends_one_notification_rf_not_02` |
 | Falla una ejecución del bucle | Se registra y el bucle sigue en la siguiente. | `test_loop_keeps_running_after_a_failure_adr_0012` |
-| Falla un recordatorio del lote | Se registra y se sigue con los demás. | Sin prueba propia |
+| Falla un recordatorio del lote | Se registra y se sigue con los demás. | `test_one_failing_reminder_does_not_stop_the_others_rf_not_02` |
 
 Sigue valiendo el límite de la sección [Envío de una notificación](#envío-de-una-notificación): la entrega es «al menos una vez», porque FCM tampoco confirma si un envío que dio error llegó.
 

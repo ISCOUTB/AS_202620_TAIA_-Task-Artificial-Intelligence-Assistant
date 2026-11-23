@@ -206,3 +206,25 @@ def test_log_says_why_no_push_was_sent_rf_not_04(env, caplog):
 
     assert [f["push"] for f in _events(caplog, "reminder_notified")] == ["no_devices"]
     assert "Recuerda" not in caplog.text
+
+
+def test_one_failing_reminder_does_not_stop_the_others_rf_not_02(env, caplog):
+    """Criterio de RF-NOT-02: si un vencido falla, los demás se envían en la misma ejecución."""
+    broken = env.reminder()
+    healthy = env.reminder(SIX_PM - timedelta(minutes=5))
+    claim = env.repo.claim
+
+    def failing_claim(reminder_id, notification):
+        if reminder_id == broken.id:
+            raise RuntimeError("fallo simulado de la base")
+        return claim(reminder_id, notification)
+
+    env.repo.claim = failing_claim
+
+    assert env.use_case.execute(SIX_PM) == 1
+
+    assert env.repo.get(healthy.id).status is ReminderStatus.SENT
+    assert env.repo.get(broken.id).status is ReminderStatus.PENDING
+    assert [message for _, message in env.push.sent] == [env.notifications()[0].message]
+    failed = [r for r in caplog.records if getattr(r, "fields", {}).get("reminder_id") == str(broken.id)]
+    assert failed and failed[0].message == "reminder_dispatch_item_failed"
