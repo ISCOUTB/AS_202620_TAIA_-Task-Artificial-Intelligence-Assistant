@@ -46,6 +46,7 @@ dependencies:
   flutter_slidable: ^5.2.0
   confetti: ^0.8.0
   shimmer: ^4.0.0
+  showcaseview: ^5.1.0
 
 dev_dependencies:
   flutter_test:

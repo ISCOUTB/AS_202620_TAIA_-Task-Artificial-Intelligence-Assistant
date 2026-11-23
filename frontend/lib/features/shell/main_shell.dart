@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import '../../core/motion.dart';
 import '../../theme/taia_colors.dart';
@@ -14,6 +15,7 @@ import '../notifications/push_registration.dart';
 import '../profile/profile_screen.dart';
 import '../tasks/subjects_service.dart';
 import '../tasks/tasks_screen.dart';
+import '../tutorial/tutorial.dart';
 import 'create_sheet.dart';
 
 /// Pestañas de la barra inferior (RNF-14). El botón central "+" no es una
@@ -24,10 +26,13 @@ enum ShellTab { home, agenda, tasks, profile }
 /// "+", Tareas y Perfil (RNF-14). Las pestañas conservan su estado al cambiar
 /// entre ellas.
 class MainShell extends StatefulWidget {
-  const MainShell({super.key, this.service});
+  const MainShell({super.key, this.service, this.tutorialStore});
 
   /// Servicio de autenticación; si es null se usa el compartido de la app.
   final AuthService? service;
+
+  /// Dónde se recuerda que el tutorial ya se vio (RF-USR-12).
+  final TutorialStore? tutorialStore;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -55,11 +60,29 @@ class _MainShellState extends State<MainShell>
   /// Con la sesión abierta se registra el dispositivo para push (RF-NOT-01).
   final PushRegistration? _push = buildPushRegistration();
 
+  late final TutorialStore _tutorial = widget.tutorialStore ?? TutorialStore();
+
   @override
   void initState() {
     super.initState();
     _push?.onForegroundMessage = _showForegroundNotification;
     _push?.start();
+    // RF-USR-12: el tutorial sale la primera vez y se puede repetir.
+    registerTutorial(onFinish: _tutorial.markSeen);
+    AppTutorial.replayRequests.addListener(_startTutorial);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!await _tutorial.seen() && mounted) _startTutorial();
+    });
+  }
+
+  /// El recorrido empieza en el Inicio, donde están TAIA y el plan.
+  void _startTutorial() {
+    if (!mounted) return;
+    _goTo(ShellTab.home);
+    ShowcaseView.get().startShowCase(
+      AppTutorial.steps,
+      delay: const Duration(milliseconds: 600),
+    );
   }
 
   /// Con la app abierta, Android no muestra la notificación: se avisa aquí.
@@ -77,6 +100,8 @@ class _MainShellState extends State<MainShell>
 
   @override
   void dispose() {
+    AppTutorial.replayRequests.removeListener(_startTutorial);
+    unregisterTutorial();
     _tabFade.dispose();
     _push?.stop();
     super.dispose();
@@ -189,31 +214,53 @@ class _MainShellState extends State<MainShell>
           // Al entrar a una pestaña se actualizan sus datos.
           _goTo(ShellTab.values[i < _createSlot ? i : i - 1]);
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined, color: taiaInk),
             selectedIcon: Icon(Icons.home, color: TaiaColors.fieryRose),
             label: 'Inicio',
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined, color: taiaInk),
-            selectedIcon: Icon(
+            icon: TutorialTarget(
+              showcaseKey: AppTutorial.agenda,
+              title: 'Tu agenda',
+              description: 'Tu horario y tus entregas de la semana, juntos en un solo lugar.',
+              child: const Icon(Icons.calendar_month_outlined, color: taiaInk),
+            ),
+            selectedIcon: const Icon(
               Icons.calendar_month,
               color: TaiaColors.fieryRose,
             ),
             label: 'Agenda',
           ),
           NavigationDestination(
-            icon: _CreateButton(),
+            icon: TutorialTarget(
+              showcaseKey: AppTutorial.create,
+              title: 'Crear',
+              description:
+                  'Desde aquí agregas actividades, clases y asignaturas.',
+              circle: true,
+              child: const _CreateButton(),
+            ),
             tooltip: 'Crear',
             label: 'Crear',
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_outlined, color: taiaInk),
-            selectedIcon: Icon(Icons.checklist, color: TaiaColors.fieryRose),
+            icon: TutorialTarget(
+              showcaseKey: AppTutorial.tasks,
+              title: 'Tus tareas',
+              description:
+                  'Desliza una tarea a la derecha para completarla. '
+                  '¡Se siente genial! \u{1F389}',
+              child: const Icon(Icons.checklist_outlined, color: taiaInk),
+            ),
+            selectedIcon: const Icon(
+              Icons.checklist,
+              color: TaiaColors.fieryRose,
+            ),
             label: 'Tareas',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.person_outline, color: taiaInk),
             selectedIcon: Icon(Icons.person, color: TaiaColors.fieryRose),
             label: 'Perfil',

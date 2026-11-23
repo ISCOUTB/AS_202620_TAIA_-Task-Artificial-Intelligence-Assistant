@@ -7,6 +7,7 @@ import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../shell/mascot_message.dart';
 import '../shell/page_header.dart';
+import '../tutorial/tutorial.dart';
 import 'profile_service.dart';
 import 'widgets/account_dialogs.dart';
 import 'widgets/profile_tile.dart';
@@ -227,6 +228,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : 'Aceptada al registrarte · versión $policy',
               trailing: const SizedBox.shrink(),
               onTap: null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        ProfileSection(
+          title: 'AYUDA',
+          tiles: [
+            ProfileTile(
+              icon: Icons.tour_outlined,
+              title: 'Ver el tutorial',
+              subtitle: 'TAIA te muestra la app otra vez',
+              // RF-USR-12: vuelve al Inicio y repite el recorrido.
+              onTap: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                AppTutorial.replayRequests.value++;
+              },
             ),
           ],
         ),

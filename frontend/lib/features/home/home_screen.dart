@@ -9,6 +9,7 @@ import '../agent/agent_service.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../study_plan/study_plan_card.dart';
+import '../tutorial/tutorial.dart';
 import 'home_data.dart';
 import 'home_service.dart';
 import 'widgets/home_header.dart';
@@ -91,11 +92,16 @@ class HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: TaiaColors.ivoryMist,
       // RF-AGT-23: TAIA con su burbuja, sin botón flotante blanco.
-      floatingActionButton: TaiaBubble(
-        text: data?.taiaBubble ?? '¿Te ayudo con algo hoy?',
-        service: widget.agentService,
-        // El agente pudo crear o completar actividades.
-        onClosed: () => refresh(),
+      floatingActionButton: TutorialTarget(
+        showcaseKey: AppTutorial.taia,
+        title: 'Esta soy yo, TAIA',
+        description: 'Tócame cuando quieras: creo, busco y completo tus tareas por chat.',
+        child: TaiaBubble(
+          text: data?.taiaBubble ?? '¿Te ayudo con algo hoy?',
+          service: widget.agentService,
+          // El agente pudo crear o completar actividades.
+          onClosed: () => refresh(),
+        ),
       ),
       body: SafeArea(
         child: data != null
@@ -134,7 +140,14 @@ class HomeScreenState extends State<HomeScreen> {
           // RNF-14: el plan de estudio, a la vista desde el Inicio.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: StudyPlanCard(version: _version),
+            child: TutorialTarget(
+              showcaseKey: AppTutorial.plan,
+              title: 'Tu plan de estudio',
+              description:
+                  'Te sugiero cuándo estudiar cada materia según tu horario. '
+                  'Ármalo aquí.',
+              child: StudyPlanCard(version: _version),
+            ),
           ).appear(context, index: 2),
           const SizedBox(height: 24),
           UpcomingDeliveries(
@@ -157,11 +170,7 @@ class HomeScreenState extends State<HomeScreen> {
 
 /// Estado de carga o de error, con la mascota.
 class _Message extends StatelessWidget {
-  const _Message({
-    required this.expression,
-    required this.text,
-    this.onRetry,
-  });
+  const _Message({required this.expression, required this.text, this.onRetry});
 
   final MascotExpression expression;
   final String text;
