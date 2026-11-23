@@ -18,7 +18,11 @@ Future<FakeApi> _pump(WidgetTester tester) async {
       'GET /academic/calendar': (r) => FakeResponse(200, {
         'start': r.queryParameters['start'],
         'end': r.queryParameters['end'],
-        'tasks': r.queryParameters['start'] == '2026-10-01'
+        'tasks':
+            const {
+              '2026-10-01',
+              '2026-10-05',
+            }.contains(r.queryParameters['start'])
             ? [taskJson(title: 'Informe', dueAt: '2026-10-06T04:59:00Z')]
             : [],
         'classes': [
@@ -57,23 +61,30 @@ void main() {
   setUp(() => clock = () => DateTime.utc(2026, 10, 5, 15));
   tearDown(() => clock = DateTime.now);
 
-  testWidgets('RF-TAR-11 · pide el mes a la vista y muestra clases y tareas', (
-    tester,
-  ) async {
-    final api = await _pump(tester);
+  testWidgets(
+    'RF-TAR-11 · la Agenda abre en la semana y junta clases y tareas',
+    (tester) async {
+      final api = await _pump(tester);
 
-    expect(_ranges(api), [
-      {'start': '2026-10-01', 'end': '2026-10-31'},
-    ]);
-    expect(find.text('Cálculo'), findsOneWidget);
-    expect(find.text('Clase hasta las 10:00 a. m. · A-201'), findsOneWidget);
-    expect(find.text('Informe'), findsOneWidget);
-  });
+      expect(_ranges(api), [
+        {'start': '2026-10-05', 'end': '2026-10-11'},
+      ]);
+      expect(find.text('Tu agenda'), findsOneWidget);
+      // En la línea de tiempo de la semana y en la agenda del día.
+      expect(find.text('Cálculo'), findsWidgets);
+      expect(find.text('Clase hasta las 10:00 a. m. · A-201'), findsOneWidget);
+      expect(find.text('Informe'), findsWidgets);
+      expect(find.text('Editar horario'), findsOneWidget);
+    },
+  );
 
   testWidgets('RF-TAR-11 · al pasar de mes pide el rango nuevo', (
     tester,
   ) async {
     final api = await _pump(tester);
+    await tester.tap(find.text('Mes'));
+    await pumpFrames(tester);
+    expect(_ranges(api).last, {'start': '2026-10-01', 'end': '2026-10-31'});
 
     await tester.tap(find.byTooltip('Mes siguiente'));
     await pumpFrames(tester);

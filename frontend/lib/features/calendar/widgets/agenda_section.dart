@@ -4,6 +4,7 @@ import '../../../core/spanish_dates.dart';
 import '../../../mascot/mascot_expression.dart';
 import '../../../mascot/taia_mascot.dart';
 import '../../../theme/taia_colors.dart';
+import '../../agent/taia_chat_button.dart';
 import '../../auth/auth_shell.dart';
 import '../../tasks/task.dart';
 import '../calendar_logic.dart';
@@ -47,15 +48,8 @@ class AgendaSection extends StatelessWidget {
               ),
             ),
             if (tasks.isNotEmpty)
-              Container(
-                width: 56,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: TaiaMascot(motion: 0.5, expression: expression),
-              ),
+              // RF-AGT-23: TAIA sin recuadro, y abre el chat.
+              TaiaChatButton(expression: expression, size: 56),
           ],
         ),
         const SizedBox(height: 12),
@@ -308,13 +302,8 @@ class _EmptyDay extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 130,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-            ),
+          SizedBox(
+            width: 110,
             child: TaiaMascot(motion: 0.6, expression: expression),
           ),
           const SizedBox(height: 14),

@@ -6,6 +6,7 @@ import '../../core/bogota_time.dart';
 import '../../core/spanish_dates.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
+import '../academic/schedule_screen.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
 import '../notifications/notifications_bell.dart';
@@ -19,10 +20,12 @@ import 'calendar_service.dart';
 import 'widgets/agenda_section.dart';
 import 'widgets/calendar_card.dart';
 import 'widgets/calendar_mode_toggle.dart';
+import 'widgets/week_timeline.dart';
 
-/// Pestaña de calendario: vista por mes o por semana con las actividades y
-/// las clases del rango (RF-TAR-11). Al tocar una actividad se abre la hoja de
-/// edición.
+/// Pestaña Agenda: el horario y las actividades juntos (RF-TAR-11). La vista
+/// de semana pone clases, sesiones de estudio y actividades en la misma línea
+/// de tiempo; la de mes marca los días con entregas. Al tocar una actividad se
+/// abre la hoja de edición, y el horario se edita desde aquí.
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({
     super.key,
@@ -48,7 +51,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   String? _error;
   bool _loading = true;
 
-  CalendarMode _mode = CalendarMode.month;
+  CalendarMode _mode = CalendarMode.week;
   late DateTime _selected = dateOnly(bogotaNow());
   late DateTime _focused = _selected;
 
@@ -189,6 +192,13 @@ class CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  /// El horario se edita desde la Agenda (RF-TAR-11); al volver se recarga.
+  Future<void> _editSchedule() async {
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const ScheduleScreen()));
+    if (mounted) await _load(silent: true);
+  }
+
   /// "NOVIEMBRE 2026" o, en la vista semanal, "2 – 8 DE NOVIEMBRE".
   String get _rangeLabel {
     if (_mode == CalendarMode.month) {
@@ -266,7 +276,7 @@ class CalendarScreenState extends State<CalendarScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Tu calendario',
+                      'Tu agenda',
                       style: TextStyle(
                         color: taiaInk,
                         fontSize: 32,
@@ -286,7 +296,19 @@ class CalendarScreenState extends State<CalendarScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _editSchedule,
+              style: TextButton.styleFrom(
+                foregroundColor: TaiaColors.fieryRose,
+              ),
+              icon: const Icon(Icons.edit_calendar_outlined),
+              label: const Text('Editar horario'),
+            ),
+          ),
+          const SizedBox(height: 8),
           CalendarCard(
             mode: _mode,
             focused: _focused,
@@ -298,6 +320,18 @@ class CalendarScreenState extends State<CalendarScreen> {
             onNext: () => _go(1),
             onToday: _goToday,
           ),
+          if (_mode == CalendarMode.week) ...[
+            const SizedBox(height: 16),
+            WeekTimeline(
+              days: weekDays(_focused),
+              classes: _classes,
+              tasks: items,
+              selected: _selected,
+              today: today,
+              onSelectDay: (day) => setState(() => _selected = day),
+              onTapTask: _edit,
+            ),
+          ],
           const SizedBox(height: 24),
           AgendaSection(
             day: _selected,
