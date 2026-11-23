@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'core/api_client.dart';
+import 'core/motion.dart';
 import 'features/auth/auth_service.dart';
 import 'firebase_options.dart';
 import 'splash/splash_screen.dart';
@@ -46,6 +47,8 @@ class TaiaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: TaiaColors.fieryRose),
+        // RNF-14: transición entre pantallas.
+        pageTransitionsTheme: taiaPageTransitions,
       ),
       home: SplashScreen(sessionCheck: authService.hasSession),
     );

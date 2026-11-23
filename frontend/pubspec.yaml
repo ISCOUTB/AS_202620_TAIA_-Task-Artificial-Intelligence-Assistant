@@ -41,6 +41,11 @@ dependencies:
   url_launcher: ^6.3.3
   firebase_core: ^5.2.0
   firebase_messaging: ^17.1.0
+  flutter_animate: ^4.5.2
+  animations: ^3.0.0
+  flutter_slidable: ^5.2.0
+  confetti: ^0.8.0
+  shimmer: ^4.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,5 @@
+import '../../core/motion.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -117,8 +119,9 @@ class _AgentScreenState extends State<AgentScreen> {
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       children: [
+                        // RNF-14: cada mensaje entra deslizándose.
                         for (final message in messages)
-                          _Bubble(message: message),
+                          _Bubble(message: message).appear(context),
                         if (_chat.sending) const _TypingBubble(),
                       ],
                     ),

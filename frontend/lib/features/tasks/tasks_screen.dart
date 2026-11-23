@@ -1,9 +1,14 @@
+import '../../core/celebration.dart';
+import '../../core/motion.dart';
+import '../../core/skeleton.dart';
 import '../agent/taia_chat_button.dart';
 import '../study_plan/study_plan_card.dart';
 
 import 'dart:async';
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../core/bogota_time.dart';
 import '../../mascot/mascot_expression.dart';
@@ -55,6 +60,7 @@ class TasksScreenState extends State<TasksScreen> {
   final Set<String> _busy = {};
   bool _celebrating = false;
   Timer? _celebrationTimer;
+  late final ConfettiController _confetti = taiaConfettiController();
 
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjects => widget.subjectsService ?? subjectsService;
@@ -70,6 +76,7 @@ class TasksScreenState extends State<TasksScreen> {
     _search.dispose();
     _celebrationTimer?.cancel();
     _searchDebounce?.cancel();
+    _confetti.dispose();
     super.dispose();
   }
 
@@ -198,6 +205,8 @@ class TasksScreenState extends State<TasksScreen> {
 
   void _celebrate() {
     _celebrationTimer?.cancel();
+    // RNF-14: vibración y confeti al completar.
+    celebrate(context, _confetti);
     setState(() => _celebrating = true);
     _celebrationTimer = Timer(const Duration(milliseconds: 2200), () {
       if (mounted) setState(() => _celebrating = false);
@@ -266,24 +275,69 @@ class TasksScreenState extends State<TasksScreen> {
     return Scaffold(
       backgroundColor: TaiaColors.ivoryMist,
       body: SafeArea(
-        child: items != null
-            ? _content(items)
-            : _loading
-            ? const _Message(
-                expression: MascotExpression.thinking,
-                text: 'Buscando tus tareas…',
-                showSpinner: true,
-              )
-            : _Message(
-                expression: MascotExpression.surprised,
-                text: _error ?? 'No se pudieron cargar tus tareas.',
-                onRetry: _load,
-              ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: items != null
+                  ? _content(items)
+                  : _loading
+                  // RNF-14: esqueleto con brillo mientras carga.
+                  ? const SkeletonList(heights: [72, 120, 48, 76, 76, 76])
+                  : _Message(
+                      expression: MascotExpression.surprised,
+                      text: _error ?? 'No se pudieron cargar tus tareas.',
+                      onRetry: _load,
+                    ),
+            ),
+            // RNF-14: confeti al completar.
+            TaiaConfetti(controller: _confetti),
+          ],
+        ),
       ),
     );
   }
 
+  /// Deslizar: a la derecha completa o reabre, a la izquierda edita (RNF-14).
+  Widget _slidable(AcademicTask task, Widget child) {
+    final done = task.status == TaskStatus.completed;
+    return Slidable(
+      key: ValueKey('slide-${task.id}'),
+      startActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: 0.32,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _toggle(task),
+            backgroundColor: done
+                ? TaiaColors.apricotWhisper
+                : const Color(0xFF7BBF7A),
+            foregroundColor: done ? taiaInk : Colors.white,
+            icon: done ? Icons.replay : Icons.check_rounded,
+            label: done ? 'Reabrir' : 'Completar',
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ],
+      ),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: 0.28,
+        children: [
+          SlidableAction(
+            onPressed: (_) => _edit(task),
+            backgroundColor: TaiaColors.softPeach,
+            foregroundColor: taiaInk,
+            icon: Icons.edit_outlined,
+            label: 'Editar',
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   Widget _content(List<AcademicTask> items) {
+    var tileIndex = 0;
     final now = bogotaNow();
     final visible = items;
     final groups = groupTasks(visible, now);
@@ -336,12 +390,15 @@ class TasksScreenState extends State<TasksScreen> {
               _GroupHeader(title: group.title, count: group.tasks.length),
               const SizedBox(height: 8),
               for (final task in group.tasks) ...[
-                TaskTile(
-                  task: task,
-                  busy: _busy.contains(task.id),
-                  onTap: () => _edit(task),
-                  onToggle: () => _toggle(task),
-                ),
+                _slidable(
+                  task,
+                  TaskTile(
+                    task: task,
+                    busy: _busy.contains(task.id),
+                    onTap: () => _edit(task),
+                    onToggle: () => _toggle(task),
+                  ),
+                ).appear(context, index: tileIndex++),
                 const SizedBox(height: 10),
               ],
               const SizedBox(height: 8),
@@ -524,16 +581,10 @@ class _EmptyState extends StatelessWidget {
 
 /// Estado de carga o de error, con la mascota.
 class _Message extends StatelessWidget {
-  const _Message({
-    required this.expression,
-    required this.text,
-    this.showSpinner = false,
-    this.onRetry,
-  });
+  const _Message({required this.expression, required this.text, this.onRetry});
 
   final MascotExpression expression;
   final String text;
-  final bool showSpinner;
   final VoidCallback? onRetry;
 
   @override
@@ -558,10 +609,6 @@ class _Message extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            if (showSpinner) ...[
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(color: TaiaColors.fieryRose),
-            ],
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               FilledButton(

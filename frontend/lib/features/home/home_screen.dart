@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/motion.dart';
+import '../../core/skeleton.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
@@ -99,11 +101,8 @@ class HomeScreenState extends State<HomeScreen> {
         child: data != null
             ? _content(data)
             : _loading
-            ? const _Message(
-                expression: MascotExpression.thinking,
-                text: 'Preparando tu día…',
-                showSpinner: true,
-              )
+            // RNF-14: esqueleto con brillo mientras carga.
+            ? const SkeletonList()
             : _Message(
                 expression: MascotExpression.surprised,
                 text: _error ?? 'No se pudo cargar tu inicio.',
@@ -121,26 +120,27 @@ class HomeScreenState extends State<HomeScreen> {
         // Espacio abajo para que el botón del agente no tape el resumen.
         padding: const EdgeInsets.fromLTRB(0, 16, 0, 112),
         children: [
+          // RNF-14: las tarjetas entran escalonadas.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: HomeHeader(firstName: data.firstName),
-          ),
+          ).appear(context),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TodayCard(data: data),
-          ),
+          ).appear(context, index: 1),
           const SizedBox(height: 16),
           // RNF-14: el plan de estudio, a la vista desde el Inicio.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: StudyPlanCard(version: _version),
-          ),
+          ).appear(context, index: 2),
           const SizedBox(height: 24),
           UpcomingDeliveries(
             tasks: data.upcoming,
             onSeeAll: widget.onSeeAllTasks ?? () {},
-          ),
+          ).appear(context, index: 3),
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -148,7 +148,7 @@ class HomeScreenState extends State<HomeScreen> {
               counts: data.weekCounts,
               total: data.weekTotal,
             ),
-          ),
+          ).appear(context, index: 4),
         ],
       ),
     );
@@ -160,13 +160,11 @@ class _Message extends StatelessWidget {
   const _Message({
     required this.expression,
     required this.text,
-    this.showSpinner = false,
     this.onRetry,
   });
 
   final MascotExpression expression;
   final String text;
-  final bool showSpinner;
   final VoidCallback? onRetry;
 
   @override
@@ -191,10 +189,6 @@ class _Message extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            if (showSpinner) ...[
-              const SizedBox(height: 16),
-              const CircularProgressIndicator(color: TaiaColors.fieryRose),
-            ],
             if (onRetry != null) ...[
               const SizedBox(height: 16),
               FilledButton(

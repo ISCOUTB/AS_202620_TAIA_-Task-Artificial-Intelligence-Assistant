@@ -1,3 +1,5 @@
+import '../../core/motion.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -330,16 +332,20 @@ class CalendarScreenState extends State<CalendarScreen> {
               today: today,
               onSelectDay: (day) => setState(() => _selected = day),
               onTapTask: _edit,
-            ),
+            ).appear(context, index: 1),
           ],
           const SizedBox(height: 24),
-          AgendaSection(
-            day: _selected,
-            today: today,
-            tasks: dayTasks,
-            classes: dayClasses,
-            expression: expression,
-            onTapTask: _edit,
+          // RNF-14: al cambiar de día, su agenda vuelve a entrar.
+          KeyedSubtree(
+            key: ValueKey(_selected),
+            child: AgendaSection(
+              day: _selected,
+              today: today,
+              tasks: dayTasks,
+              classes: dayClasses,
+              expression: expression,
+              onTapTask: _edit,
+            ).appear(context, index: 2),
           ),
         ],
       ),

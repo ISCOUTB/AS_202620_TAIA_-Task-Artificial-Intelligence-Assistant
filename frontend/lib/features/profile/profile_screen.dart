@@ -1,5 +1,6 @@
-
+import '../../core/motion.dart';
 import '../agent/taia_chat_button.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -151,13 +152,13 @@ class ProfileScreenState extends State<ProfileScreen>
         children: [
           _Header(expression: _expression),
           const SizedBox(height: 20),
-          ProfileCard(user: user),
+          ProfileCard(user: user).appear(context),
           const SizedBox(height: 24),
           // RF-PRF-01: las gráficas se ven al entrar al perfil.
           StatisticsSection(
             key: _statisticsKey,
             service: widget.statisticsService,
-          ),
+          ).appear(context, index: 1),
           const SizedBox(height: 24),
           ProfileSection(
             title: 'ACADÉMICO',

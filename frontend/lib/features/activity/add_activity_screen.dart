@@ -1,6 +1,9 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/bogota_time.dart';
+import '../../core/celebration.dart';
+import '../../core/motion.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
 import '../agent/taia_chat_button.dart';
@@ -65,6 +68,8 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   /// La descripción es opcional: se abre con "Añadir detalles" (RNF-14).
   bool _showDetails = false;
 
+  late final ConfettiController _confetti = taiaConfettiController();
+
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjectService =>
       widget.subjectsService ?? subjectsService;
@@ -118,6 +123,7 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   void dispose() {
     _title.removeListener(_titleChanged);
     _title.dispose();
+    _confetti.dispose();
     _description.dispose();
     super.dispose();
   }
@@ -234,6 +240,8 @@ class AddActivityScreenState extends State<AddActivityScreen> {
         _created = task;
         _expression = MascotExpression.excited;
       });
+      // RNF-14: celebración al crear.
+      celebrate(context, _confetti);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -280,19 +288,24 @@ class AddActivityScreenState extends State<AddActivityScreen> {
     return Scaffold(
       backgroundColor: TaiaColors.ivoryMist,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Stack(
           children: [
-            _Header(expression: _expression),
-            const SizedBox(height: 20),
-            if (created != null)
-              ActivitySuccess(
-                task: created,
-                onAddAnother: _addAnother,
-                onSeeTasks: widget.onSeeTasks,
-              )
-            else
-              _form(),
+            ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                _Header(expression: _expression),
+                const SizedBox(height: 20),
+                if (created != null)
+                  ActivitySuccess(
+                    task: created,
+                    onAddAnother: _addAnother,
+                    onSeeTasks: widget.onSeeTasks,
+                  ).appear(context)
+                else
+                  _form(),
+              ],
+            ),
+            TaiaConfetti(controller: _confetti),
           ],
         ),
       ),

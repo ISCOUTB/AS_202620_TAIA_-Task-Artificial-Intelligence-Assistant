@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/motion.dart';
 import '../../theme/taia_colors.dart';
 import '../academic/schedule_service.dart';
 import '../academic/widgets/class_composer.dart';
@@ -32,7 +33,8 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell>
+    with SingleTickerProviderStateMixin {
   ShellTab _tab = ShellTab.home;
   final _homeKey = GlobalKey<HomeScreenState>();
   final _tasksKey = GlobalKey<TasksScreenState>();
@@ -41,6 +43,14 @@ class _MainShellState extends State<MainShell> {
 
   /// Posición del "+" entre los destinos de la barra.
   static const _createSlot = 2;
+
+  /// Desvanecido corto al cambiar de pestaña (RNF-14). Anima la pila entera,
+  /// así las pestañas conservan su estado.
+  late final AnimationController _tabFade = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+    value: 1,
+  );
 
   /// Con la sesión abierta se registra el dispositivo para push (RF-NOT-01).
   final PushRegistration? _push = buildPushRegistration();
@@ -67,6 +77,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    _tabFade.dispose();
     _push?.stop();
     super.dispose();
   }
@@ -84,6 +95,7 @@ class _MainShellState extends State<MainShell> {
           _profileKey.currentState?.refresh();
       }
     }
+    if (tab != _tab && !reduceMotion(context)) _tabFade.forward(from: 0.3);
     setState(() => _tab = tab);
   }
 
@@ -150,14 +162,20 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _tab.index,
-        children: [
-          HomeScreen(key: _homeKey, onSeeAllTasks: () => _goTo(ShellTab.tasks)),
-          CalendarScreen(key: _calendarKey),
-          TasksScreen(key: _tasksKey),
-          ProfileScreen(key: _profileKey, service: widget.service),
-        ],
+      body: FadeTransition(
+        opacity: CurvedAnimation(parent: _tabFade, curve: Curves.easeOut),
+        child: IndexedStack(
+          index: _tab.index,
+          children: [
+            HomeScreen(
+              key: _homeKey,
+              onSeeAllTasks: () => _goTo(ShellTab.tasks),
+            ),
+            CalendarScreen(key: _calendarKey),
+            TasksScreen(key: _tasksKey),
+            ProfileScreen(key: _profileKey, service: widget.service),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: TaiaColors.ivoryMist,
