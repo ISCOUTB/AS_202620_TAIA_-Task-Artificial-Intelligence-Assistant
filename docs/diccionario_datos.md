@@ -647,7 +647,7 @@ Se calculan en el dominio o en la consulta y se exponen en la API con estos nomb
 | `archived` | Asignatura | `archived_at IS NOT NULL` | RF-ASG-05 |
 | `pending_tasks` | Asignatura | Conteo de sus tareas no eliminadas y no completadas | RF-ASG-02 |
 | `end_date` | Plan de estudio | `start_date + 6 días` | D-13 |
-| Mensaje por defecto | Recordatorio | `"Recuerda: <title> (<subject>) vence el <due_at>"`, armado al enviar con los datos actuales de la tarea | RF-REC-01 |
+| Mensaje por defecto | Recordatorio | `"¡Ey! Soy TAIA <pulpo> Recuerda que <title> de <subject> vence el <due_at>. ¡Tú puedes!"`, armado al enviar con los datos actuales de la tarea | RF-REC-01, RF-AGT-22 |
 | `read` | Notificación | `read_at IS NOT NULL` | RF-NOT-03 |
 | Conversación vencida | Conversación | El último mensaje tiene más de 30 minutos | RF-AGT-15 |
 | Estadísticas y calendario | Varias | Consultas agregadas sobre `tasks`, `subjects` y `schedule_blocks` | RF-PRF-01, RF-TAR-11 |

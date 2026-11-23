@@ -562,7 +562,7 @@ El sistema debe permitir crear un recordatorio para una actividad propia y pendi
 
 **Reglas**
 - La fecha debe ser futura y anterior a la fecha límite de la actividad.
-- Si no se indica mensaje, se genera uno: `"Recuerda: <título> (<asignatura>) vence el <fecha y hora>"`.
+- Si no se indica mensaje, se genera uno con la voz de TAIA (RF-AGT-22): `"¡Ey! Soy TAIA <pulpo> Recuerda que <título> de <asignatura> vence el <fecha y hora>. ¡Tú puedes!"`.
 - Origen: `custom`.
 
 ### RF-REC-02 · Política de recordatorios por defecto
@@ -676,10 +676,16 @@ El sistema debe permitir vincular la cuenta TAIA con una cuenta de Telegram medi
 **Reglas**
 - Una cuenta de Telegram solo puede estar vinculada a una cuenta TAIA, y viceversa.
 - Un código usado o expirado no sirve.
+- El webhook responde siempre `2xx`, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). El resultado se le informa al usuario en el mismo chat, con la voz de TAIA (RF-AGT-22):
+  - Vinculación exitosa: "¡Listo, ya estamos conectadas! <pulpo> Desde aquí puedes pedirme que cree, consulte o complete tus tareas."
+  - Código inválido, usado o vencido: "Ese enlace ya no sirve: dura 10 minutos y solo se usa una vez. Pide uno nuevo en la app y lo intentamos otra vez."
+  - La cuenta de Telegram ya es de otro usuario: "Esta cuenta de Telegram ya está vinculada a otra cuenta de TAIA. Desvincúlala desde esa cuenta en la app y vuelve a intentarlo."
+  - La cuenta TAIA ya tiene otro Telegram: "Tu cuenta de TAIA ya tiene otro Telegram vinculado. Desvincúlalo en la app y pide un enlace nuevo."
 
 **Criterios de aceptación**
-- Usar el mismo código dos veces → la segunda vez falla.
-- Vincular una cuenta de Telegram que ya pertenece a otro usuario → `409`.
+- Usar el mismo código dos veces → la segunda vez no vincula y el bot responde el mensaje de código inválido.
+- Vincular una cuenta de Telegram que ya pertenece a otro usuario → no vincula y el bot responde el mensaje correspondiente.
+- Una vinculación exitosa → el bot lo confirma en el chat.
 
 ### RF-TEL-02 · Canal del bot autenticado
 **Prioridad:** MVP · **Estado:** Implementado
@@ -701,8 +707,8 @@ El sistema debe recibir los mensajes que el usuario escribe al bot y procesarlos
 
 **Reglas**
 - La identidad del usuario se resuelve por la vinculación (`telegram_user_id` → usuario TAIA).
-- Si la cuenta de Telegram no está vinculada, el bot responde únicamente con instrucciones para vincularla y no procesa la solicitud.
-- Si la cuenta TAIA está inactiva, el bot responde con un mensaje fijo ("No puedo atender esta solicitud.") y no da información de la cuenta.
+- Si la cuenta de Telegram no está vinculada, el bot responde únicamente con instrucciones para vincularla y no procesa la solicitud: "¡Hola! Soy TAIA, tu compañera de estudio. Para ayudarte desde Telegram necesito que vinculemos tu cuenta: en la app pide el enlace de Telegram, ábrelo y pulsa Iniciar. Vale 10 minutos."
+- Si la cuenta TAIA está inactiva, el bot responde con un mensaje fijo ("Lo siento, por ahora no puedo ayudarte con esta cuenta.") y no da información de la cuenta.
 
 ---
 
@@ -732,8 +738,13 @@ El agente solo reconoce estas intenciones:
 | Resumen de actividades de un período | Lectura | No |
 | Consultar horario de clases | Lectura | No |
 | Ayuda sobre TAIA | Lectura | No |
+| Saludo, agradecimiento o despedida (`greeting`) | Lectura | No |
 
-Cualquier otra intención recibe una respuesta fija, sin una segunda llamada al LLM, que indica qué puede hacer el agente.
+El saludo recibe una respuesta fija con la voz de TAIA (RF-AGT-22), sin una segunda llamada al LLM. Cualquier otra intención recibe una respuesta fija, también sin una segunda llamada al LLM, que indica qué puede hacer el agente.
+
+**Criterios de aceptación**
+- "Hola taia" → saludo de TAIA con lo que puede hacer, no la respuesta de intención no reconocida.
+- "Gracias" → respuesta breve y cálida, sin ejecutar nada.
 
 ### RF-AGT-03 · Acciones excluidas del agente
 **Prioridad:** MVP · **Estado:** Implementado (por omisión)
@@ -868,6 +879,8 @@ El agente responde preguntas sobre cómo usar TAIA **solo** a partir de una base
 - La respuesta es breve: máximo 3 frases (aproximadamente 80 palabras), con un enlace o una ruta de la app cuando aplique.
 - El límite de tokens de salida es configurable (por defecto 1024) y debe considerar los tokens de razonamiento del modelo. Para esta llamada se desactiva o se acota el razonamiento (*thinking*).
 - Si la respuesta llega cortada por el límite de tokens (`finishReason = MAX_TOKENS`), no se muestra a medias: se responde un mensaje fijo.
+- La base de conocimiento explica qué recuerda TAIA: la lista de mensajes del chat se borra al salir (RF-AGT-01) y el contexto se limita a los últimos mensajes de los últimos 30 minutos (RF-AGT-15). Así, "¿no tienes memoria?" o "¿qué te dije en el otro chat?" se responden como ayuda.
+- La respuesta sigue la voz de TAIA (RF-AGT-22).
 
 ### RF-AGT-15 · Contexto conversacional acotado
 **Prioridad:** MVP · **Estado:** Implementado
@@ -938,6 +951,24 @@ De vez en cuando, no en cada mensaje, el agente podría ofrecer dos respuestas y
 - Las elecciones son datos personales: necesitan una tabla en el diccionario de datos y entrar en la política de datos (RF-USR-10).
 - Groq y Gemini no aprenden de las elecciones por sí solos. Hay que definir cómo se usan: por ejemplo, para elegir ejemplos del prompt o para evaluar los cambios de reglas con `tools/eval_llm.py`.
 - Queda para después de la sustentación de S16.
+
+### RF-AGT-22 · Voz y personalidad de TAIA
+**Prioridad:** MVP · **Estado:** Pendiente
+
+TAIA habla como una compañera de estudio: en primera persona, cercana, carismática y breve. Aplica a todo texto que el estudiante lee de TAIA: las respuestas fijas del agente, la ayuda (base de conocimiento y prompt), los mensajes del bot de Telegram y el mensaje por defecto de las notificaciones (RF-REC-01).
+
+**Reglas**
+- Primera persona y en femenino ("Soy TAIA, tu compañera de estudio"). Tutea. Nunca se refiere a sí misma en tercera persona ("TAIA puede...", "el asistente...").
+- Ortografía completa: tildes y signos de exclamación. En las preguntas, a veces se omite el signo de apertura o se cierra con "???" para sonar más natural, pero no en todas.
+- Emojis con moderación: como máximo uno por mensaje, y ninguno en los errores ni en los resúmenes que piden confirmar una escritura (RF-AGT-04). En este documento, `<pulpo>` es el emoji del pulpo (U+1F419); en el código se escribe como secuencia de escape, no como carácter.
+- Las respuestas fijas que se pueden repetir (intención no reconocida, no entendí) tienen al menos dos variantes. Si la respuesta repetiría el mensaje anterior de TAIA, se usa otra variante.
+- Los datos (fechas, títulos, conteos) se muestran igual que antes; la voz no cambia qué se informa.
+- El mensaje por defecto de un recordatorio es: `"¡Ey! Soy TAIA <pulpo> Recuerda que <título> de <asignatura> vence el <fecha y hora>. ¡Tú puedes!"`.
+
+**Criterios de aceptación**
+- Ningún texto fijo del agente, del bot ni de las notificaciones dice "TAIA puede" ni "el asistente", y todos llevan tildes.
+- La misma intención no reconocida dos veces seguidas recibe dos textos distintos.
+- `tools/eval_llm.py` en Groq y en Gemini no baja la exactitud de intención ni la de campos frente a la última medición.
 
 ---
 
