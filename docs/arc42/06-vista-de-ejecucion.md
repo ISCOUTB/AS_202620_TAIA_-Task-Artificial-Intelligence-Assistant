@@ -1,1106 +1,183 @@
 # 6. Vista de ejecución
 
-La vista de ejecución describe cómo los bloques de TAIA colaboran durante la ejecución de escenarios relevantes.
-
-La selección de escenarios se realiza por relevancia arquitectónica: se documentan los recorridos que muestran las interacciones importantes entre módulos, dependencias externas, validaciones, aislamiento de usuarios y manejo de errores.
-
-Los recorridos principales se agrupan por los cuatro módulos del sistema y por sus integraciones.
+La vista de ejecución describe cómo colaboran los bloques de TAIA en los escenarios con más peso arquitectónico: los que cruzan módulos, llaman a servicios externos, aíslan los datos de cada usuario o manejan fallos. Los nombres de los bloques son los de la [vista de bloques](05-vista-de-bloques-de-construccion.md).
 
 ---
 
-## 6.1. Recorrido del módulo Usuario — Registro
+## 6.1. Autenticación de una solicitud
 
-### Flujo
-
-```text
-Estudiante
-    │
-    │ POST /users
-    ▼
-Usuario API
-    │
-    ▼
-RegisterUserUseCase
-    │
-    ├── valida Email
-    │
-    ├── verifica usuario existente
-    │
-    ├── genera password hash
-    │
-    ▼
-Usuario
-    │
-    ▼
-UserRepository
-    │
-    ▼
-InMemoryUserRepository
-    │
-    ▼
-HTTP 201
-```
-
-### Secuencia
-
-1. El estudiante envía nombre, correo y contraseña.
-2. El adaptador HTTP recibe la solicitud.
-3. `RegisterUserUseCase` valida el correo.
-4. Se verifica que no exista otro usuario con el mismo correo.
-5. La contraseña se transforma mediante `Pbkdf2PasswordHasher`.
-6. Se crea la entidad `Usuario`.
-7. El repositorio almacena el usuario.
-8. La API devuelve la información pública del usuario.
-
-### Errores relevantes
+Toda ruta exige JWT salvo las excepciones de RT-01 (registro, inicio de sesión, renovación, recuperación de contraseña, webhook de Telegram y salud).
 
 ```text
-Correo existente
-      │
-      ▼
-HTTP 409 Conflict
+App móvil
+   │ Authorization: Bearer <JWT>
+   ▼
+Ruta de cualquier módulo
+   │ CurrentUserId (app/shared/adapters/inbound/auth.py)
+   ▼
+IdentityService (Usuario)
+   ├── token inválido o vencido ──► 401
+   ├── cuenta desactivada ────────► 401
+   ▼
+user_id ──► caso de uso del módulo ──► repositorio filtrado por user_id
 ```
 
-```text
-Datos inválidos
-      │
-      ▼
-HTTP 422 Unprocessable Entity
-```
+El `user_id` sale siempre del token, nunca del cuerpo de la petición. Un recurso de otro usuario responde `404` (RT-02).
+
+El inicio de sesión (`POST /users/login`) entrega un JWT de acceso y un token de renovación. `POST /users/refresh` renueva la sesión, y los intentos fallidos de inicio de sesión se limitan por cuenta.
 
 ---
 
-## 6.2. Recorrido del módulo Usuario — Login
+## 6.2. Crear una actividad desde la app
 
 ```text
-Estudiante
-    │
-    │ POST /users/login
-    ▼
-Usuario API
-    │
-    ▼
-LoginUserUseCase
-    │
-    ├── busca usuario
-    │
-    ├── verifica password
-    │
-    ▼
-JwtTokenService
-    │
-    ▼
-Access Token
-    │
-    ▼
-HTTP 200
+App móvil
+   │ POST /academic/tasks
+   ▼
+Academic API ──► manage_tasks (crear)
+   │                ├── valida asignatura, fecha y tipo (dominio)
+   │                ├── TaskRepository.add (SQLAlchemy)
+   │                └── TaskReminderSync.on_task_created ──► Reminders
+   │                                                          └── crea los recordatorios
+   │                                                              por defecto (RF-REC-02)
+   ▼
+201 con la actividad
 ```
 
-### Secuencia
-
-1. El estudiante envía correo y contraseña.
-2. `LoginUserUseCase` consulta el repositorio.
-3. Se verifica la contraseña mediante el hasher.
-4. Se valida que el usuario esté activo.
-5. `JwtTokenService` genera el token.
-6. El token se devuelve al cliente.
-
-### Errores
-
-```text
-Credenciales inválidas
-        │
-        ▼
-HTTP 401
-```
-
-```text
-Usuario inactivo
-        │
-        ▼
-HTTP 403
-```
+Completar, reabrir, cambiar la fecha o eliminar la actividad avisa a Reminders por el mismo puerto (`on_task_closed`, `on_task_reopened`, `on_due_changed`), que cancela o recalcula los recordatorios pendientes (RF-REC-06).
 
 ---
 
-## 6.3. Recorrido del módulo Usuario — Autenticación de una solicitud
+## 6.3. Crear una actividad por lenguaje natural, con confirmación
 
-Este recorrido es transversal a los otros tres módulos.
+El mismo recorrido sirve para la app (`POST /ai/message`) y para Telegram (`POST /telegram/webhook`).
 
 ```text
-Cliente
-   │
-   │ Authorization: Bearer JWT
-   ▼
-HTTP Endpoint
+Estudiante: "tengo parcial de cálculo el viernes a las 10"
    │
    ▼
-IdentityService.authenticate()
-   │
+HandleUserMessageUseCase (AI)
+   ├── límite de uso superado ──► 429 (RF-AGT-19)
+   ├── contexto acotado de la conversación (RF-AGT-15)
    ▼
-JwtTokenService
-   │
+FallbackLLM ──► Groq (cada clave) ──► Gemini
+   │  el texto del estudiante va delimitado como dato;
+   │  el LLM no recibe identificadores de usuario
    ▼
-GetCurrentUserUseCase
-   │
+interpretation_contract: valida intención y campos
+   ├── confianza baja o intención fuera de la lista ──► pide aclarar
    ▼
-UserRepository
+Guarda la acción pendiente y pregunta: "¿La registro?"
    │
-   ├── usuario válido ─────► user_id
-   │
-   └── usuario inválido ───► HTTP 401
+Estudiante: "sí"
+   ▼
+Confirmación determinista, sin LLM (RF-AGT-04, ADR-0005)
+   ▼
+AcademicGateway ──► AcademicTaskManagement (Academic)
+   ▼
+Se crea la actividad, con sus recordatorios (6.2)
 ```
 
-Una vez obtenido el `user_id`, el endpoint delega la operación al módulo correspondiente.
-
-Esto permite que la identidad sea resuelta una sola vez en la frontera HTTP y que cada módulo aplique sus propias reglas de pertenencia.
+En Telegram, la identidad sale de la vinculación de la cuenta (6.5). La respuesta viaja en el cuerpo de la respuesta del webhook, como `method: sendMessage`, así que la API no llama a Telegram.
 
 ---
 
-## 6.4. Recorrido del módulo Usuario — Vinculación con Telegram
-
-### Generación del enlace
+## 6.4. Fallo del proveedor LLM
 
 ```text
-Estudiante autenticado
-        │
-        │ POST /users/me/telegram/link
-        ▼
-Usuario API
-        │
-        ▼
-CreateTelegramLinkUseCase
-        │
-        ├── valida usuario
-        ├── genera token
-        ├── define expiración
-        ▼
-TelegramLinkRepository
-        │
-        ▼
-Deep Link de Telegram
+FallbackLLM
+   ├── Groq clave 1 ── error o timeout ──┐
+   ├── Groq clave 2 ── error o timeout ──┤
+   ├── Gemini ──────── error o timeout ──┤
+   ▼                                     │
+Todos fallaron ◄─────────────────────────┘
+   ▼
+El agente responde que no está disponible y no ejecuta nada (RF-AGT-20, ADR-0007)
 ```
 
-El token generado es temporal y está asociado al usuario autenticado.
+El primer proveedor que responde corta la cadena. Con Groq disponible, una caída de Gemini no se nota ([ADR-0013](../adr/0013-usar-groq-como-proveedor-llm-principal.md)). Las pruebas están en `test_ai_fallback_llm.py`.
 
-### Confirmación
+---
+
+## 6.5. Vincular la cuenta de Telegram
 
 ```text
+App móvil
+   │ POST /users/me/telegram/link
+   ▼
+Usuario: genera un código temporal ──► enlace t.me/<bot>?start=<código>
+
 Telegram
-    │
-    │ update con "/start <código>"
-    │ X-Telegram-Bot-Api-Secret-Token
-    ▼
+   │ update "/start <código>", cabecera X-Telegram-Bot-Api-Secret-Token
+   ▼
 POST /telegram/webhook
-    │
-    ├── secreto incorrecto ───► HTTP 401
-    │
-    ▼
+   ├── secreto incorrecto ──► 401
+   ▼
 ConfirmTelegramLinkUseCase
-    │
-    ├── valida token
-    ├── verifica expiración
-    ├── verifica unicidad
-    ▼
-Usuario.link_telegram()
-    │
-    ▼
-UserRepository
+   ├── código inexistente, vencido o usado ──┐
+   ├── Telegram ya vinculado a otra cuenta ──┤──► 204 sin vincular
+   ▼                                         │
+Guarda telegram_user_id (message.from.id) ──► 204
 ```
 
-La vinculación se rechaza si:
-
-* el token no existe;
-* el token expiró;
-* el token ya fue utilizado;
-* el Telegram ya pertenece a otro usuario;
-* el usuario ya tiene otra cuenta Telegram vinculada.
-
-El `telegram_user_id` se toma del remitente del update (`message.from.id`). Cuando la vinculación se rechaza, el webhook responde `204` igual, porque Telegram reintenta cualquier respuesta que no sea 2xx (RF-TEL-02).
+El webhook responde `2xx` incluso cuando rechaza la vinculación, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). Por eso el bot todavía no le dice al estudiante si la vinculación funcionó: RF-TEL-01 queda *Parcial*.
 
 ---
 
-## 6.5. Recorrido del módulo Academic — Registro de tarea
+## 6.6. Envío automático de un recordatorio
 
 ```text
-Estudiante autenticado
-        │
-        │ POST /academic/tasks
-        ▼
-Academic API
-        │
-        ▼
-RegisterTaskUseCase
-        │
-        ▼
-Task
-        │
-        ▼
-TaskRepository
-        │
-        ▼
-InMemoryTaskRepository
-        │
-        ▼
-TaskResponse
-        │
-        ▼
-HTTP 201
+Bucle de envío (lifespan de la API, cada 60 s, ADR-0012)
+   ▼
+DispatchDueRemindersUseCase.execute(ahora en America/Bogota)
+   │ por cada recordatorio pending con scheduled_at <= ahora:
+   ├── cuenta inactiva o actividad cerrada ──► cancela el recordatorio
+   ├── claim: UPDATE condicional + notificación ──► si otro proceso ya lo tomó, sigue
+   ▼
+UserDeviceDirectory (Usuario): tokens FCM del estudiante
+   ├── sin tokens o sin FCM configurado ──► queda en la bandeja (RF-NOT-04)
+   ▼
+FcmPushSender ──► Firebase Cloud Messaging ──► teléfono
+   ├── token inválido ──► se borra
+   ├── error de FCM ────► hasta 3 reintentos (1, 2 y 4 s), solo a los tokens que fallaron
+   ▼
+Registra intentos y push_sent_at; una línea de log por recordatorio
 ```
 
-### Secuencia
-
-1. El usuario envía los datos de la tarea.
-2. FastAPI obtiene el `user_id` desde el JWT.
-3. `RegisterTaskUseCase` recibe los datos.
-4. Se crea la entidad `Task`.
-5. El caso de uso utiliza `TaskRepository`.
-6. `InMemoryTaskRepository` almacena la tarea.
-7. Se devuelve `TaskResponse`.
-
-### Validación
-
-```text
-Datos inválidos
-      │
-      ▼
-InvalidTaskError
-      │
-      ▼
-HTTP 422
-```
+Un fallo en un recordatorio no detiene a los demás, y un fallo de una vuelta no detiene el bucle. La bandeja (`GET /notifications`) muestra la notificación aunque el push no haya llegado.
 
 ---
 
-## 6.6. Recorrido del módulo Academic — Consulta de tareas
+## 6.7. Manejo transversal de errores
 
-```text
-Cliente
-   │
-   │ GET /academic/tasks
-   ▼
-Academic API
-   │
-   ▼
-ListTasksUseCase
-   │
-   ▼
-TaskRepository
-   │
-   ▼
-InMemoryTaskRepository
-   │
-   ▼
-Filtrado por user_id
-   │
-   ▼
-Lista de TaskResponse
-```
+Los casos de uso lanzan errores de aplicación y el adaptador HTTP de cada módulo los traduce al código de RT-05, con el formato `{"detail": "..."}`.
 
-El repositorio devuelve únicamente las tareas correspondientes al usuario autenticado.
-
-Este escenario es especialmente relevante para **S4 — Acceso únicamente a datos del propio estudiante**.
+| Situación | Módulo | Resultado |
+| --- | --- | --- |
+| Credenciales inválidas o JWT inválido | Usuario | `401` |
+| Correo ya registrado | Usuario | `409` |
+| Recuperación de contraseña sin Resend configurado | Usuario | `503` |
+| Recurso inexistente o de otro usuario | Todos | `404` |
+| Datos inválidos | Todos | `422` |
+| Límite de uso del agente superado | AI | `429` |
+| Secreto del webhook incorrecto | Usuario | `401` |
 
 ---
 
-## 6.7. Recorrido del módulo Academic — Actualización de tarea
+## 6.8. Integración de la API principal: contrato HTTP síncrono
+
+La API usa **HTTP síncrono** y **JSON** ([ADR-0002](../adr/0002-estrategia-integracion-api-sincrona.md)). El contrato versionado es [`docs/api/openapi.json`](../api/openapi.json); `test_api_contract.py` comprueba que coincide con la aplicación, y el cliente generado se regenera con `tools/generate_api_client.py`.
 
 ```text
-Cliente
-   │
-   │ PATCH /academic/tasks/{task_id}
-   ▼
-Academic API
-   │
-   ▼
-UpdateTaskUseCase
-   │
-   ├── busca tarea
-   ├── verifica user_id
-   ├── actualiza campos
-   ▼
-TaskRepository
-   │
-   ▼
-InMemoryTaskRepository
-   │
-   ▼
-TaskResponse
-```
-
-Si la tarea no existe o no pertenece al usuario:
-
-```text
-TaskNotFoundError
-      │
-      ▼
-HTTP 404
-```
-
----
-
-## 6.8. Recorrido del módulo Academic — Completar tarea
-
-```text
-Cliente
-   │
-   │ PATCH /academic/tasks/{task_id}/complete
-   ▼
-Academic API
-   │
-   ▼
-CompleteTaskUseCase
-   │
-   ▼
-TaskRepository
-   │
-   ▼
-Task.update / estado completado
-   │
-   ▼
-InMemoryTaskRepository
-   │
-   ▼
-TaskResponse
-```
-
-El caso de uso verifica que la tarea corresponda al usuario autenticado antes de modificar su estado.
-
----
-
-## 6.9. Recorrido del módulo AI — Mensaje simple
-
-```text
-Cliente autenticado
-        │
-        │ POST /ai/message
-        ▼
-AI API
-        │
-        ▼
-HandleUserMessageUseCase
-        │
-        ├──────────────► ConversationStore
-        │
-        ▼
-      LLM Port
-        │
-        ▼
-   GeminiLLM
-        │
-        ▼
- Gemini API
-        │
-        ▼
-Respuesta interpretada
-        │
-        ▼
-HandleUserMessageUseCase
-        │
-        ▼
-AIMessageResponse
-```
-
-### Secuencia
-
-1. El usuario envía un mensaje.
-2. El endpoint valida el JWT.
-3. Se obtiene el `user_id`.
-4. `HandleUserMessageUseCase` recibe un `IncomingRequest`.
-5. El caso de uso utiliza el almacenamiento de conversación.
-6. El puerto `LLM` abstrae al proveedor.
-7. `GeminiLLM` traduce la solicitud hacia Gemini.
-8. El resultado vuelve al caso de uso.
-9. Se construye la respuesta del asistente.
-
-Si Gemini no está configurado:
-
-```text
-GeminiLLM.from_env()
-        │
-        ▼
-configuración ausente
-        │
-        ▼
-HTTP 503
-```
-
----
-
-## 6.10. Recorrido del módulo AI — Registro de una tarea mediante lenguaje natural
-
-Este es uno de los recorridos de mayor relevancia arquitectónica porque conecta AI con Academic.
-
-```text
-Estudiante
-    │
-    │ "Tengo que entregar ... el viernes"
-    ▼
-POST /ai/message
-    │
-    ▼
-AI API
-    │
-    ▼
-HandleUserMessageUseCase
-    │
-    ▼
-LLM
-    │
-    ▼
-Información estructurada
-    │
-    ▼
-Validación / confirmación
-    │
-    ├── requiere confirmación
-    │
-    │      ▼
-    │   respuesta al usuario
-    │
-    │      ▼
-    │   "sí"
-    │
-    ▼
-AcademicGateway
-    │
-    ▼
-AcademicGatewayAdapter
-    │
-    ▼
-RegisterTaskUseCase
-    │
-    ▼
-TaskRepository
-    │
-    ▼
-InMemoryTaskRepository
-    │
-    ▼
-Task creada
-    │
-    ▼
-AI Response
-```
-
-### Principio arquitectónico
-
-El LLM **no crea directamente la tarea**.
-
-La secuencia correcta es:
-
-```text
-Lenguaje natural
-       │
-       ▼
-      LLM
-       │
-       ▼
-Información estructurada
-       │
-       ▼
-Validación
-       │
-       ▼
-AcademicGateway
-       │
-       ▼
-Academic Use Case
-       │
-       ▼
-Domain
-       │
-       ▼
-Repository
-```
-
-Esto mantiene las reglas de negocio fuera del modelo de lenguaje.
-
----
-
-## 6.11. Recorrido del módulo AI — Consulta académica
-
-```text
-Estudiante
-   │
-   │ "¿Qué tareas tengo?"
-   ▼
-AI API
-   │
-   ▼
-HandleUserMessageUseCase
-   │
-   ▼
-LLM
-   │
-   ▼
-Intención de consulta
-   │
-   ▼
-AcademicGateway
-   │
-   ▼
-AcademicGatewayAdapter
-   │
-   ▼
-ListTasksUseCase
-   │
-   ▼
-TaskRepository
-   │
-   ▼
-Tareas del user_id
-   │
-   ▼
-AcademicGateway
-   │
-   ▼
-AI
-   │
-   ▼
-Respuesta al estudiante
-```
-
-El `user_id` autenticado se conserva durante el recorrido para evitar que la consulta acceda a tareas de otro usuario.
-
----
-
-## 6.12. Recorrido del módulo Reminders — Creación
-
-```text
-Estudiante autenticado
-        │
-        │ POST /reminders
-        ▼
-Reminders Controller
-        │
-        ▼
-CreateReminderUseCase
-        │
-        ├── valida mensaje
-        ├── valida fecha futura
-        │
-        ▼
-AcademicTaskLookup
-        │
-        ▼
-AcademicTaskLookupAdapter
-        │
-        ▼
-Academic Repository
-        │
-        ├── tarea inexistente ─────► error
-        │
-        └── tarea pertenece al usuario
-                    │
-                    ▼
-              Reminder
-                    │
-                    ▼
-        InMemoryReminderRepository
-                    │
-                    ▼
-                HTTP 201
-```
-
-El recordatorio no puede asociarse arbitrariamente a una tarea perteneciente a otro estudiante.
-
----
-
-## 6.13. Recorrido del módulo Reminders — Consulta
-
-```text
-Cliente
-   │
-   │ GET /reminders
-   ▼
-Reminders Controller
-   │
-   ▼
-ListRemindersUseCase
-   │
-   ▼
-ReminderRepository
-   │
-   ▼
-InMemoryReminderRepository
-   │
-   ▼
-Filtrado por user_id
-   │
-   ▼
-Lista de ReminderResponse
-```
-
-La consulta solamente devuelve los recordatorios del usuario autenticado.
-
----
-
-## 6.14. Recorrido del módulo Reminders — Consulta individual
-
-```text
-GET /reminders/{id}
-        │
-        ▼
-Reminders Controller
-        │
-        ▼
-GetReminderUseCase
-        │
-        ▼
-ReminderRepository
-        │
-        ├── no existe ───────► HTTP 404
-        │
-        ├── pertenece a otro usuario
-        │                     │
-        │                     └──► HTTP 404
-        │
-        ▼
-ReminderResponse
-```
-
-El sistema no revela información sobre recordatorios de otros usuarios.
-
----
-
-## 6.15. Recorrido del módulo Reminders — Edición
-
-```text
-PATCH /reminders/{id}
-        │
-        ▼
-EditReminderUseCase
-        │
-        ├── verifica existencia
-        ├── verifica ownership
-        ├── verifica que no esté completado
-        ├── valida nueva fecha
-        │
-        ▼
-ReminderRepository
-        │
-        ▼
-InMemoryReminderRepository
-        │
-        ▼
-ReminderResponse
-```
-
-Un recordatorio completado no puede editarse.
-
----
-
-## 6.16. Recorrido del módulo Reminders — Completar
-
-```text
-POST /reminders/{id}/complete
-        │
-        ▼
-MarkReminderCompletedUseCase
-        │
-        ├── verifica existencia
-        ├── verifica ownership
-        │
-        ▼
-Reminder
-        │
-        ▼
-is_completed = true
-        │
-        ▼
-ReminderRepository
-        │
-        ▼
-ReminderResponse
-```
-
-La operación es idempotente: si el recordatorio ya está completado, se mantiene en ese estado.
-
----
-
-## 6.17. Recorrido del módulo Reminders — Envío de notificación
-
-```text
-Estudiante autenticado
-        │
-        │ POST /reminders/{id}/notify
-        ▼
-Reminders Controller
-        │
-        ▼
-GetReminderUseCase
-        │
-        ▼
-ReminderRepository
-        │
-        ▼
-Reminder válido
-        │
-        ▼
-ScheduleNotificationUseCase
-        │
-        ▼
-Notification
-        │
-        ▼
-SendNotificationUseCase
-        │
-        ▼
-NotificationSender
-        │
-        ▼
-TelegramNotificationSender
-        │
-        ▼
-TelegramBotApiClient
-        │
-        ▼
-Telegram Bot API
-        │
-        ▼
-NotificationResponse
-```
-
-### Fallo de envío
-
-Si Telegram no puede recibir la notificación:
-
-```text
-Telegram Bot API
-       │
-       ▼
-envío fallido
-       │
-       ▼
-NotificationSender = False
-       │
-       ▼
-HTTP 503
-```
-
-El sistema no presenta el envío como exitoso cuando el proveedor externo no confirma la operación.
-
----
-
-## 6.18. Recorrido integrado — Usuario + Academic
-
-Este escenario representa el flujo normal de autenticación y gestión académica.
-
-```text
-                    ┌───────────────┐
-                    │   Estudiante  │
-                    └───────┬───────┘
-                            │
-                            │ login
-                            ▼
-                    ┌───────────────┐
-                    │    Usuario    │
-                    └───────┬───────┘
-                            │
-                         JWT │
-                            ▼
-                    ┌───────────────┐
-                    │    Academic   │
-                    └───────┬───────┘
-                            │
-                            ▼
-                         Task
-                            │
-                            ▼
-                    TaskRepository
-```
-
-Este flujo establece el contexto de identidad que utilizarán AI y Reminders.
-
----
-
-## 6.19. Recorrido integrado — Usuario + AI + Academic
-
-Este escenario representa la captura inteligente.
-
-```text
-Estudiante
-    │
-    │ JWT + mensaje
-    ▼
- Usuario
-    │
-    │ user_id
-    ▼
-   AI
-    │
-    ▼
-  Gemini
-    │
-    ▼
-interpretación
-    │
-    ▼
-AcademicGateway
-    │
-    ▼
- Academic
-    │
-    ▼
- TaskRepository
-    │
-    ▼
- tarea
-    │
-    ▼
-   AI
-    │
-    ▼
-Estudiante
-```
-
-La característica importante es que AI funciona como **orquestador**, mientras Academic conserva la responsabilidad sobre la información académica.
-
----
-
-## 6.20. Recorrido integrado — Usuario + Academic + Reminders
-
-Este escenario representa la creación de un recordatorio asociado a una tarea.
-
-```text
-Estudiante
-    │
-    │ JWT
-    ▼
- Usuario
-    │
-    │ user_id
-    ▼
-Reminders
-    │
-    │ task_id + user_id
-    ▼
-AcademicTaskLookup
-    │
-    ▼
-Academic
-    │
-    ▼
-TaskRepository
-    │
-    ├── tarea válida
-    │
-    ▼
-CreateReminderUseCase
-    │
-    ▼
-ReminderRepository
-    │
-    ▼
-Reminder
-```
-
-Este recorrido garantiza que el recordatorio no pueda apuntar a información académica de otro usuario.
-
----
-
-## 6.21. Recorrido integrado — Usuario + Reminders + Telegram
-
-```text
-Estudiante
-    │
-    │ JWT
-    ▼
-Usuario
-    │
-    │ user_id
-    ▼
-Reminders
-    │
-    ▼
-ReminderRepository
-    │
-    ▼
-Notification
-    │
-    ▼
-NotificationSender
-    │
-    ▼
-TelegramNotificationSender
-    │
-    ▼
-Telegram Bot API
-    │
-    ▼
-Estudiante en Telegram
-```
-
-La vinculación entre Usuario y Telegram permite que la notificación se entregue a la cuenta correspondiente.
-
----
-
-## 6.22. Recorrido integrado completo — AI + Academic + Reminders
-
-El flujo representa la evolución esperada de una interacción completa dentro de TAIA.
-
-```text
-                    Estudiante
-                        │
-                        │ mensaje
-                        ▼
-                   ┌─────────┐
-                   │   AI    │
-                   └────┬────┘
-                        │
-                        ▼
-                     Gemini
-                        │
-                        ▼
-                intención estructurada
-                        │
-             ┌──────────┴──────────┐
-             │                     │
-             ▼                     ▼
-        Registrar tarea       Consultar tarea
-             │                     │
-             ▼                     ▼
-          Academic              Academic
-             │                     │
-             └──────────┬──────────┘
-                        │
-                        ▼
-                     Task
-                        │
-                        ▼
-                   Reminders
-                        │
-                        ▼
-                    Reminder
-                        │
-                        ▼
-                  Notification
-                        │
-                        ▼
-                  Telegram
-                        │
-                        ▼
-                    Usuario
-```
-
-Este escenario evidencia la separación de responsabilidades:
-
-* **AI** interpreta.
-* **Academic** gobierna la información académica.
-* **Reminders** administra recordatorios.
-* **Usuario** controla identidad.
-* **Telegram** funciona como canal externo.
-
----
-
-## 6.23. Manejo transversal de errores
-
-Los módulos mantienen una frontera clara entre errores de aplicación y respuestas HTTP.
-
-```text
-Domain / Use Case
-       │
-       ▼
-Error de negocio
-       │
-       ▼
-HTTP Adapter
-       │
-       ▼
-HTTP status code
-```
-
-Ejemplos:
-
-| Situación                       | Módulo    | Resultado |
-| ------------------------------- | --------- | --------- |
-| Credenciales inválidas          | Usuario   | `401`     |
-| Usuario inactivo                | Usuario   | `403`     |
-| Correo ya registrado            | Usuario   | `409`     |
-| JWT inválido                    | Usuario   | `401`     |
-| Tarea no encontrada             | Academic  | `404`     |
-| Datos de tarea inválidos        | Academic  | `422`     |
-| Recordatorio inexistente        | Reminders | `404`     |
-| Recordatorio de otro usuario    | Reminders | `404`     |
-| Fecha de recordatorio no válida | Reminders | `422`     |
-| Recordatorio completado editado | Reminders | `422`     |
-| Gemini no configurado           | AI        | `503`     |
-| Telegram no disponible          | Reminders | `503`     |
-
----
-
-## 6.24. Resumen de recorridos arquitectónicos
-
-Los escenarios principales documentados son:
-
-| #  | Módulo / integración           | Escenario                                 |
-| -- | ------------------------------ | ----------------------------------------- |
-| 1  | Usuario                        | Registro                                  |
-| 2  | Usuario                        | Login                                     |
-| 3  | Usuario                        | Autenticación transversal                 |
-| 4  | Usuario                        | Vinculación Telegram                      |
-| 5  | Academic                       | Registro de tarea                         |
-| 6  | Academic                       | Consulta de tareas                        |
-| 7  | Academic                       | Actualización de tarea                    |
-| 8  | Academic                       | Completar tarea                           |
-| 9  | AI                             | Procesar mensaje                          |
-| 10 | AI                             | Registrar tarea mediante lenguaje natural |
-| 11 | AI                             | Consultar información académica           |
-| 12 | Reminders                      | Crear recordatorio                        |
-| 13 | Reminders                      | Listar recordatorios                      |
-| 14 | Reminders                      | Consultar recordatorio                    |
-| 15 | Reminders                      | Editar recordatorio                       |
-| 16 | Reminders                      | Completar recordatorio                    |
-| 17 | Reminders                      | Enviar notificación                       |
-| 18 | Usuario + Academic             | Gestión autenticada de tareas             |
-| 19 | Usuario + AI + Academic        | Captura inteligente                       |
-| 20 | Usuario + Academic + Reminders | Recordatorio asociado a tarea             |
-| 21 | Usuario + Reminders + Telegram | Entrega de notificación                   |
-| 22 | AI + Academic + Reminders      | Flujo integrado                           |
-| 23 | Transversal                    | Manejo de errores                         |
-
-
-Estos escenarios representan los recorridos arquitectónicamente relevantes del estado actual de TAIA y muestran cómo los cuatro módulos colaboran dentro del monolito modular.
-
----
-
-## 6.25. Flujo de integración de la API principal — contrato HTTP síncrono
-
-La API principal utiliza **HTTP síncrono** y **JSON** para las operaciones expuestas al cliente. El contrato versionado es `docs/api/openapi.json` y corresponde a la versión de API `1.0.0`.
-
-```text
-Cliente / App móvil
-      │
-      │ HTTPS + JSON
-      │ solicitud HTTP
-      ▼
-API TAIA
-      │
-      ├── autenticación: Bearer JWT
-      │
-      ├── validación de esquema
-      │
-      └── caso de uso del módulo
-      │
-      ▼
-Respuesta HTTP + JSON
-      │
-      │ HTTPS
-      ▼
-Cliente / App móvil
+App móvil ── HTTPS + JSON + Bearer JWT ──► API TAIA ──► caso de uso ──► respuesta JSON
 ```
 
 ### Flujos de integración externos
 
 ```text
-API TAIA ── HTTPS + JSON ──► Gemini
-API TAIA ◄─ HTTPS + JSON ─── Gemini
-
-Telegram ── HTTPS + JSON ──► API TAIA
-API TAIA ── HTTPS + JSON ──► Telegram
-
-API TAIA ── SQL/TCP 5432 ──► Base de datos
+API TAIA ── HTTPS + JSON ──► Groq, Gemini       (interpretación)
+Telegram ── HTTPS + JSON ──► API TAIA           (webhook; la respuesta va en el cuerpo)
+API TAIA ── HTTPS ─────────► Firebase Cloud Messaging (push)
+API TAIA ── HTTPS + JSON ──► Resend             (correo de recuperación)
+API TAIA ── SQL/TCP 5432 ──► PostgreSQL
 ```
-
-El protocolo y formato de cada integración se reflejan también en el C4 nivel 2. La API HTTP se mantiene síncrona porque las operaciones actuales necesitan devolver al cliente el resultado de validación, autenticación o ejecución en la misma interacción.

@@ -10,7 +10,6 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 | Health check | https://taia-sistema.iscoutb.dev/health → `200 {"status": "ok"}` |
 | Métrica de latencia | https://taia-sistema.iscoutb.dev/metrics |
 | Documentación interactiva | https://taia-sistema.iscoutb.dev/docs |
-| Respaldo en Render (alternativa del taller) | https://taia-backend-latest.onrender.com/health |
 | CI y CD (GitHub Actions) | https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions |
 | Análisis estático y Quality Gate (SonarCloud, público) | https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant |
 
@@ -70,9 +69,11 @@ El backend es un **monolito modular con organización hexagonal selectiva** con 
 | Integración | Estado |
 |---|---|
 | PostgreSQL | Integrada. Supabase en el despliegue y PostgreSQL local en desarrollo y CI. |
-| Telegram | Vinculación de cuenta y envío de notificaciones implementados; en el despliegue falta configurar `TAIA_TELEGRAM_BOT_TOKEN`. |
-| Gemini | Puerto y adaptador implementados; en el despliegue falta configurar `GEMINI_API_KEY`. |
-| Flutter | Arquitectura objetivo; no forma parte del backend entregado. |
+| Telegram | Integrada. Vinculación de cuenta y conversación con el asistente. |
+| Groq y Gemini | Integradas. Groq es el proveedor principal y Gemini el respaldo (ADR-0013). |
+| Firebase Cloud Messaging | Integrada. Notificaciones push de los recordatorios. |
+| Resend | Integrada. Correo de recuperación de contraseña. |
+| Flutter | Integrada. Aplicación móvil en `frontend/`. |
 
 El estado por requerimiento está en `docs/requerimientos.md`. Las rutas de la API están en `/docs` y en el contrato `docs/api/openapi.json`.
 
