@@ -1,16 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../mascot/mascot_expression.dart';
+import '../../mascot/taia_mascot.dart';
 import '../../theme/taia_colors.dart';
 import '../academic/schedule_block.dart';
+import '../activity/widgets/activity_form_widgets.dart';
 import '../auth/auth_shell.dart';
-import '../shell/page_header.dart';
 import '../tasks/subject.dart';
 import '../tasks/widgets/task_form_widgets.dart';
 import 'study_plan_service.dart';
 
-/// Formulario fijo del plan de estudio (RF-EST-01). Nunca por texto libre.
-/// Devuelve las respuestas con `Navigator.pop`.
+/// Franjas para elegir con un toque (RNF-14).
+const _windowPresets = [
+  (
+    label: 'Mañana',
+    start: TimeOfDay(hour: 6, minute: 0),
+    end: TimeOfDay(hour: 12, minute: 0),
+  ),
+  (
+    label: 'Tarde',
+    start: TimeOfDay(hour: 12, minute: 0),
+    end: TimeOfDay(hour: 18, minute: 0),
+  ),
+  (
+    label: 'Noche',
+    start: TimeOfDay(hour: 18, minute: 0),
+    end: TimeOfDay(hour: 22, minute: 0),
+  ),
+  (
+    label: 'Todo el día',
+    start: TimeOfDay(hour: 6, minute: 0),
+    end: TimeOfDay(hour: 22, minute: 0),
+  ),
+];
+
+/// Formulario fijo del plan de estudio (RF-EST-01), paso a paso: TAIA hace
+/// una o dos preguntas por pantalla (RNF-14). Nunca por texto libre. Devuelve
+/// las respuestas con `Navigator.pop`.
 class StudyPlanFormScreen extends StatefulWidget {
   const StudyPlanFormScreen({
     super.key,
@@ -40,6 +67,10 @@ class _StudyPlanFormScreenState extends State<StudyPlanFormScreen> {
   late StudyTime _time = widget.initial.preferredTime;
   late bool _works = widget.initial.busyBlocks.any((b) => b.work);
   String? _error;
+
+  /// Paso actual del formulario (0 a [_steps] - 1).
+  int _step = 0;
+  static const _steps = 5;
 
   static const _earliest = TimeOfDay(hour: 5, minute: 0);
   static const _latest = TimeOfDay(hour: 23, minute: 0);
@@ -117,19 +148,51 @@ class _StudyPlanFormScreenState extends State<StudyPlanFormScreen> {
     if (added != null && mounted) setState(() => _busy.add(added));
   }
 
-  void _submit() {
+  String? _windowError() {
     if (_min(_windowStart) < _min(_earliest) ||
         _min(_windowEnd) > _min(_latest)) {
-      setState(
-        () => _error =
-            'La franja debe estar entre las 5:00 a. m. y las 11:00 p. m.',
-      );
-      return;
+      return 'La franja debe estar entre las 5:00 a. m. y las 11:00 p. m.';
     }
     if (_min(_windowEnd) <= _min(_windowStart)) {
-      setState(
-        () => _error = 'El fin de la franja debe ser después del inicio.',
-      );
+      return 'El fin de la franja debe ser después del inicio.';
+    }
+    return null;
+  }
+
+  void _next() {
+    if (_step == 1) {
+      final error = _windowError();
+      if (error != null) {
+        setState(() => _error = error);
+        return;
+      }
+    }
+    HapticFeedback.selectionClick();
+    if (_step == _steps - 1) {
+      _submit();
+      return;
+    }
+    setState(() {
+      _error = null;
+      _step++;
+    });
+  }
+
+  void _back() {
+    if (_step == 0) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    setState(() {
+      _error = null;
+      _step--;
+    });
+  }
+
+  void _submit() {
+    final error = _windowError();
+    if (error != null) {
+      setState(() => _error = error);
       return;
     }
     Navigator.of(context).pop(
@@ -178,146 +241,350 @@ class _StudyPlanFormScreenState extends State<StudyPlanFormScreen> {
     ],
   );
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: TaiaColors.ivoryMist,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                tooltip: 'Volver',
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded, color: taiaInk),
+  /// Lo que TAIA pregunta en cada paso.
+  static const _questions = [
+    '¿Cuándo te gusta estudiar?',
+    '¿Qué días y a qué horas?',
+    '¿Cuánto estudias de una sentada?',
+    '¿Tienes compromisos fijos?',
+    '¿Qué materias incluimos?',
+  ];
+
+  static const _expressions = [
+    MascotExpression.thinking,
+    MascotExpression.organizing,
+    MascotExpression.studying,
+    MascotExpression.laptop,
+    MascotExpression.books,
+  ];
+
+  bool _sameTime(TimeOfDay a, TimeOfDay b) =>
+      a.hour == b.hour && a.minute == b.minute;
+
+  Widget _chips<T>(
+    Map<T, String> options,
+    bool Function(T) selected,
+    void Function(T) onTap,
+  ) => Wrap(
+    spacing: 8,
+    runSpacing: 6,
+    children: [
+      for (final entry in options.entries)
+        TaiaChoiceChip(
+          label: entry.value,
+          selected: selected(entry.key),
+          onSelected: () => setState(() => onTap(entry.key)),
+        ),
+    ],
+  );
+
+  List<Widget> _stepContent() {
+    switch (_step) {
+      case 0:
+        return [
+          const FormLabel('Prefiero estudiar…'),
+          _chips<StudyPreference>(
+            {for (final p in StudyPreference.values) p: p.label},
+            (p) => p == _preference,
+            (p) => _preference = p,
+          ),
+          const SizedBox(height: 18),
+          const FormLabel('Rindo mejor en la…'),
+          _chips<StudyTime>(
+            {for (final s in StudyTime.values) s: s.label},
+            (s) => s == _time,
+            (s) => _time = s,
+          ),
+        ];
+      case 1:
+        const weekdays = {
+          Weekday.monday,
+          Weekday.tuesday,
+          Weekday.wednesday,
+          Weekday.thursday,
+          Weekday.friday,
+        };
+        const weekend = {Weekday.saturday, Weekday.sunday};
+        bool sameSet(Set<Weekday> s) =>
+            _days.length == s.length && _days.containsAll(s);
+        final customWindow = !_windowPresets.any(
+          (w) =>
+              _sameTime(w.start, _windowStart) && _sameTime(w.end, _windowEnd),
+        );
+        return [
+          const FormLabel('Días'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              TaiaChoiceChip(
+                label: 'Todos',
+                selected: _days.isEmpty,
+                onSelected: () => setState(_days.clear),
               ),
-            ),
-            const PageHeader(
-              label: 'PLAN DE ESTUDIO',
-              title: 'Cuéntame de tu semana',
-              subtitle: 'Con esto armo un plan que sí puedas cumplir.',
-              expression: MascotExpression.organizing,
-            ),
-            const SizedBox(height: 16),
-            const FormLabel('¿Cuándo prefieres estudiar?'),
-            TaskSegments<StudyPreference>(
-              value: _preference,
-              options: {for (final p in StudyPreference.values) p: p.label},
-              onChanged: (p) => setState(() => _preference = p),
-            ),
-            const SizedBox(height: 16),
-            const FormLabel('Días disponibles (sin marcar: todos)'),
+              TaiaChoiceChip(
+                label: 'Lun a Vie',
+                selected: sameSet(weekdays),
+                onSelected: () => setState(() {
+                  _days
+                    ..clear()
+                    ..addAll(weekdays);
+                }),
+              ),
+              TaiaChoiceChip(
+                label: 'Fin de semana',
+                selected: sameSet(weekend),
+                onSelected: () => setState(() {
+                  _days
+                    ..clear()
+                    ..addAll(weekend);
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (final day in Weekday.values)
+                FilterChip(
+                  label: Text(day.label.substring(0, 3)),
+                  selected: _days.contains(day),
+                  selectedColor: TaiaColors.softPeach,
+                  onSelected: (on) =>
+                      setState(() => on ? _days.add(day) : _days.remove(day)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const FormLabel('Franja para estudiar'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final w in _windowPresets)
+                TaiaChoiceChip(
+                  label: w.label,
+                  selected:
+                      _sameTime(w.start, _windowStart) &&
+                      _sameTime(w.end, _windowEnd),
+                  onSelected: () => setState(() {
+                    _windowStart = w.start;
+                    _windowEnd = w.end;
+                    _error = null;
+                  }),
+                ),
+              TaiaChoiceChip(
+                label: 'Otra franja…',
+                selected: customWindow,
+                onSelected: () async {
+                  final start = await _pickTime(_windowStart);
+                  if (start == null || !mounted) return;
+                  final end = await _pickTime(_windowEnd);
+                  if (end == null || !mounted) return;
+                  setState(() {
+                    _windowStart = start;
+                    _windowEnd = end;
+                    _error = null;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'De ${formatBlockTime(_windowStart)} a ${formatBlockTime(_windowEnd)}',
+            style: const TextStyle(color: taiaInk, fontWeight: FontWeight.w700),
+          ),
+        ];
+      case 2:
+        return [
+          const FormLabel('Cada sesión dura'),
+          TaskSegments<int>(
+            value: _sessionMinutes,
+            options: const {
+              30: '30 min',
+              45: '45 min',
+              60: '1 h',
+              90: '1 h 30',
+            },
+            onChanged: (m) => setState(() => _sessionMinutes = m),
+          ),
+          const SizedBox(height: 18),
+          const FormLabel('Como máximo al día'),
+          TaskSegments<int>(
+            value: _maxDaily ?? 0,
+            options: const {
+              0: 'Sin máximo',
+              60: '1 h',
+              120: '2 h',
+              180: '3 h',
+              240: '4 h',
+            },
+            onChanged: (m) => setState(() => _maxDaily = m == 0 ? null : m),
+          ),
+        ];
+      case 3:
+        return [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: TaiaColors.fieryRose,
+            title: const Text('¿Trabajas?', style: taskValueStyle),
+            value: _works,
+            onChanged: (on) => setState(() => _works = on),
+          ),
+          if (_works) _busyList(true),
+          const FormLabel(
+            'Otros compromisos fijos (cursos, deporte, transporte)',
+          ),
+          _busyList(false),
+        ];
+      default:
+        return [
+          if (widget.subjects.isEmpty)
+            const Text(
+              'Incluyo todas tus materias.',
+              style: TextStyle(color: taiaInk),
+            )
+          else ...[
+            const FormLabel('Sin marcar: todas'),
             Wrap(
               spacing: 6,
               children: [
-                for (final day in Weekday.values)
+                for (final subject in widget.subjects)
                   FilterChip(
-                    label: Text(day.label.substring(0, 3)),
-                    selected: _days.contains(day),
+                    label: Text(subject.name),
+                    selected: _subjects.contains(subject.id),
                     selectedColor: TaiaColors.softPeach,
-                    onSelected: (on) =>
-                        setState(() => on ? _days.add(day) : _days.remove(day)),
+                    onSelected: (on) => setState(
+                      () => on
+                          ? _subjects.add(subject.id)
+                          : _subjects.remove(subject.id),
+                    ),
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            const FormLabel('Franja horaria'),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final t = await _pickTime(_windowStart);
-                      if (t != null) setState(() => _windowStart = t);
-                    },
-                    child: Text('Desde ${formatBlockTime(_windowStart)}'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final t = await _pickTime(_windowEnd);
-                      if (t != null) setState(() => _windowEnd = t);
-                    },
-                    child: Text('Hasta ${formatBlockTime(_windowEnd)}'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const FormLabel('Duración de cada sesión'),
-            TaskSegments<int>(
-              value: _sessionMinutes,
-              options: const {
-                30: '30 min',
-                45: '45 min',
-                60: '1 h',
-                90: '1 h 30',
-              },
-              onChanged: (m) => setState(() => _sessionMinutes = m),
-            ),
-            const SizedBox(height: 16),
-            const FormLabel('Máximo de estudio por día'),
-            TaskSegments<int>(
-              value: _maxDaily ?? 0,
-              options: const {
-                0: 'Sin máximo',
-                60: '1 h',
-                120: '2 h',
-                180: '3 h',
-                240: '4 h',
-              },
-              onChanged: (m) => setState(() => _maxDaily = m == 0 ? null : m),
-            ),
-            const SizedBox(height: 16),
-            const FormLabel('¿En qué momento del día rindes mejor?'),
-            TaskSegments<StudyTime>(
-              value: _time,
-              options: {for (final t in StudyTime.values) t: t.label},
-              onChanged: (t) => setState(() => _time = t),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              activeThumbColor: TaiaColors.fieryRose,
-              title: const Text('¿Trabajas?', style: taskValueStyle),
-              value: _works,
-              onChanged: (on) => setState(() => _works = on),
-            ),
-            if (_works) _busyList(true),
-            const FormLabel(
-              'Otros compromisos fijos (cursos, deporte, transporte)',
-            ),
-            _busyList(false),
-            if (widget.subjects.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const FormLabel('Asignaturas (sin marcar: todas)'),
-              Wrap(
-                spacing: 6,
+          ],
+        ];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final last = _step == _steps - 1;
+    return Scaffold(
+      backgroundColor: TaiaColors.ivoryMist,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+              child: Row(
                 children: [
-                  for (final subject in widget.subjects)
-                    FilterChip(
-                      label: Text(subject.name),
-                      selected: _subjects.contains(subject.id),
-                      selectedColor: TaiaColors.softPeach,
-                      onSelected: (on) => setState(
-                        () => on
-                            ? _subjects.add(subject.id)
-                            : _subjects.remove(subject.id),
+                  IconButton(
+                    tooltip: 'Volver',
+                    onPressed: _back,
+                    icon: const Icon(Icons.arrow_back_rounded, color: taiaInk),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(end: (_step + 1) / _steps),
+                        duration: const Duration(milliseconds: 250),
+                        builder: (context, value, _) => LinearProgressIndicator(
+                          value: value,
+                          minHeight: 8,
+                          color: TaiaColors.fieryRose,
+                          backgroundColor: TaiaColors.softPeach,
+                        ),
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${_step + 1} de $_steps',
+                    style: const TextStyle(
+                      color: taiaInk,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
-            ],
-            const SizedBox(height: 20),
-            if (_error != null) AuthErrorText(_error!),
-            AuthSubmitButton(
-              label: 'Generar plan',
-              loading: false,
-              onPressed: _submit,
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0.08, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: ListView(
+                  key: ValueKey(_step),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox.square(
+                          dimension: 72,
+                          child: TaiaMascot(
+                            motion: 0.6,
+                            expression: _expressions[_step],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'PLAN DE ESTUDIO',
+                                style: TextStyle(
+                                  color: TaiaColors.fieryRose,
+                                  fontSize: 12,
+                                  letterSpacing: 1.6,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _questions[_step],
+                                style: const TextStyle(
+                                  color: taiaInk,
+                                  fontSize: 24,
+                                  height: 1.15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    ..._stepContent(),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  if (_error != null) AuthErrorText(_error!),
+                  AuthSubmitButton(
+                    label: last ? 'Generar plan' : 'Siguiente',
+                    loading: false,
+                    onPressed: _next,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

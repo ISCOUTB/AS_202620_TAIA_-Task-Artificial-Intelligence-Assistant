@@ -151,7 +151,15 @@ void main() {
       await tester.tap(find.text('abrir'));
       await pumpFrames(tester);
 
+      // RNF-14: el formulario va paso a paso; los compromisos están en el 4.
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.text('Siguiente'));
+        await pumpFrames(tester);
+      }
+      expect(find.text('4 de 5'), findsOneWidget);
       expect(find.text('Sábado · 08:00 a. m. a 02:00 p. m.'), findsOneWidget);
+      await tester.tap(find.text('Siguiente'));
+      await pumpFrames(tester);
       await tester.tap(find.text('Generar plan'));
       await pumpFrames(tester);
 

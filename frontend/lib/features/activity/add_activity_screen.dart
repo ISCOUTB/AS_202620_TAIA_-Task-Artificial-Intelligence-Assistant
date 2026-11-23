@@ -1,8 +1,6 @@
-
 import 'package:flutter/material.dart';
 
 import '../../core/bogota_time.dart';
-import '../../core/spanish_dates.dart';
 import '../../mascot/mascot_expression.dart';
 import '../../theme/taia_colors.dart';
 import '../agent/taia_chat_button.dart';
@@ -17,6 +15,7 @@ import '../tasks/task.dart';
 import '../tasks/tasks_service.dart';
 import '../tasks/widgets/task_form_widgets.dart';
 import 'activity_logic.dart';
+import 'widgets/activity_form_widgets.dart';
 import 'widgets/activity_success.dart';
 import 'widgets/new_subject_dialog.dart';
 import 'widgets/quick_date_chips.dart';
@@ -63,6 +62,9 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   AcademicTask? _created;
   MascotExpression _expression = MascotExpression.wink;
 
+  /// La descripción es opcional: se abre con "Añadir detalles" (RNF-14).
+  bool _showDetails = false;
+
   TasksService get _tasks => widget.tasksService ?? tasksService;
   SubjectsService get _subjectService =>
       widget.subjectsService ?? subjectsService;
@@ -71,10 +73,50 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   void initState() {
     super.initState();
     _loadSubjects();
+    // El resumen en vivo sigue lo que se escribe en el título.
+    _title.addListener(_titleChanged);
+  }
+
+  void _titleChanged() => setState(() {});
+
+  String? get _subjectName {
+    final id = _subjectId;
+    if (id == null) return null;
+    for (final s in _subjects ?? const <Subject>[]) {
+      if (s.id == id) return s.name;
+    }
+    return null;
+  }
+
+  void _useSuggestion(String word) {
+    final title = suggestedTitle(word, _subjectName);
+    _title.value = TextEditingValue(
+      text: title,
+      selection: TextSelection.collapsed(offset: title.length),
+    );
+    _onEdited();
+  }
+
+  void _setDue(DateTime due) {
+    setState(() {
+      _due = due;
+      _error = null;
+    });
+    _onEdited();
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_due),
+    );
+    if (time == null || !mounted) return;
+    _setDue(withTime(_due, time.hour, time.minute));
   }
 
   @override
   void dispose() {
+    _title.removeListener(_titleChanged);
     _title.dispose();
     _description.dispose();
     super.dispose();
@@ -258,22 +300,25 @@ class AddActivityScreenState extends State<AddActivityScreen> {
   }
 
   Widget _form() {
+    final suggestionSubject = _subjectName;
     return Form(
       key: _formKey,
       onChanged: _onEdited,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const FormLabel('¿Qué tipo de actividad es?'),
-          TaskSegments<TaskType>(
+          const FormLabel('¿Qué vas a registrar?'),
+          ActivityTypeCards(
             value: _type,
             enabled: !_saving,
-            options: const {TaskType.task: 'Tarea', TaskType.exam: 'Examen'},
             onChanged: (v) {
               setState(() => _type = v);
               _onEdited();
             },
           ),
+          const SizedBox(height: 18),
+          const FormLabel('Materia'),
+          _subjectField(),
           const SizedBox(height: 18),
           const FormLabel('Título'),
           TextFormField(
@@ -282,55 +327,98 @@ class AddActivityScreenState extends State<AddActivityScreen> {
             maxLength: 200,
             style: taskValueStyle,
             textCapitalization: TextCapitalization.sentences,
-            decoration: taskFieldDecoration(hint: 'Ej. Informe de laboratorio')
-                .copyWith(counterText: ''),
+            decoration: taskFieldDecoration(
+              hint: _type == TaskType.exam
+                  ? 'Ej. Parcial de cálculo'
+                  : 'Ej. Informe de laboratorio',
+            ).copyWith(counterText: ''),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Escribe un título.' : null,
           ),
-          const SizedBox(height: 18),
-          const FormLabel('Descripción (opcional)'),
-          TextFormField(
-            controller: _description,
-            enabled: !_saving,
-            minLines: 3,
-            maxLines: 5,
-            maxLength: 2000,
-            style: taskValueStyle,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: taskFieldDecoration(
-              hint: 'Detalles, páginas, qué hay que entregar…',
-            ).copyWith(counterText: ''),
-          ),
-          const SizedBox(height: 18),
-          const FormLabel('Materia'),
-          _subjectField(),
-          const SizedBox(height: 18),
-          const FormLabel('Fecha y hora límite'),
-          InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: _saving ? null : _pickDue,
-            child: InputDecorator(
-              decoration: taskFieldDecoration(
-                suffix: const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 20,
-                  color: taiaInk,
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final word in titleSuggestions(_type))
+                TaiaChoiceChip(
+                  label: word,
+                  selected:
+                      _title.text == suggestedTitle(word, suggestionSubject),
+                  onSelected: _saving ? null : () => _useSuggestion(word),
                 ),
-              ),
-              child: Text(formatDateTimeShort(_due), style: taskValueStyle),
-            ),
+            ],
           ),
-          const SizedBox(height: 10),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: _showDetails
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: TextFormField(
+                      controller: _description,
+                      enabled: !_saving,
+                      minLines: 3,
+                      maxLines: 5,
+                      maxLength: 2000,
+                      style: taskValueStyle,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: taskFieldDecoration(
+                        hint: 'Detalles, páginas, qué hay que entregar…',
+                      ).copyWith(counterText: ''),
+                    ),
+                  )
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: TaiaColors.fieryRose,
+                      ),
+                      onPressed: _saving
+                          ? null
+                          : () => setState(() => _showDetails = true),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text(
+                        'Añadir detalles',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 14),
+          const FormLabel('¿Para cuándo?'),
           QuickDateChips(
             due: _due,
             enabled: !_saving,
-            onChanged: (due) {
-              setState(() {
-                _due = due;
-                _error = null;
-              });
-              _onEdited();
-            },
+            onChanged: _setDue,
+            onOther: _saving ? null : _pickDue,
+          ),
+          const SizedBox(height: 8),
+          QuickTimeChips(
+            due: _due,
+            enabled: !_saving,
+            onChanged: _setDue,
+            onOther: _pickTime,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(
+                Icons.event_outlined,
+                size: 18,
+                color: TaiaColors.fieryRose,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  dueSentence(_due, bogotaNow()),
+                  style: const TextStyle(
+                    color: taiaInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
           if (_dueInPast)
             Padding(
@@ -362,10 +450,22 @@ class AddActivityScreenState extends State<AddActivityScreen> {
               _onEdited();
             },
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
+          ActivitySummaryCard(
+            expression: _expression,
+            text: activitySummary(
+              type: _type,
+              title: _title.text,
+              subjectName: _subjectName,
+              due: _due,
+              reminders: _reminderMode,
+              customReminders: _customAt.length,
+            ),
+          ),
+          const SizedBox(height: 16),
           if (_error != null) AuthErrorText(_error!),
           AuthSubmitButton(
-            label: 'Crear actividad',
+            label: _type == TaskType.exam ? 'Crear examen' : 'Crear tarea',
             loading: _saving,
             onPressed: _submit,
           ),
@@ -450,32 +550,18 @@ class AddActivityScreenState extends State<AddActivityScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
-          key: ValueKey('${subjects.length}-$_subjectId'),
-          initialValue: _subjectId,
-          isExpanded: true,
-          style: taskValueStyle,
-          hint: Text(
-            'Elige una materia',
-            style: TextStyle(color: taiaInk.withValues(alpha: 0.4)),
-          ),
-          decoration: taskFieldDecoration(),
-          items: [
-            for (final subject in subjects)
-              DropdownMenuItem(
-                value: subject.id,
-                child: Text(subject.name, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _saving
-              ? null
-              : (id) {
-                  setState(() {
-                    _subjectId = id;
-                    _subjectFieldError = null;
-                  });
-                  _onEdited();
-                },
+        SubjectChips(
+          subjects: subjects,
+          selectedId: _subjectId,
+          enabled: !_saving,
+          onNew: _newSubject,
+          onSelected: (id) {
+            setState(() {
+              _subjectId = id;
+              _subjectFieldError = null;
+            });
+            _onEdited();
+          },
         ),
         if (_subjectFieldError != null)
           Padding(
@@ -485,18 +571,6 @@ class AddActivityScreenState extends State<AddActivityScreen> {
               style: TextStyle(color: Colors.red.shade700, fontSize: 12),
             ),
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: TaiaColors.fieryRose),
-            onPressed: _saving ? null : _newSubject,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text(
-              'Nueva materia',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
       ],
     );
   }

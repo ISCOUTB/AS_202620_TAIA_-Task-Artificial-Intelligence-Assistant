@@ -69,7 +69,8 @@ void main() {
   ) async {
     final api = await _pump(tester);
 
-    await tester.tap(find.text('Crear actividad'));
+    await tester.ensureVisible(find.text('Crear tarea'));
+    await tester.tap(find.text('Crear tarea'));
     await pumpFrames(tester);
 
     expect(_postedReminders(api), {'mode': 'default'});
@@ -80,7 +81,8 @@ void main() {
 
     await tester.tap(find.text('Ninguno'));
     await pumpFrames(tester);
-    await tester.tap(find.text('Crear actividad'));
+    await tester.ensureVisible(find.text('Crear tarea'));
+    await tester.tap(find.text('Crear tarea'));
     await pumpFrames(tester);
 
     expect(_postedReminders(api), {'mode': 'none'});
@@ -93,7 +95,8 @@ void main() {
 
       await tester.tap(find.text('Elegir fechas'));
       await pumpFrames(tester);
-      await tester.tap(find.text('Crear actividad'));
+      await tester.ensureVisible(find.text('Crear tarea'));
+      await tester.tap(find.text('Crear tarea'));
       await pumpFrames(tester);
 
       expect(
