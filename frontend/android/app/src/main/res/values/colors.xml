@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="taia_coral">#F26A6C</color>
+    <!-- RNF-14: fondo del icono adaptativo de la app. -->
+    <color name="ic_launcher_background">#F8EBE2</color>
 </resources>
