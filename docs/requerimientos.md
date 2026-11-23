@@ -277,7 +277,7 @@ La aplicación debe tener una pantalla de configuración, separada del perfil, c
 - Desde el perfil se abre la configuración, y las opciones de cuenta, Telegram y sesión ya no aparecen en el perfil.
 
 ### RF-USR-12 · Tutorial de la aplicación
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 La primera vez que el estudiante entra a la aplicación, después de la configuración inicial (RF-ASG-10), TAIA le muestra un recorrido corto que señala las partes principales: el botón central para crear, la Agenda, las Tareas, el plan de estudio y cómo hablarle a TAIA.
 
@@ -550,7 +550,7 @@ El sistema debe permitir eliminar una actividad propia. **Solo el usuario puede 
 - Eliminar una actividad de otro usuario → `404`.
 
 ### RF-TAR-11 · Calendario académico
-**Prioridad:** MVP · **Estado:** Parcial (falta la vista de semana de la Agenda)
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir consultar, para un rango de fechas (por ejemplo, un mes), todos los eventos del usuario:
 - Actividades por fecha límite.
@@ -991,7 +991,7 @@ TAIA habla como una compañera de estudio: en primera persona, cercana, carismá
 - `tools/eval_llm.py` en Groq y en Gemini no baja la exactitud de intención ni la de campos frente a la última medición.
 
 ### RF-AGT-23 · TAIA presente en la app
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Implementado
 
 TAIA debe estar a la vista en toda la aplicación, no escondida, para que hablarle sea natural.
 
@@ -1112,7 +1112,7 @@ Mínimos iniciales. Los escenarios de calidad detallados están en `docs/calidad
 | RNF-13 | Contrato | La API se documenta con OpenAPI (`docs/api/openapi.json`) y se valida en CI contra el código. |
 | RNF-14 | Experiencia | Identidad y uso de la aplicación (ver abajo). |
 
-**RNF-14 · Identidad y experiencia de la aplicación** (MVP, *Pendiente*)
+**RNF-14 · Identidad y experiencia de la aplicación** (MVP, *Implementado*)
 - El icono de la aplicación es TAIA. Las notificaciones push usan una silueta monocroma de TAIA como icono pequeño de Android, con el color de acento de la marca.
 - Navegación inferior: Inicio, Agenda, botón central "+", Tareas y Perfil. El "+" abre una hoja con Nueva actividad, Nueva clase y Nueva asignatura.
 - El plan de estudio (RF-EST-01 a 03) tiene una tarjeta destacada en el Inicio y un acceso en Tareas.

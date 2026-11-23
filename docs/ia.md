@@ -1664,3 +1664,40 @@ El equipo eligió que el servidor permita pedir las no completadas (pendientes y
 * Backend: prueba HTTP de varios estados y de búsqueda por asignatura, y prueba del repositorio SQLAlchemy con pendientes y atrasadas juntas.
 * App: `task_filters_test.dart` (traducción de cada filtro a parámetros) y prueba de que varios estados viajan como `status=a&status=b`. `flutter analyze` sin avisos.
 * Límite: la búsqueda del servidor no ignora tildes ("matematicas" no encuentra "Matemáticas"); en el teléfono sí las ignoraba.
+
+## Entrada 039
+
+**Fecha:** 2026-11-23
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Ola de diseño de la app (H-30): RF-AGT-23, RNF-14, la Agenda de RF-TAR-11 y el tutorial de RF-USR-12.
+
+### Solicitud realizada
+
+El equipo pidió una app menos fragmentada y más animada: el chat de TAIA a la vista, sin recuadros blancos, el horario y las tareas juntos, el plan de estudio visible, formularios ingeniosos y no tediosos con librerías buenas en diseño, interacciones satisfactorias, un tutorial y el icono de TAIA en la app y en las notificaciones.
+
+### Resultado generado
+
+* Iconos: TAIA como icono de la app (clásico y adaptativo) y silueta blanca para las notificaciones push, generados desde las poses de `assets/mascot/` sin dependencias nuevas.
+* Navegación: Inicio · Agenda · "+" · Tareas · Perfil. El "+" abre una hoja con actividad, clase y asignatura.
+* TAIA en cada pantalla: burbuja en el Inicio según el día (vencidas, pendientes de hoy o al día), TAIA pequeña que abre el chat en las cabeceras, estados de pensando y hablando en el chat, sin recuadros blancos salvo sobre el degradado coral.
+* Agenda: vista de semana con clases, sesiones de estudio y actividades en una línea de tiempo; el horario se edita desde ahí.
+* Plan de estudio: tarjeta en el Inicio y en Tareas, según el estado del plan.
+* Formularios: Nueva actividad con tarjetas de tipo, chips de materia, títulos sugeridos, atajos de día y hora y resumen en vivo; el plan de estudio en cinco pasos con barra de progreso.
+* Animaciones con las librerías aprobadas: `animations` (transiciones), `flutter_animate` (entradas escalonadas), `flutter_slidable` (deslizar para completar o editar), `confetti` (celebraciones), `shimmer` (esqueletos de carga) y `showcaseview` (tutorial). Todo dura 300 ms o menos y se apaga si el sistema pide reducir el movimiento.
+* Tutorial: recorrido de cinco pasos la primera vez, con "Siguiente" y "Saltar"; se repite desde Configuración. Que ya se vio se guarda en el teléfono.
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* `flutter analyze` sin avisos y 139 pruebas de Flutter aprobadas. Nuevas: hoja del "+", frase de la burbuja, línea de tiempo de la semana (criterio de RF-TAR-11), tarjeta del plan, lógica del formulario de actividad, paso a paso del plan, reducción del movimiento y tutorial.
+* APK de depuración compilado con las librerías nuevas. `tools/verificar_dependencias_dart.py --online`: veredicto "ok", sin vulnerabilidades en OSV.
+* Las pruebas encontraron dos errores que se corrigieron: la hoja del "+" se desbordaba en pantallas bajas y el resumen repetía la materia cuando el título ya la nombraba.
