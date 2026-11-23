@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import sessionmaker
 
 from app.modules.academic.adapters.outbound.sqlalchemy_models import SubjectModel, TaskModel
@@ -90,12 +90,8 @@ def _owned_by(user_id: uuid.UUID) -> Select:
 def _apply_filters(query: Select, filters: TaskQuery, now: datetime) -> Select:
     if filters.subject_id is not None:
         query = query.where(TaskModel.subject_id == filters.subject_id)
-    if filters.status is TaskStatus.COMPLETED:
-        query = query.where(TaskModel.completed_at.is_not(None))
-    elif filters.status is TaskStatus.PENDING:
-        query = query.where(TaskModel.completed_at.is_(None), TaskModel.due_at >= now)
-    elif filters.status is TaskStatus.OVERDUE:
-        query = query.where(TaskModel.completed_at.is_(None), TaskModel.due_at < now)
+    if filters.statuses:
+        query = query.where(or_(*(_status_condition(status, now) for status in set(filters.statuses))))
     if filters.type is not None:
         query = query.where(TaskModel.type == filters.type)
     if filters.due_from is not None:
@@ -107,9 +103,18 @@ def _apply_filters(query: Select, filters: TaskQuery, now: datetime) -> Select:
             or_(
                 TaskModel.title.icontains(filters.text, autoescape=True),
                 TaskModel.description.icontains(filters.text, autoescape=True),
+                SubjectModel.name.icontains(filters.text, autoescape=True),
             )
         )
     return query
+
+
+def _status_condition(status: TaskStatus, now: datetime):
+    if status is TaskStatus.COMPLETED:
+        return TaskModel.completed_at.is_not(None)
+    if status is TaskStatus.PENDING:
+        return and_(TaskModel.completed_at.is_(None), TaskModel.due_at >= now)
+    return and_(TaskModel.completed_at.is_(None), TaskModel.due_at < now)
 
 
 def _to_model(task: Task) -> TaskModel:

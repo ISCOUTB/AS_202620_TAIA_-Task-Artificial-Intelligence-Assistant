@@ -67,9 +67,14 @@ def test_list_filters_in_database(repos):
         return [task.title for task in items], total
 
     assert titles() == (["Vencida", "Hecha", "Pendiente física", "Parcial de derivadas"], 4)
-    assert titles(status=TaskStatus.OVERDUE) == (["Vencida"], 1)
-    assert titles(status=TaskStatus.COMPLETED) == (["Hecha"], 1)
-    assert titles(status=TaskStatus.PENDING) == (["Pendiente física", "Parcial de derivadas"], 2)
+    assert titles(statuses=(TaskStatus.OVERDUE,)) == (["Vencida"], 1)
+    assert titles(statuses=(TaskStatus.COMPLETED,)) == (["Hecha"], 1)
+    assert titles(statuses=(TaskStatus.PENDING,)) == (["Pendiente física", "Parcial de derivadas"], 2)
+    # RF-TAR-04: pendiente y vencida juntas son las no completadas.
+    assert titles(statuses=(TaskStatus.PENDING, TaskStatus.OVERDUE)) == (
+        ["Vencida", "Pendiente física", "Parcial de derivadas"], 3)
+    # RF-TAR-04: el texto también busca en el nombre de la asignatura.
+    assert titles(text="matemát") == (["Parcial de derivadas"], 1)
     assert titles(subject_id=math.id) == (["Parcial de derivadas"], 1)
     assert titles(type=TaskType.EXAM) == (["Parcial de derivadas"], 1)
     assert titles(text="DERIVADAS") == (["Parcial de derivadas"], 1)

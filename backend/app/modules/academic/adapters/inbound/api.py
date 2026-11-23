@@ -205,11 +205,14 @@ def list_tasks(
     user_id: CurrentUserId,
     service: TaskManagement,
     subject_id: Annotated[uuid.UUID | None, Query()] = None,
-    status: Annotated[TaskStatus | None, Query()] = None,
+    status: Annotated[
+        list[TaskStatus] | None,
+        Query(description="Uno o varios estados. `pending` y `overdue` juntos traen las no completadas."),
+    ] = None,
     type: Annotated[TaskType | None, Query()] = None,
     due_from: Annotated[datetime | None, Query()] = None,
     due_to: Annotated[datetime | None, Query()] = None,
-    q: Annotated[str | None, Query(max_length=200, description="Texto en el título o la descripción.")] = None,
+    q: Annotated[str | None, Query(max_length=200, description="Texto en el título, la descripción o el nombre de la asignatura.")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TaskPageResponse:
@@ -217,7 +220,7 @@ def list_tasks(
 
     query = TaskQuery(
         subject_id=subject_id,
-        status=status,
+        statuses=tuple(status or ()),
         type=type,
         due_from=due_from,
         due_to=due_to,

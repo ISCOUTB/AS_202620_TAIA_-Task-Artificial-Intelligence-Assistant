@@ -66,7 +66,9 @@ class AcademicTaskManagementService(AcademicTaskManagement):
                        "pending": TaskStatus.PENDING, "overdue": TaskStatus.OVERDUE}
             query = TaskQuery(
                 subject_id=query.subject_id,
-                status=aliases.get((query.status or "").lower()),
+                statuses=tuple(
+                    status for status in [aliases.get((query.status or "").lower())] if status is not None
+                ),
                 type=TaskType(query.type.lower()) if query.type else None,
                 due_from=query.due_from, due_to=query.due_to,
                 text=query.text, limit=query.limit, offset=query.offset,

@@ -12,10 +12,14 @@ from app.modules.academic.domain.entities.task import Task, TaskStatus, TaskType
 
 @dataclass(frozen=True)
 class TaskQuery:
-    """Filtros de RF-TAR-04. `None` significa "sin filtrar por ese campo"."""
+    """Filtros de RF-TAR-04. `None` o vacío significa "sin filtrar por ese campo".
+
+    `statuses` admite varios estados: `(PENDING, OVERDUE)` trae las no completadas.
+    `text` busca en el título, la descripción y el nombre de la asignatura.
+    """
 
     subject_id: uuid.UUID | None = None
-    status: TaskStatus | None = None
+    statuses: tuple[TaskStatus, ...] = ()
     type: TaskType | None = None
     due_from: datetime | None = None
     due_to: datetime | None = None

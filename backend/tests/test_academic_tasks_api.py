@@ -274,3 +274,26 @@ def test_management_port_rejects_unknown_type_rf_tar_04():
 
     with pytest.raises(ValueError):
         port.list_tasks(uuid.uuid4(), query)
+
+
+def test_several_statuses_and_search_by_subject_name_rf_tar_04():
+    headers = register_and_login(client)
+    physics = create_subject(client, headers, "Física")
+    math = create_subject(client, headers, "Matemáticas")
+    done = _post_task(headers, physics, "Hecha", due_at=future_iso(days=2)).json()
+    _post_task(headers, physics, "Informe", due_at=future_iso(days=3))
+    _post_task(headers, math, "Parcial", due_at=future_iso(days=4))
+    client.patch(f"/academic/tasks/{done['id']}/complete", headers=headers)
+
+    open_ones = client.get(
+        "/academic/tasks", params=[("status", "pending"), ("status", "overdue")], headers=headers
+    ).json()
+    both = client.get(
+        "/academic/tasks", params=[("status", "pending"), ("status", "completed")], headers=headers
+    ).json()
+    by_subject_name = client.get("/academic/tasks", params={"q": "matemát"}, headers=headers).json()
+
+    assert [t["title"] for t in open_ones["items"]] == ["Informe", "Parcial"]
+    assert [t["title"] for t in both["items"]] == ["Hecha", "Informe", "Parcial"]
+    assert [t["title"] for t in by_subject_name["items"]] == ["Parcial"]
+    assert client.get("/academic/tasks", params={"status": "done"}, headers=headers).status_code == 422

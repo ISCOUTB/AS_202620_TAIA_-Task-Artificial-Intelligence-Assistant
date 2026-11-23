@@ -461,10 +461,10 @@ Las actividades completadas no tienen prioridad y las vencidas tienen su propio 
 
 El sistema debe permitir listar las actividades del usuario, ordenadas por fecha límite ascendente (lo que vence primero aparece primero). Se puede filtrar por:
 - Asignatura (identificador).
-- Estado: pendiente, completada o vencida.
+- Estado: uno o varios de pendiente, completada o vencida. Pedir pendiente y vencida a la vez trae todas las no completadas.
 - Tipo: tarea o examen.
 - Rango de fechas límite.
-- Texto contenido en el título o la descripción.
+- Texto contenido en el título, la descripción o el nombre de la asignatura.
 
 **Reglas**
 - Los filtros se aplican en la consulta a la base de datos, no en memoria después de traer todas las tareas.
@@ -474,6 +474,8 @@ El sistema debe permitir listar las actividades del usuario, ordenadas por fecha
 **Criterios de aceptación**
 - Filtrar por la asignatura X devuelve solo actividades de X.
 - Con 25 actividades y sin paginación explícita, se devuelven 20 y la información para pedir la siguiente página.
+- Filtrar por pendiente y vencida a la vez devuelve las no completadas, y ninguna completada.
+- Buscar el nombre de una asignatura devuelve sus actividades, aunque el nombre no esté en el título ni en la descripción.
 
 ### RF-TAR-05 · Ver detalle de una actividad
 **Prioridad:** MVP · **Estado:** Implementado

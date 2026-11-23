@@ -99,14 +99,19 @@
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/TaskStatus"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskStatus"
+                  }
                 },
                 {
                   "type": "null"
                 }
               ],
+              "description": "Uno o varios estados. `pending` y `overdue` juntos traen las no completadas.",
               "title": "Status"
-            }
+            },
+            "description": "Uno o varios estados. `pending` y `overdue` juntos traen las no completadas."
           },
           {
             "name": "type",
@@ -172,10 +177,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Texto en el título o la descripción.",
+              "description": "Texto en el título, la descripción o el nombre de la asignatura.",
               "title": "Q"
             },
-            "description": "Texto en el título o la descripción."
+            "description": "Texto en el título, la descripción o el nombre de la asignatura."
           },
           {
             "name": "limit",

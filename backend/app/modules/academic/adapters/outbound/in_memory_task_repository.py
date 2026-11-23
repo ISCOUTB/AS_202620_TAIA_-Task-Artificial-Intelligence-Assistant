@@ -36,7 +36,7 @@ class InMemoryTaskRepository(TaskRepository):
 
     def list(self, user_id: uuid.UUID, query: TaskQuery, now: datetime) -> tuple[list[Task], int]:
         matching = sorted(
-            (task for task in self._active(user_id) if _matches(task, query, now)),
+            (task for task in self._active(user_id) if _matches(task, query, now, self._subject_name(task))),
             key=lambda task: task.due_at,
         )
         page = matching[query.offset : query.offset + query.limit]
@@ -62,6 +62,11 @@ class InMemoryTaskRepository(TaskRepository):
                 counts[task.subject_id] = counts.get(task.subject_id, 0) + 1
         return counts
 
+    def _subject_name(self, task: Task) -> str:
+        owner = self._subjects.owner(task.subject_id)
+        subject = self._subjects.get(task.subject_id, owner) if owner is not None else None
+        return subject.name if subject is not None else ""
+
     def _active(self, user_id: uuid.UUID) -> list[Task]:
         return [
             task
@@ -70,10 +75,10 @@ class InMemoryTaskRepository(TaskRepository):
         ]
 
 
-def _matches(task: Task, query: TaskQuery, now: datetime) -> bool:
+def _matches(task: Task, query: TaskQuery, now: datetime, subject_name: str = "") -> bool:
     if query.subject_id is not None and task.subject_id != query.subject_id:
         return False
-    if query.status is not None and task.status(now) is not query.status:
+    if query.statuses and task.status(now) not in query.statuses:
         return False
     if query.type is not None and task.type is not query.type:
         return False
@@ -82,7 +87,7 @@ def _matches(task: Task, query: TaskQuery, now: datetime) -> bool:
     if query.due_to is not None and task.due_at > query.due_to:
         return False
     if query.text:
-        haystack = f"{task.title} {task.description or ''}".lower()
+        haystack = f"{task.title} {task.description or ''} {subject_name}".lower()
         if query.text.lower() not in haystack:
             return False
     return True
