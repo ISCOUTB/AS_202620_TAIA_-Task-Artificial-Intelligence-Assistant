@@ -276,6 +276,20 @@ La aplicación debe tener una pantalla de configuración, separada del perfil, c
 **Criterio de aceptación**
 - Desde el perfil se abre la configuración, y las opciones de cuenta, Telegram y sesión ya no aparecen en el perfil.
 
+### RF-USR-12 · Tutorial de la aplicación
+**Prioridad:** MVP · **Estado:** Pendiente
+
+La primera vez que el estudiante entra a la aplicación, después de la configuración inicial (RF-ASG-10), TAIA le muestra un recorrido corto que señala las partes principales: el botón central para crear, la Agenda, las Tareas, el plan de estudio y cómo hablarle a TAIA.
+
+**Reglas**
+- Cada paso se puede saltar, y el recorrido completo también.
+- El recorrido se puede repetir desde la configuración (RF-USR-11).
+- Que ya se vio se guarda en el teléfono; no es un dato del servidor.
+
+**Criterios de aceptación**
+- La primera entrada muestra el recorrido; la segunda no.
+- Repetirlo desde la configuración lo vuelve a mostrar.
+
 ---
 
 ## 4. Asignaturas y horario (ASG)
@@ -536,20 +550,23 @@ El sistema debe permitir eliminar una actividad propia. **Solo el usuario puede 
 - Eliminar una actividad de otro usuario → `404`.
 
 ### RF-TAR-11 · Calendario académico
-**Prioridad:** MVP · **Estado:** Implementado
+**Prioridad:** MVP · **Estado:** Parcial (falta la vista de semana de la Agenda)
 
 El sistema debe permitir consultar, para un rango de fechas (por ejemplo, un mes), todos los eventos del usuario:
 - Actividades por fecha límite.
 - Exámenes.
 - Bloques de clase proyectados en cada fecha del rango.
 
-La aplicación usa esta consulta para la vista de calendario.
+La aplicación usa esta consulta para la **Agenda**, que reemplaza a la pestaña Calendario y junta el horario con las actividades.
 
 **Reglas**
 - El rango incluye el día inicial y el final, y abarca como máximo 31 días.
+- La Agenda tiene una vista de semana, con los bloques de clase y las actividades de cada día en la misma línea de tiempo, y una vista de mes.
+- El horario (RF-ASG-06 y RF-ASG-07) se consulta y se edita desde la Agenda.
 
 **Criterios de aceptación**
 - Un rango con el final antes del inicio, o de más de 31 días → `422`.
+- En la vista de semana, un día con una clase y una actividad muestra las dos.
 
 ---
 
@@ -973,6 +990,21 @@ TAIA habla como una compañera de estudio: en primera persona, cercana, carismá
 - La misma intención no reconocida dos veces seguidas recibe dos textos distintos.
 - `tools/eval_llm.py` en Groq y en Gemini no baja la exactitud de intención ni la de campos frente a la última medición.
 
+### RF-AGT-23 · TAIA presente en la app
+**Prioridad:** MVP · **Estado:** Pendiente
+
+TAIA debe estar a la vista en toda la aplicación, no escondida, para que hablarle sea natural.
+
+**Reglas**
+- En el Inicio, TAIA aparece con una burbuja de texto que invita a hablarle, con su voz (RF-AGT-22) y una frase según el día: actividades para hoy, actividades vencidas o nada pendiente. Tocar a TAIA o la burbuja abre el chat. No hay botón flotante blanco.
+- En las demás pantallas, una TAIA pequeña en la cabecera abre el chat.
+- En el chat, TAIA muestra su estado: pensando mientras espera la respuesta y hablando al responder.
+- TAIA se muestra sin recuadro blanco; solo lleva fondo cuando hace falta contraste, por ejemplo sobre fondos rosados.
+
+**Criterios de aceptación**
+- Desde cualquier pantalla principal se abre el chat con un toque.
+- Con actividades vencidas, la burbuja del Inicio lo menciona.
+
 ---
 
 ## 10. Plan de estudio (EST) y perfil con estadísticas (PRF)
@@ -1078,6 +1110,15 @@ Mínimos iniciales. Los escenarios de calidad detallados están en `docs/calidad
 | RNF-11 | Idioma | Mensajes al usuario en español. |
 | RNF-12 | Calidad | Cada requerimiento MVP tiene al menos una prueba automatizada que verifica sus criterios de aceptación. Las pruebas se ejecutan en CI. |
 | RNF-13 | Contrato | La API se documenta con OpenAPI (`docs/api/openapi.json`) y se valida en CI contra el código. |
+| RNF-14 | Experiencia | Identidad y uso de la aplicación (ver abajo). |
+
+**RNF-14 · Identidad y experiencia de la aplicación** (MVP, *Pendiente*)
+- El icono de la aplicación es TAIA. Las notificaciones push usan una silueta monocroma de TAIA como icono pequeño de Android, con el color de acento de la marca.
+- Navegación inferior: Inicio, Agenda, botón central "+", Tareas y Perfil. El "+" abre una hoja con Nueva actividad, Nueva clase y Nueva asignatura.
+- El plan de estudio (RF-EST-01 a 03) tiene una tarjeta destacada en el Inicio y un acceso en Tareas.
+- Los formularios usan opciones rápidas (chips, atajos de fecha y hora, valores por defecto) y muestran un resumen en vivo de lo que se va a crear, para llenarlos con pocos toques.
+- Las pantallas tienen animaciones de entrada y transición cortas (300 ms o menos), con vibración y celebraciones al completar, y respetan la opción del sistema de reducir el movimiento.
+- Librerías aprobadas: `flutter_animate`, `animations`, `showcaseview`, `flutter_slidable`, `confetti` y `shimmer`.
 
 ---
 
