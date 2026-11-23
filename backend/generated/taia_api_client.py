@@ -194,11 +194,11 @@ class TaiaApiClient:
     def handle_message_ai_message_post(self, body: object | None = None) -> object:
         return self._request("POST", "/ai/message", body, **{})
 
-    def list_reminders_reminders_get(self, body: object | None = None) -> object:
-        return self._request("GET", PATH_REMINDERS, body, **{})
-
     def create_reminder_reminders_post(self, body: object | None = None) -> object:
         return self._request("POST", PATH_REMINDERS, body, **{})
+
+    def list_reminders_reminders_get(self, body: object | None = None) -> object:
+        return self._request("GET", PATH_REMINDERS, body, **{})
 
     def get_reminder_reminders__reminder_id__get(self, body: object | None = None, reminder_id: object | None = None) -> object:
         return self._request("GET", PATH_REMINDERS_REMINDER_ID, body, **{'reminder_id': reminder_id})

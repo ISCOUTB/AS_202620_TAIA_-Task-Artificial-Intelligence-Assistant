@@ -159,3 +159,48 @@ def test_complete_and_notify_routes_no_longer_exist_d_10():
 
     assert client.post(f"/reminders/{reminder_id}/complete", headers=headers).status_code == 404
     assert client.post(f"/reminders/{reminder_id}/notify", headers=headers).status_code == 404
+
+
+def test_list_filters_by_task_rf_rec_03():
+    headers, first = _owner_with_task("Informe")
+    second = helpers.create_task(client, headers, "Parcial")
+    _create(headers, first)
+    _create(headers, second)
+
+    listed = client.get("/reminders", headers=headers, params={"task_id": first})
+    assert listed.status_code == 200, listed.text
+    assert listed.json()
+    assert {item["task_id"] for item in listed.json()} == {first}
+
+
+def test_list_filters_by_status_rf_rec_03():
+    headers, open_task = _owner_with_task("Abierta")
+    closed_task = helpers.create_task(client, headers, "Cerrada")
+    _create(headers, open_task)
+    _create(headers, closed_task)
+    # Completar la actividad cancela sus recordatorios pendientes (RF-REC-06).
+    assert client.patch(f"/academic/tasks/{closed_task}/complete", headers=headers).status_code == 200
+
+    cancelled = client.get("/reminders", headers=headers, params={"status": "cancelled"}).json()
+    pending = client.get("/reminders", headers=headers, params={"status": "pending"}).json()
+    assert cancelled and {(item["task_id"], item["status"]) for item in cancelled} == {(closed_task, "cancelled")}
+    assert pending and {(item["task_id"], item["status"]) for item in pending} == {(open_task, "pending")}
+
+    both = client.get("/reminders", headers=headers, params={"task_id": closed_task, "status": "pending"})
+    assert both.json() == []
+
+
+def test_list_filter_by_task_of_another_user_is_empty_rf_rec_03_rt_02():
+    owner, task_id = _owner_with_task()
+    _create(owner, task_id)
+    other = helpers.register_and_login(client)
+
+    assert client.get("/reminders", headers=other, params={"task_id": task_id}).json() == []
+
+
+def test_list_rejects_unknown_status_rf_rec_03_rt_05():
+    headers = helpers.register_and_login(client)
+
+    response = client.get("/reminders", headers=headers, params={"status": "done"})
+    assert response.status_code == 422
+    assert "detail" in response.json()

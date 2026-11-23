@@ -1562,3 +1562,37 @@ El equipo pidió que atrás funcione en la configuración inicial, que una clase
 
 * App: `flutter analyze` sin avisos y 107 pruebas aprobadas.
 * Backend: pruebas del registro del envío con `caplog`, que también comprueban que el mensaje no aparece en el log.
+
+## Entrada 036
+
+**Fecha:** 2026-11-22
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Cerrar la matriz de cumplimiento de S16: documentación coherente con el sistema entregado, flujos comprobados en producción y RF-REC-03.
+
+### Solicitud realizada
+
+El equipo pidió verificar la matriz de cumplimiento del proyecto final y corregir lo que no cumplía, quitar el respaldo de Render y terminar los pendientes de la sesión 4 que no dependen de una decisión.
+
+### Resultado generado
+
+* `aspectos.md`: tabla de 7 filas con las 8 columnas enlazadas e ID de requisitos actuales. Tenía 12 enlaces rotos y la fila A-07 fuera de la tabla.
+* C4 niveles 1 a 3: FCM, Groq y Gemini, Resend, Telegram como canal conversacional, la app Flutter y el bucle de envío; las flechas del C3 salen de los imports entre puertos.
+* arc42 §1 a §8, §11 y §12, y el README: alineados con el sistema entregado; §5 y §6 reescritas desde el código; sin Render.
+* `escenarios_calidad.md` y `modos_fallo_s11.md`: estado de los escenarios y modos de fallo de FCM con sus pruebas. Se declara que S1 con Groq (89,1 %) queda bajo el umbral del 90 % y que S5 tocó 4 archivos del adaptador.
+* RF-REC-03: `GET /reminders` acepta `task_id` y `status`. El filtro se aplica sobre los recordatorios del usuario, así que una actividad de otro usuario devuelve una lista vacía (RT-02).
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* Enlaces y anclas de los documentos tocados: 358 comprobados con un script local, ninguno roto. Los tres diagramas C4 renderizan con mermaid-cli.
+* Producción, 2026-11-22 de 22:26 a 22:31 -05:00, con cuentas de prueba desactivadas al final: 43 peticiones de los flujos principales y de error con el resultado esperado; un recordatorio programado llegó a la bandeja 52 s después.
+* RF-REC-03: 4 pruebas nuevas en `test_reminders_api.py`; suite completa, 755 aprobadas. Contrato y cliente regenerados; solo cambia `/reminders`.

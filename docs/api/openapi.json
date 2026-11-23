@@ -2593,49 +2593,26 @@
       }
     },
     "/reminders": {
-      "get": {
-        "tags": [
-          "reminders"
-        ],
-        "summary": "List Reminders",
-        "operationId": "list_reminders_reminders_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ReminderResponse"
-                  },
-                  "type": "array",
-                  "title": "Response List Reminders Reminders Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "reminders"
         ],
         "summary": "Create Reminder",
         "operationId": "create_reminder_reminders_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateReminderRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -2678,12 +2655,85 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "List Reminders",
+        "description": "RF-REC-03: los recordatorios del usuario, filtrables por actividad y estado.",
+        "operationId": "list_reminders_reminders_get",
         "security": [
           {
             "HTTPBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Solo los recordatorios de esta actividad.",
+              "title": "Task Id"
+            },
+            "description": "Solo los recordatorios de esta actividad."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ReminderStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`pending`, `sent` o `cancelled`.",
+              "title": "Status"
+            },
+            "description": "`pending`, `sent` o `cancelled`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReminderResponse"
+                  },
+                  "title": "Response List Reminders Reminders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/reminders/{reminder_id}": {

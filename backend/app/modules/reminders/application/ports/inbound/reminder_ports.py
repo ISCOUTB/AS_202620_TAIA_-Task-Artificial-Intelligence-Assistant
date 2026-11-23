@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from app.modules.reminders.domain.entities import Notification, Reminder
+from app.modules.reminders.domain.entities import Notification, Reminder, ReminderStatus
 
 
 class CreateReminderPort(ABC):
@@ -20,7 +20,9 @@ class CreateReminderPort(ABC):
 
 class ListRemindersPort(ABC):
     @abstractmethod
-    def execute(self, user_id: UUID) -> list[Reminder]:
+    def execute(
+        self, user_id: UUID, task_id: UUID | None = None, status: ReminderStatus | None = None
+    ) -> list[Reminder]:
         raise NotImplementedError
 
 

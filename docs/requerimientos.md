@@ -581,7 +581,7 @@ Cuando una actividad se crea con la política por defecto, el sistema genera aut
 - Una tarea creada el 1 de octubre a las 10:00 con vencimiento el 8 de octubre a las 23:59 genera recordatorios el 2, 4, 6 y 7 de octubre a las 18:00.
 
 ### RF-REC-03 · Consultar recordatorios
-**Prioridad:** MVP · **Estado:** Parcial (faltan los filtros por actividad y estado)
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir listar los recordatorios del usuario, filtrables por actividad y estado, y consultar uno por identificador. Cada recordatorio muestra:
 - **Estado:** `pending`, `sent` o `cancelled`.

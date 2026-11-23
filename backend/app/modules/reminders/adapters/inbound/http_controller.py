@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.modules.reminders.application.errors import (
@@ -151,9 +151,16 @@ def create_reminder(
 
 @router.get("")
 def list_reminders(
-    user_id: CurrentUserId, use_case: Annotated[ListRemindersPort, Depends(get_list_use_case)]
+    user_id: CurrentUserId,
+    use_case: Annotated[ListRemindersPort, Depends(get_list_use_case)],
+    task_id: Annotated[UUID | None, Query(description="Solo los recordatorios de esta actividad.")] = None,
+    reminder_status: Annotated[
+        ReminderStatus | None, Query(alias="status", description="`pending`, `sent` o `cancelled`.")
+    ] = None,
 ) -> list[ReminderResponse]:
-    return [ReminderResponse.from_domain(item) for item in use_case.execute(user_id)]
+    """RF-REC-03: los recordatorios del usuario, filtrables por actividad y estado."""
+
+    return [ReminderResponse.from_domain(item) for item in use_case.execute(user_id, task_id, reminder_status)]
 
 
 @router.get("/{reminder_id}", responses=NOT_FOUND)
