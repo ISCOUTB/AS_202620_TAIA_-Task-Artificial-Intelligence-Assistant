@@ -1,5 +1,6 @@
-
 import '../agent/taia_chat_button.dart';
+import '../study_plan/study_plan_card.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -306,6 +307,9 @@ class TasksScreenState extends State<TasksScreen> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           _Header(unfinished: unfinished, expression: expression),
+          const SizedBox(height: 16),
+          // RNF-14: el plan de estudio también se abre desde Tareas.
+          const StudyPlanCard(),
           const SizedBox(height: 20),
           TasksFilterBar(
             searchController: _search,

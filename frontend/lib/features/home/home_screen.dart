@@ -6,6 +6,7 @@ import '../../theme/taia_colors.dart';
 import '../agent/agent_service.dart';
 import '../auth/auth_service.dart';
 import '../auth/auth_shell.dart';
+import '../study_plan/study_plan_card.dart';
 import 'home_data.dart';
 import 'home_service.dart';
 import 'widgets/home_header.dart';
@@ -42,6 +43,9 @@ class HomeScreenState extends State<HomeScreen> {
   String? _error;
   bool _loading = true;
 
+  /// Cambia en cada carga para que la tarjeta del plan también se actualice.
+  int _version = 0;
+
   HomeService get _service => widget.service ?? homeService;
 
   @override
@@ -67,6 +71,7 @@ class HomeScreenState extends State<HomeScreen> {
         _data = data;
         _error = null;
         _loading = false;
+        _version++;
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -124,6 +129,12 @@ class HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TodayCard(data: data),
+          ),
+          const SizedBox(height: 16),
+          // RNF-14: el plan de estudio, a la vista desde el Inicio.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: StudyPlanCard(version: _version),
           ),
           const SizedBox(height: 24),
           UpcomingDeliveries(
