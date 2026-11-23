@@ -71,9 +71,14 @@ void main() {
       final api = FakeApi(
         routes({
           'GET /academic/subjects': _subjects,
-          'GET /reminders': (_) => FakeResponse(200, [
-            reminderJson(message: 'Repasar capítulo 3'),
-            reminderJson(id: 'r2', taskId: 'otra', message: 'De otra tarea'),
+          // RF-REC-03: el servidor filtra por actividad con `task_id`.
+          'GET /reminders': (request) => FakeResponse(200, [
+            for (final reminder in [
+              reminderJson(message: 'Repasar capítulo 3'),
+              reminderJson(id: 'r2', taskId: 'otra', message: 'De otra tarea'),
+            ])
+              if (reminder['task_id'] == request.queryParameters['task_id'])
+                reminder,
           ]),
         }),
       );

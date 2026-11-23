@@ -18,15 +18,18 @@ class RemindersService {
         .toList();
   });
 
-  /// Recordatorios de una actividad, del más cercano al más lejano.
-  ///
-  /// `GET /reminders` todavía no filtra por actividad (RF-REC-03), así que el
-  /// filtro se hace aquí.
-  Future<List<Reminder>> listForTask(String taskId) async {
-    final all = await list();
-    return all.where((r) => r.taskId == taskId).toList()
+  /// Recordatorios de una actividad, del más cercano al más lejano. El
+  /// servidor filtra por actividad (`GET /reminders?task_id=`, RF-REC-03).
+  Future<List<Reminder>> listForTask(String taskId) => apiGuard(() async {
+    final response = await _dio.get<List<dynamic>>(
+      '/reminders',
+      queryParameters: {'task_id': taskId},
+    );
+    return (response.data ?? const [])
+        .map((e) => Reminder.fromJson(e as Map<String, dynamic>))
+        .toList()
       ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
-  }
+  });
 
   /// POST /reminders (RF-REC-01). Sin mensaje, el servidor usa el de por defecto.
   Future<Reminder> create({
