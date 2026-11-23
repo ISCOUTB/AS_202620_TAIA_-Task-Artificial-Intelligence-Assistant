@@ -151,4 +151,4 @@ Los repositorios en memoria se conservan para las pruebas unitarias.
 
 ## 5.6. Límites actuales de los bloques
 
-Lo implementado y lo pendiente se lleva por requisito en [requerimientos.md](../requerimientos.md). Al cierre queda como *Parcial* RF-TEL-01 (el bot no informa el resultado de la vinculación), y como *Pendiente* RF-REC-07 y RF-AGT-21. Las capacidades avanzadas de IA (RAG, embeddings, búsqueda semántica) quedan fuera del MVP.
+Lo implementado y lo pendiente se lleva por requisito en [requerimientos.md](../requerimientos.md). Al cierre quedan como *Pendiente* RF-REC-07 y RF-AGT-21. Las capacidades avanzadas de IA (RAG, embeddings, búsqueda semántica) quedan fuera del MVP.

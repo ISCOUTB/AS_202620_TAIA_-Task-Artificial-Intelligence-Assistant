@@ -77,7 +77,7 @@ def test_create_task_executes_after_yes():
     reply = uc.execute(_msg("si"))
 
     tasks = academic.list_tasks("u1", TaskFilters())
-    assert "cree la tarea" in reply.text.lower()
+    assert "creé la tarea" in reply.text.lower()
     assert len(tasks) == 1
     assert tasks[0].title == "Taller"
 
@@ -114,7 +114,7 @@ def test_create_without_title_asks_for_it():
 
     reply = uc.execute(_msg("crea una tarea"))
 
-    assert "titulo" in reply.text.lower()
+    assert "título" in reply.text.lower()
 
 
 def test_create_without_due_asks_for_it():
@@ -210,7 +210,7 @@ def test_update_task_resolves_target_and_updates_after_yes():
     assert reply.awaiting_confirmation is True
 
     reply2 = uc.execute(_msg("si"))
-    assert "actualice" in reply2.text.lower()
+    assert "actualicé" in reply2.text.lower()
     assert academic.list_tasks("u1", TaskFilters(text="historia"))[0].due_at == new_due
 
 
@@ -233,7 +233,7 @@ def test_update_task_ambiguous_target_is_not_confirmed():
     reply = uc.execute(_msg("cambia la de historia"))
 
     assert reply.awaiting_confirmation is False
-    assert "especifico" in reply.text.lower()
+    assert "me dices cuál" in reply.text.lower()
 
 
 def test_llm_failure_returns_friendly_message():
@@ -246,7 +246,7 @@ def test_llm_failure_returns_friendly_message():
 
     reply = uc.execute(_msg("crea una tarea"))
 
-    assert "intenta de nuevo" in reply.text.lower()
+    assert "inténtalo de nuevo" in reply.text.lower()
 
 
 def test_gemini_timeout_returns_friendly_message_without_writing_rf_agt_20():
@@ -266,7 +266,7 @@ def test_gemini_timeout_returns_friendly_message_without_writing_rf_agt_20():
 
     reply = uc.execute(_msg("crea la tarea taller para el viernes"))
 
-    assert "intenta de nuevo" in reply.text.lower()
+    assert "inténtalo de nuevo" in reply.text.lower()
     assert academic.list_tasks("u1", TaskFilters()) == []
 
 

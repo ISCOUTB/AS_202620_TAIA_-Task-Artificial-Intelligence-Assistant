@@ -62,7 +62,7 @@ def test_default_message_in_colombian_time_rf_rec_01_rt_03():
 
     message = default_message("Informe", "Cálculo", due_utc)
 
-    assert message == "Recuerda: Informe (Cálculo) vence el 08/10/2026 23:59"
+    assert message == "\u00a1Ey! Soy TAIA \U0001F419 Recuerda que Informe de C\u00e1lculo vence el 08/10/2026 23:59. \u00a1T\u00fa puedes!"
 
 
 def test_naive_date_is_colombian_time_rf_rec_01_rt_03(setup):

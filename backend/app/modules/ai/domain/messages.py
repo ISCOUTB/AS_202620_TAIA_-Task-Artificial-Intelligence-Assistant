@@ -56,6 +56,7 @@ class Intent(str, Enum):
     SUMMARY = "summary"
     QUERY_SCHEDULE = "query_schedule"
     SYSTEM_HELP = "system_help"
+    GREETING = "greeting"
     UNKNOWN = "unknown"
 
 

@@ -5,8 +5,8 @@ import '../../core/api_error.dart';
 
 /// Mensaje que se muestra si el `429` llega sin `detail` (RF-AGT-19).
 const String agentLimitMessage =
-    'Alcanzaste el límite de mensajes al asistente. Intenta de nuevo más '
-    'tarde.';
+    'Alcanzaste el límite de mensajes conmigo por ahora. Inténtalo de nuevo '
+    'más tarde.';
 
 /// Respuesta del agente a un mensaje.
 class AgentReply {

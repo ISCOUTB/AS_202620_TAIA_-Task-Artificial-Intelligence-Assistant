@@ -29,20 +29,45 @@ from app.modules.usuario.adapters.outbound.provider import (
     repository as _repository,
     telegram_link_repository as _telegram_link_repository,
 )
-from app.modules.usuario.application.use_cases.link_telegram import ConfirmTelegramLinkUseCase
+from app.modules.usuario.application.use_cases.link_telegram import (
+    ConfirmTelegramLinkUseCase,
+    TelegramAlreadyLinkedError,
+    UserAlreadyLinkedError,
+)
 from app.modules.usuario.domain.entities.usuario import UserStatus
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 _START_COMMAND = "/start"
 
+_OCTOPUS = "\U0001F419"
+
 # RF-TEL-04: una cuenta de Telegram sin vincular solo recibe cómo vincularla (RF-TEL-01).
 NOT_LINKED_MESSAGE = (
-    "Tu cuenta de Telegram no está vinculada a TAIA. Para vincularla, pide el enlace "
-    "de Telegram desde la aplicación TAIA, ábrelo y pulsa Iniciar. El enlace vale 10 minutos."
+    "¡Hola! Soy TAIA, tu compañera de estudio. Para ayudarte desde Telegram necesito que "
+    "vinculemos tu cuenta: en la app pide el enlace de Telegram, ábrelo y pulsa Iniciar. "
+    "Vale 10 minutos."
 )
 # RF-TEL-04: una cuenta TAIA inactiva no recibe información de la cuenta.
-INACTIVE_ACCOUNT_MESSAGE = "No puedo atender esta solicitud."
+INACTIVE_ACCOUNT_MESSAGE = "Lo siento, por ahora no puedo ayudarte con esta cuenta."
+
+# RF-TEL-01: el resultado de la vinculación se cuenta en el chat, con la voz de TAIA (RF-AGT-22).
+LINKED_MESSAGE = (
+    f"¡Listo, ya estamos conectadas! {_OCTOPUS} Desde aquí puedes pedirme que cree, "
+    "consulte o complete tus tareas."
+)
+LINK_INVALID_MESSAGE = (
+    "Ese enlace ya no sirve: dura 10 minutos y solo se usa una vez. Pide uno nuevo en la "
+    "app y lo intentamos otra vez."
+)
+TELEGRAM_TAKEN_MESSAGE = (
+    "Esta cuenta de Telegram ya está vinculada a otra cuenta de TAIA. Desvincúlala desde "
+    "esa cuenta en la app y vuelve a intentarlo."
+)
+USER_ALREADY_LINKED_MESSAGE = (
+    "Tu cuenta de TAIA ya tiene otro Telegram vinculado. Desvincúlalo en la app y pide un "
+    "enlace nuevo."
+)
 
 
 class _TelegramUser(BaseModel):
@@ -75,7 +100,7 @@ class TelegramSendMessage(BaseModel):
     "/webhook",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        200: {"model": TelegramSendMessage, "description": "Respuesta del bot en el mismo chat (RF-TEL-04)."},
+        200: {"model": TelegramSendMessage, "description": "Respuesta del bot en el mismo chat (RF-TEL-01, RF-TEL-04)."},
         401: {"model": ErrorResponse, "description": "Falta el secreto del webhook o no es válido."},
     },
 )
@@ -115,12 +140,18 @@ async def telegram_webhook(
             code,
             message.sender.id,
         )
+        answer = LINKED_MESSAGE
+    except TelegramAlreadyLinkedError:
+        answer = TELEGRAM_TAKEN_MESSAGE
+    except UserAlreadyLinkedError:
+        answer = USER_ALREADY_LINKED_MESSAGE
     except ValueError:
-        # Código inválido, expirado o usado, o cuenta ya vinculada: no se vincula
-        # nada. Se responde 2xx igual, porque Telegram reintenta cualquier otra
-        # respuesta.
-        pass
-    return _no_reply()
+        # Código inválido, expirado o usado. Se responde 2xx igual, porque
+        # Telegram reintenta cualquier otra respuesta (RF-TEL-01, RF-TEL-02).
+        answer = LINK_INVALID_MESSAGE
+    if message.chat is None:
+        return _no_reply()
+    return JSONResponse(TelegramSendMessage(chat_id=message.chat.id, text=answer).model_dump())
 
 
 def _converse(telegram_user_id: int, text: str) -> str:

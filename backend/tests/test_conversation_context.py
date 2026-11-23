@@ -166,6 +166,6 @@ def test_context_is_shared_by_the_app_and_telegram_rf_agt_15(clean_db):
     use_case().execute(IncomingRequest(user_id, "crea el informe de fisica", Channel.APP))
     reply = use_case().execute(IncomingRequest(user_id, "si", Channel.TELEGRAM))
 
-    assert reply.text.startswith('Listo, cree la tarea "Informe"')
+    assert reply.text.startswith('¡Listo! Ya creé la tarea "Informe"')
     assert [task.title for task in academic.list_tasks(user_id, TaskFilters())] == ["Informe"]
     assert len(llm.seen) == 1

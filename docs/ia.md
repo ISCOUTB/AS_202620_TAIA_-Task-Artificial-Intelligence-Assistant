@@ -1596,3 +1596,39 @@ El equipo pidió verificar la matriz de cumplimiento del proyecto final y correg
 * Enlaces y anclas de los documentos tocados: 358 comprobados con un script local, ninguno roto. Los tres diagramas C4 renderizan con mermaid-cli.
 * Producción, 2026-11-22 de 22:26 a 22:31 -05:00, con cuentas de prueba desactivadas al final: 43 peticiones de los flujos principales y de error con el resultado esperado; un recordatorio programado llegó a la bandeja 52 s después.
 * RF-REC-03: 4 pruebas nuevas en `test_reminders_api.py`; suite completa, 755 aprobadas. Contrato y cliente regenerados; solo cambia `/reminders`.
+
+## Entrada 037
+
+**Fecha:** 2026-11-23
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Darle a TAIA su voz (RF-AGT-22), reconocer saludos (RF-AGT-02) y contar en Telegram el resultado de la vinculación (RF-TEL-01).
+
+### Solicitud realizada
+
+En la prueba en el teléfono, TAIA respondía seco: "Hola taia" caía en la respuesta de intención no reconocida, que se repetía igual, y la ayuda hablaba en tercera persona y sin tildes. El equipo aprobó el requisito RF-AGT-22, la intención `greeting`, que la ayuda explique qué recuerda TAIA y los textos de la vinculación por Telegram.
+
+### Resultado generado
+
+* `replies.py`: todos los textos fijos en primera persona, en femenino y con tildes; preguntas a veces sin "¿" o con "???"; como máximo un emoji, escrito como secuencia de escape, y ninguno en errores ni en confirmaciones. La respuesta de intención no reconocida y la de "no entendí" tienen variantes y no se repiten igual en mensajes seguidos.
+* Intención `greeting` (saludo, agradecimiento o despedida): respuesta fija sin otra llamada al LLM; el tipo se decide con palabras clave.
+* Contrato de interpretación: definición de `greeting` y de `system_help` (también "¿puedes borrar tareas?" y las preguntas sobre la memoria); la ayuda responde con la voz de TAIA. `ayuda.md` en primera persona, con una sección sobre qué recuerda TAIA.
+* Webhook de Telegram: mensajes de H-28 y respuesta en el chat para cada resultado de `/start <código>`; sigue respondiendo `2xx`.
+* Mensaje por defecto de las notificaciones con la voz de TAIA (RF-REC-01, diccionario §9).
+* Conjunto de evaluación: `x005`, `x007` y `x009` pasan de `unknown` a `greeting`, y se agregan `w001` ("Hola taia") y `w002` (despedida).
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* `test_ai_voice.py` (nueva): saludo, agradecimiento y despedida; variantes sin repetir; textos fijos sin tercera persona ni palabras sin tilde; emojis. Pruebas de vinculación con los cuatro mensajes. Suite completa: 769 aprobadas. App: pruebas del agente aprobadas.
+* Evaluación con `tools/eval_llm.py` sobre 116 mensajes ([resultado de Gemini](evaluacion_ia/resultado_gemini_voz.json), `gemini-3.5-flash-lite`): intención 93,97 % (antes 92,93 % sobre 99), p95 3 572 ms, 4 errores de llamada. En los 110 campos que también midió la corrida de octubre, 102 correctos frente a 105, uno de ellos perdido por un error de llamada.
+* Groq queda sin medir: la corrida del prompt final falló en 68 de 116 llamadas porque las dos claves agotaron su cuota diaria de tokens, y se descartó. RF-AGT-22 queda *Parcial* hasta medirlo.
+* Una primera corrida, con el prompt anterior al ajuste de `greeting` y `system_help`, se descartó sin versionar: Groq confundía "ok", "ayúdame" y el pulgar arriba con `greeting`, y la de Gemini usó por error `gemini-3.5-flash` y falló casi todas las llamadas.

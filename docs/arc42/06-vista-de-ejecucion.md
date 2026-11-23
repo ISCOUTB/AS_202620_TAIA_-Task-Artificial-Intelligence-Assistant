@@ -114,13 +114,14 @@ POST /telegram/webhook
    ├── secreto incorrecto ──► 401
    ▼
 ConfirmTelegramLinkUseCase
-   ├── código inexistente, vencido o usado ──┐
-   ├── Telegram ya vinculado a otra cuenta ──┤──► 204 sin vincular
-   ▼                                         │
-Guarda telegram_user_id (message.from.id) ──► 204
+   ├── código inexistente, vencido o usado ──► 200: "Ese enlace ya no sirve..."
+   ├── Telegram ya vinculado a otra cuenta ──► 200: "Esta cuenta de Telegram ya está vinculada..."
+   ├── la cuenta TAIA ya tiene otro Telegram ► 200: "Tu cuenta de TAIA ya tiene otro Telegram..."
+   ▼
+Guarda telegram_user_id (message.from.id) ──► 200: "¡Listo, ya estamos conectadas!..."
 ```
 
-El webhook responde `2xx` incluso cuando rechaza la vinculación, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). Por eso el bot todavía no le dice al estudiante si la vinculación funcionó: RF-TEL-01 queda *Parcial*.
+El webhook responde siempre `2xx`, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). El resultado de la vinculación va en el cuerpo como `method: sendMessage`, así que el estudiante lo lee en el mismo chat (RF-TEL-01), con la voz de TAIA (RF-AGT-22).
 
 ---
 

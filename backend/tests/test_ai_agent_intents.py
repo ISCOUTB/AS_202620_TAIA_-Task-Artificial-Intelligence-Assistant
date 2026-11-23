@@ -154,7 +154,7 @@ def test_create_with_several_subjects_lists_five_and_saves_nothing_rf_agt_05():
     assert reply.awaiting_confirmation is False
     assert all(name in reply.text for name in names[:5])
     assert "Física VI" not in reply.text
-    assert "Escribe de nuevo la solicitud" in reply.text
+    assert "Escríbeme de nuevo" in reply.text
     assert store.get(USER).pending is None
     # Un "si" despues no crea nada: no habia solicitud guardada.
     uc.execute(_msg("si"))
@@ -250,7 +250,7 @@ def test_criterion_lab_report_gets_a_generated_title_rf_agt_06_rf_agt_07():
     assert proposal.awaiting_confirmation is True
     assert proposal.text == (
         'Voy a crear la tarea "Informe de laboratorio" de Física para el 11/09/2026 23:59, '
-        "con recordatorios cada 2 dias y la tarde anterior. Confirmas? (si / no)"
+        "con recordatorios cada 2 días y la tarde anterior. ¿Lo confirmo? (sí / no)"
     )
     uc.execute(_msg("sí"))
     [created] = academic.list_tasks(USER, TaskFilters())
@@ -292,8 +292,8 @@ def test_complete_task_asks_confirmation_and_completes_after_yes_rf_agt_09():
     done = uc.execute(_msg("si"))
 
     assert proposal.awaiting_confirmation is True
-    assert proposal.text == 'Voy a marcar como completada la tarea "Taller de física" (Física). Confirmas? (si / no)'
-    assert done.text == 'Listo, marque como completada la tarea "Taller de física".'
+    assert proposal.text == 'Voy a marcar como completada la tarea "Taller de física" (Física). ¿Lo confirmo? (sí / no)'
+    assert done.text == '¡Bien hecho! Marqué como completada la tarea "Taller de física" \U0001F389'
     assert academic.list_tasks(USER, TaskFilters())[0].id == target.id
     assert academic.list_tasks(USER, TaskFilters())[0].status == "completed"
     # La confirmacion se evalua sin llamar al LLM (RF-AGT-04).
@@ -391,7 +391,7 @@ def test_update_task_with_several_matches_lists_five_and_changes_nothing_rf_agt_
     assert reply.awaiting_confirmation is False
     assert sum(line.startswith("- ") for line in reply.text.splitlines()) == 5
     assert '"Quiz 6"' not in reply.text
-    assert reply.text.endswith("Puedes ser mas especifico?")
+    assert reply.text.endswith("¿Me dices cuál?")
     assert store.get(USER).pending is None
 
 
@@ -440,7 +440,7 @@ def test_query_lists_ten_by_due_date_with_priority_and_the_rest_rf_agt_11():
     assert lines[2].endswith("prioridad media")
     assert lines[3].endswith("prioridad baja")
     assert [line.split('"')[1] for line in lines[1:11]] == [f"Actividad {n:02d}" for n in range(1, 11)]
-    assert lines[11] == "...y 2 mas."
+    assert lines[11] == "...y 2 más."
     assert len(lines) == 12
 
 
@@ -541,7 +541,7 @@ def test_summary_uses_backend_counts_for_the_period_rf_agt_12():
         "Resumen del 01/09/2026 al 30/09/2026: 1 pendiente(s), 1 completada(s) y 1 vencida(s).",
         "- Redes: 1 pendiente(s), 1 completada(s), 0 vencida(s)",
         "- Ética: 0 pendiente(s), 0 completada(s), 1 vencida(s)",
-        'Proxima por vencer: "Taller" (Redes) el 15/09/2026 23:59.',
+        'Próxima por vencer: "Taller" (Redes) el 15/09/2026 23:59.',
     ]
     assert academic.ranges == [("summary", *SEPTEMBER.bounds())]
     assert len(llm.seen) == 1
@@ -579,7 +579,7 @@ def test_schedule_lists_classes_of_the_period_in_colombia_time_rf_agt_13():
     assert reply.text.splitlines() == [
         "Tienes 2 clase(s):",
         "- viernes 11/09/2026 07:00-09:00 Redes",
-        "- viernes 11/09/2026 14:00-16:00 Física, salon 201",
+        "- viernes 11/09/2026 14:00-16:00 Física, salón 201",
     ]
     assert academic.ranges == [("classes", *TOMORROW.bounds())]
 
@@ -615,7 +615,7 @@ def test_schedule_lists_at_most_ten_classes_and_the_rest_rf_agt_13():
     lines = reply.text.splitlines()
     assert lines[0] == "Tienes 12 clase(s):"
     assert [line.rsplit(" ", 2)[-2:] for line in lines[1:11]] == [["Clase", f"{n:02d}"] for n in range(1, 11)]
-    assert lines[11] == "...y 2 mas."
+    assert lines[11] == "...y 2 más."
     assert len(lines) == 12
 
 
@@ -634,7 +634,7 @@ def test_schedule_without_classes_says_so_rf_agt_13():
 
     reply = uc.execute(_msg("que clases tengo manana?"))
 
-    assert reply.text == "No tienes clases registradas en ese periodo."
+    assert reply.text == "No tienes clases registradas en ese período."
 
 
 # -- D6 · RF-AGT-14: ayuda cortada por el limite de tokens ----------------------

@@ -92,7 +92,7 @@ def _linked_user() -> tuple[int, uuid.UUID]:
     token = client.post("/users/login", json={"email": email, "password": TEST_PASSWORD}).json()["access_token"]
     link = client.post("/users/me/telegram/link", headers={"Authorization": f"Bearer {token}"}).json()
     telegram_user_id = next(_telegram_ids)
-    assert _send(_update(telegram_user_id, f"/start {link['telegram_deep_link'].split('?start=', 1)[1]}")).status_code == 204
+    assert _send(_update(telegram_user_id, f"/start {link['telegram_deep_link'].split('?start=', 1)[1]}")).status_code == 200
     user = repository.get_by_telegram_user_id(telegram_user_id)
     assert user is not None
     return telegram_user_id, user.id
@@ -146,7 +146,7 @@ def test_inactive_account_gets_the_fixed_message_and_no_data_rf_tel_04(agent):
 
     response = _send(_update(telegram_user_id, "que tareas tengo?"))
 
-    assert _bot_text(response) == INACTIVE_ACCOUNT_MESSAGE == "No puedo atender esta solicitud."
+    assert _bot_text(response) == INACTIVE_ACCOUNT_MESSAGE == "Lo siento, por ahora no puedo ayudarte con esta cuenta."
     assert agent.calls == []
 
 
@@ -258,6 +258,6 @@ def test_create_and_confirm_a_task_from_telegram_rf_agt_01(monkeypatch):
     proposal = _bot_text(_send(_update(telegram_user_id, "crea el informe de fisica para el 4 de diciembre")))
     done = _bot_text(_send(_update(telegram_user_id, "si")))
 
-    assert proposal.endswith("Confirmas? (si / no)")
-    assert done.startswith('Listo, cree la tarea "Informe"')
+    assert proposal.endswith("¿Lo confirmo? (sí / no)")
+    assert done.startswith('¡Listo! Ya creé la tarea "Informe"')
     assert [task.title for task in academic.list_tasks(str(user_id), TaskFilters())] == ["Informe"]

@@ -193,7 +193,7 @@ def test_list_for_task_is_ordered_and_has_messages_rf_tar_05(env):
 
     assert [v.scheduled_at for v in views] == [at(2), at(3, 9), at(4), at(6), at(7)]
     assert views[1].message == "Mío"
-    assert views[0].message == "Recuerda: Informe (Cálculo) vence el 08/10/2026 23:59"
+    assert views[0].message == "\u00a1Ey! Soy TAIA \U0001F419 Recuerda que Informe de C\u00e1lculo vence el 08/10/2026 23:59. \u00a1T\u00fa puedes!"
     assert (views[0].origin, views[0].status) == ("automatic", "pending")
 
 

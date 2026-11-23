@@ -94,7 +94,7 @@ def test_confirmacion_crea_la_tarea(respuesta):
     tareas = academic.list_tasks("u1", TaskFilters())
     assert len(tareas) == 1, f"{respuesta!r} no creo la tarea: {reply.text!r}"
     assert tareas[0].title == "Taller"
-    assert "cree la tarea" in reply.text.lower()
+    assert "creé la tarea" in reply.text.lower()
 
 
 def test_confirmacion_repetida_crea_una_sola_tarea_rf_agt_04():

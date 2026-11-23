@@ -53,6 +53,15 @@ def _normalizar_respuesta(text: str) -> str:
     return sin_acentos.casefold().strip(_MARCAS)
 
 
+def _previous_reply(conversation: Conversation) -> str | None:
+    """Ultimo mensaje de TAIA, para no repetirlo igual (RF-AGT-22)."""
+
+    for turn in reversed(conversation.turns):
+        if turn.role == "assistant":
+            return turn.text
+    return None
+
+
 class UsageLimitExceededError(Exception):
     """El estudiante supero el limite de mensajes al asistente (RF-AGT-19)."""
 
@@ -116,7 +125,7 @@ class HandleUserMessageUseCase:
         for window, limit in windows:
             if self._conversations.count_user_messages_since(user_id, now - window) >= limit:
                 raise UsageLimitExceededError(
-                    "Alcanzaste el límite de mensajes al asistente. Intenta de nuevo más tarde."
+                    "Alcanzaste el límite de mensajes conmigo por ahora. Inténtalo de nuevo más tarde."
                 )
 
     # -- ruteo ---------------------------------------------------------------
@@ -144,6 +153,9 @@ class HandleUserMessageUseCase:
         intent = interpretation.intent
         if intent is Intent.SYSTEM_HELP:
             return self._system_help(text)
+        if intent is Intent.GREETING:
+            # RF-AGT-02: respuesta fija con la voz de TAIA, sin otra llamada.
+            return AssistantReply(replies.greeting(text, _previous_reply(conversation)))
         handlers = {
             Intent.QUERY_TASKS: self._query_tasks,
             Intent.CREATE_TASK: self._propose_create,
@@ -155,7 +167,7 @@ class HandleUserMessageUseCase:
         handler = handlers.get(intent)
         if handler is None:
             # RF-AGT-02: fuera de la lista cerrada, respuesta fija sin otra llamada.
-            return AssistantReply(replies.not_understood())
+            return AssistantReply(replies.not_understood(_previous_reply(conversation)))
         try:
             return handler(request.user_id, interpretation, conversation)
         except AcademicError:
@@ -242,7 +254,7 @@ class HandleUserMessageUseCase:
     ) -> AssistantReply:
         task = interpretation.task or ExtractedTaskData()
         if interpretation.confidence < MIN_CONFIDENCE:
-            return AssistantReply(replies.rephrase())
+            return AssistantReply(replies.rephrase(_previous_reply(conversation)))
         if not task.title:
             return AssistantReply(replies.missing_title())
         if task.due_at is None:
@@ -269,7 +281,7 @@ class HandleUserMessageUseCase:
         changes = interpretation.task or ExtractedTaskData()
         hint = (interpretation.task_hint or "").strip()
         if interpretation.confidence < MIN_CONFIDENCE or _no_changes(changes) or not hint:
-            return AssistantReply(replies.rephrase())
+            return AssistantReply(replies.rephrase(_previous_reply(conversation)))
 
         subject_id = None
         if changes.subject:
@@ -304,7 +316,7 @@ class HandleUserMessageUseCase:
 
         hint = (interpretation.task_hint or "").strip()
         if interpretation.confidence < MIN_CONFIDENCE or not hint:
-            return AssistantReply(replies.rephrase())
+            return AssistantReply(replies.rephrase(_previous_reply(conversation)))
 
         matches = [
             task

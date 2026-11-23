@@ -46,7 +46,7 @@ def test_due_reminder_is_sent_and_saved_rf_not_02(env):
 
     assert env.repo.get(reminder.id).status is ReminderStatus.SENT
     [notification] = env.notifications()
-    assert notification.message == "Recuerda: Informe (Cálculo) vence el 08/10/2026 23:59"
+    assert notification.message == "\u00a1Ey! Soy TAIA \U0001F419 Recuerda que Informe de C\u00e1lculo vence el 08/10/2026 23:59. \u00a1T\u00fa puedes!"
     assert (notification.push_attempts, notification.push_sent_at) == (1, SIX_PM)
     assert env.push.sent == [("token-a", notification.message)]
 

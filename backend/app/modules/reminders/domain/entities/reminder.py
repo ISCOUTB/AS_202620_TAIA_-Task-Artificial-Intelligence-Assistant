@@ -45,6 +45,12 @@ class Reminder:
 
 
 def default_message(title: str, subject_name: str, due_at: datetime) -> str:
-    """Mensaje por defecto de RF-REC-01 y del diccionario §9, en hora de Colombia (RT-03)."""
+    """Mensaje por defecto de RF-REC-01 y del diccionario §9, en hora de Colombia (RT-03).
 
-    return f"Recuerda: {title} ({subject_name}) vence el {as_bogota(due_at):%d/%m/%Y %H:%M}"
+    Con la voz de TAIA (RF-AGT-22); el emoji del pulpo va como secuencia de escape.
+    """
+
+    return (
+        f"¡Ey! Soy TAIA 🐙 Recuerda que {title} de {subject_name} vence el "
+        f"{as_bogota(due_at):%d/%m/%Y %H:%M}. ¡Tú puedes!"
+    )

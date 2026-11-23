@@ -108,8 +108,8 @@ void main() {
     final api = _agent([
       const FakeResponse(429, {
         'detail':
-            'Alcanzaste el límite de mensajes al asistente. Intenta de nuevo '
-            'más tarde.',
+            'Alcanzaste el límite de mensajes conmigo por ahora. Inténtalo de '
+            'nuevo más tarde.',
       }),
     ]);
     await _pump(tester, api);

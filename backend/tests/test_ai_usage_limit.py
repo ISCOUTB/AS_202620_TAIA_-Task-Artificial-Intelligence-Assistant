@@ -96,7 +96,7 @@ def test_api_returns_429_when_the_limit_is_reached():
 
     assert response.status_code == 429
     assert response.json() == {
-        "detail": "Alcanzaste el límite de mensajes al asistente. Intenta de nuevo más tarde."
+        "detail": "Alcanzaste el límite de mensajes conmigo por ahora. Inténtalo de nuevo más tarde."
     }
 
 

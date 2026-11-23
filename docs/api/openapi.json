@@ -2510,7 +2510,7 @@
             "description": "Successful Response"
           },
           "200": {
-            "description": "Respuesta del bot en el mismo chat (RF-TEL-04).",
+            "description": "Respuesta del bot en el mismo chat (RF-TEL-01, RF-TEL-04).",
             "content": {
               "application/json": {
                 "schema": {

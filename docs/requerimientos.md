@@ -663,7 +663,7 @@ Si el usuario no tiene dispositivos registrados, la notificación se guarda igua
 La vinculación con Telegram sirve para conversar con el agente desde Telegram. No es el canal de notificaciones.
 
 ### RF-TEL-01 · Vincular cuenta de Telegram
-**Prioridad:** MVP · **Estado:** Parcial
+**Prioridad:** MVP · **Estado:** Implementado
 
 El sistema debe permitir vincular la cuenta TAIA con una cuenta de Telegram mediante un código temporal.
 
@@ -738,13 +738,14 @@ El agente solo reconoce estas intenciones:
 | Resumen de actividades de un período | Lectura | No |
 | Consultar horario de clases | Lectura | No |
 | Ayuda sobre TAIA | Lectura | No |
-| Saludo, agradecimiento o despedida (`greeting`) | Lectura | No |
+| Saludo, agradecimiento, despedida o acuse corto, como "ok" o un emoji suelto (`greeting`) | Lectura | No |
 
 El saludo recibe una respuesta fija con la voz de TAIA (RF-AGT-22), sin una segunda llamada al LLM. Cualquier otra intención recibe una respuesta fija, también sin una segunda llamada al LLM, que indica qué puede hacer el agente.
 
 **Criterios de aceptación**
 - "Hola taia" → saludo de TAIA con lo que puede hacer, no la respuesta de intención no reconocida.
 - "Gracias" → respuesta breve y cálida, sin ejecutar nada.
+- "ok" o un emoji suelto → respuesta breve, sin la respuesta de intención no reconocida.
 
 ### RF-AGT-03 · Acciones excluidas del agente
 **Prioridad:** MVP · **Estado:** Implementado (por omisión)
@@ -953,7 +954,7 @@ De vez en cuando, no en cada mensaje, el agente podría ofrecer dos respuestas y
 - Queda para después de la sustentación de S16.
 
 ### RF-AGT-22 · Voz y personalidad de TAIA
-**Prioridad:** MVP · **Estado:** Pendiente
+**Prioridad:** MVP · **Estado:** Parcial (falta medir con `tools/eval_llm.py` en Groq: el 2026-11-23 las dos claves agotaron su cuota diaria)
 
 TAIA habla como una compañera de estudio: en primera persona, cercana, carismática y breve. Aplica a todo texto que el estudiante lee de TAIA: las respuestas fijas del agente, la ayuda (base de conocimiento y prompt), los mensajes del bot de Telegram y el mensaje por defecto de las notificaciones (RF-REC-01).
 

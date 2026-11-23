@@ -72,14 +72,23 @@ def test_generate_telegram_link_requires_auth_and_returns_deep_link():
     assert body["expires_at"]
 
 
+def _bot_reply(response) -> str:
+    assert response.status_code == 200, response.text
+    assert response.json()["method"] == "sendMessage"
+    return response.json()["text"]
+
+
 def test_webhook_start_command_links_the_telegram_sender():
-    """RF-TEL-01, RF-TEL-02: el telegram_user_id sale del update del bot."""
+    """RF-TEL-01, RF-TEL-02: el telegram_user_id sale del update del bot y el bot lo confirma."""
+    from app.modules.usuario.adapters.inbound.telegram_webhook import LINKED_MESSAGE
+
     token = _register_and_login("telegram-confirm@example.com")
     code = _link_code(token)
 
     response = _send(_update(123456789, f"/start {code}"))
 
-    assert response.status_code == 204
+    assert _bot_reply(response) == LINKED_MESSAGE
+    assert response.json()["chat_id"] == 123456789
     assert _telegram_linked(token) is True
     assert repository.get_by_telegram_user_id(123456789) is not None
 
@@ -117,28 +126,55 @@ def test_webhook_checks_secret_before_reading_the_body():
 
 
 def test_link_code_is_one_time():
-    """RF-TEL-01: usar el mismo código dos veces -> la segunda vez falla."""
+    """RF-TEL-01: usar el mismo código dos veces -> la segunda vez no vincula y el bot lo dice."""
+    from app.modules.usuario.adapters.inbound.telegram_webhook import LINK_INVALID_MESSAGE
+
     token = _register_and_login("telegram-one-time@example.com")
     code = _link_code(token)
-    assert _send(_update(333333333, f"/start {code}")).status_code == 204
+    assert _send(_update(333333333, f"/start {code}")).status_code == 200
 
     reused = _send(_update(444444444, f"/start {code}"))
 
-    # Telegram reintenta cualquier respuesta que no sea 2xx: el rechazo no cambia el código.
-    assert reused.status_code == 204
+    # Telegram reintenta cualquier respuesta que no sea 2xx: el rechazo va en el chat.
+    assert _bot_reply(reused) == LINK_INVALID_MESSAGE
     assert repository.get_by_telegram_user_id(444444444) is None
 
 
+def test_unknown_code_gets_the_invalid_link_message_rf_tel_01():
+    from app.modules.usuario.adapters.inbound.telegram_webhook import LINK_INVALID_MESSAGE
+
+    response = _send(_update(444444445, "/start codigo-que-no-existe"))
+
+    assert _bot_reply(response) == LINK_INVALID_MESSAGE
+    assert repository.get_by_telegram_user_id(444444445) is None
+
+
 def test_same_telegram_account_cannot_be_linked_to_two_users():
-    """RF-TEL-01: una cuenta de Telegram solo se vincula a una cuenta TAIA."""
+    """RF-TEL-01: una cuenta de Telegram solo se vincula a una cuenta TAIA, y el bot lo explica."""
+    from app.modules.usuario.adapters.inbound.telegram_webhook import TELEGRAM_TAKEN_MESSAGE
+
     first_token = _register_and_login("telegram-owner@example.com")
-    assert _send(_update(987654321, f"/start {_link_code(first_token)}")).status_code == 204
+    assert _send(_update(987654321, f"/start {_link_code(first_token)}")).status_code == 200
 
     second_token = _register_and_login("telegram-second@example.com")
     response = _send(_update(987654321, f"/start {_link_code(second_token)}"))
 
-    assert response.status_code == 204
+    assert _bot_reply(response) == TELEGRAM_TAKEN_MESSAGE
     assert _telegram_linked(second_token) is False
+
+
+def test_taia_account_with_another_telegram_gets_its_message_rf_tel_01():
+    """RF-TEL-01: una cuenta TAIA solo tiene un Telegram."""
+    from app.modules.usuario.adapters.inbound.telegram_webhook import USER_ALREADY_LINKED_MESSAGE
+
+    token = _register_and_login("telegram-two-codes@example.com")
+    first_code, second_code = _link_code(token), _link_code(token)
+    assert _send(_update(777777771, f"/start {first_code}")).status_code == 200
+
+    response = _send(_update(777777772, f"/start {second_code}"))
+
+    assert _bot_reply(response) == USER_ALREADY_LINKED_MESSAGE
+    assert repository.get_by_telegram_user_id(777777772) is None
 
 
 @pytest.mark.parametrize("text", ["hola", "/start", "/ayuda codigo"])
