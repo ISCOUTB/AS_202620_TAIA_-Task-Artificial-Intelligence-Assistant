@@ -18,7 +18,8 @@ import 'widgets/task_tile.dart';
 import 'widgets/tasks_filter_bar.dart';
 
 /// Pestaña de tareas: lista agrupada por día, con búsqueda y filtros. Al tocar
-/// una tarea se abre la hoja de edición.
+/// una tarea se abre la hoja de edición. El servidor filtra y pagina
+/// (RF-TAR-04, H-15); la app pide más páginas al llegar al final.
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key, this.tasksService, this.subjectsService});
 
@@ -29,10 +30,19 @@ class TasksScreen extends StatefulWidget {
   State<TasksScreen> createState() => TasksScreenState();
 }
 
+/// Tamaño de cada página que se pide al servidor (máximo 100, RF-TAR-04).
+const tasksPageSize = 50;
+
 class TasksScreenState extends State<TasksScreen> {
   List<AcademicTask>? _items;
   String? _error;
   bool _loading = true;
+  int _total = 0;
+  int _unfinished = 0;
+  bool _loadingMore = false;
+  Timer? _searchDebounce;
+  // Cada carga lleva un número: una respuesta vieja no pisa a una nueva.
+  int _generation = 0;
 
   final _search = TextEditingController();
   TaskFilter _status = TaskFilter.pending;
@@ -56,7 +66,71 @@ class TasksScreenState extends State<TasksScreen> {
   void dispose() {
     _search.dispose();
     _celebrationTimer?.cancel();
+    _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  TaskListQuery get _query => taskQueryFor(
+    status: _status,
+    search: _search.text,
+    date: _date,
+    pickedDay: _pickedDay,
+    now: bogotaNow(),
+  );
+
+  Future<TaskPage> _fetch(int offset) {
+    final query = _query;
+    return _tasks.list(
+      statuses: query.statuses,
+      dueFrom: query.dueFrom,
+      dueTo: query.dueTo,
+      query: query.text,
+      limit: tasksPageSize,
+      offset: offset,
+    );
+  }
+
+  /// Pendientes y atrasadas, para el encabezado: solo interesa el total.
+  Future<int> _countUnfinished() async {
+    final page = await _tasks.list(
+      statuses: const [TaskStatus.pending, TaskStatus.overdue],
+      limit: 1,
+    );
+    return page.total;
+  }
+
+  /// Cambió un filtro: se vuelve a pedir la primera página.
+  void _filtersChanged(VoidCallback change) {
+    setState(change);
+    _load(silent: _items != null);
+  }
+
+  /// La búsqueda espera a que se deje de escribir para no pedir por cada letra.
+  void _searchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _load(silent: _items != null),
+    );
+  }
+
+  Future<void> _loadMore() async {
+    final items = _items;
+    if (_loadingMore || items == null || items.length >= _total) return;
+    final generation = _generation;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await _fetch(items.length);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _items = [...items, ...page.items];
+        _total = page.total;
+      });
+    } on ApiException catch (e) {
+      if (mounted) _toast(e.message);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   /// Vuelve a pedir las tareas sin ocultar las que ya se muestran.
@@ -69,16 +143,33 @@ class TasksScreenState extends State<TasksScreen> {
         _error = null;
       });
     }
+    final generation = ++_generation;
     try {
-      final items = await _tasks.listAll();
-      if (!mounted) return;
+      final (page, unfinished) = await (_fetch(0), _countUnfinished()).wait;
+      if (!mounted || generation != _generation) return;
       setState(() {
-        _items = items;
+        _items = page.items;
+        _total = page.total;
+        _unfinished = unfinished;
         _error = null;
         _loading = false;
       });
+    } on ParallelWaitError<
+      (TaskPage?, int?),
+      (AsyncError?, AsyncError?)
+    > catch (e) {
+      final error = e.errors.$1?.error ?? e.errors.$2?.error;
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        if (_items == null) {
+          _error = error is ApiException
+              ? error.message
+              : 'No se pudieron cargar tus tareas.';
+        }
+        _loading = false;
+      });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         // Si ya había tareas, se conservan y se ignora el fallo.
         if (_items == null) _error = e.message;
@@ -120,6 +211,7 @@ class TasksScreenState extends State<TasksScreen> {
       if (!mounted) return;
       _replace(updated);
       if (updated.status == TaskStatus.completed) _celebrate();
+      unawaited(refresh());
     } on ApiException catch (e) {
       if (mounted) _toast(e.message);
     } finally {
@@ -140,11 +232,13 @@ class TasksScreenState extends State<TasksScreen> {
         _items = (_items ?? []).where((t) => t.id != task.id).toList();
       });
       _toast('Tarea eliminada');
+      unawaited(refresh());
       return;
     }
     final saved = result.task!;
     _replace(saved);
     _toast('Cambios guardados');
+    unawaited(refresh());
     if (saved.status == TaskStatus.completed &&
         task.status != TaskStatus.completed) {
       _celebrate();
@@ -156,7 +250,7 @@ class TasksScreenState extends State<TasksScreen> {
 
   void _clearFilters() {
     _search.clear();
-    setState(() {
+    _filtersChanged(() {
       _date = DateFilter.any;
       _pickedDay = null;
       _status = TaskFilter.all;
@@ -188,16 +282,9 @@ class TasksScreenState extends State<TasksScreen> {
 
   Widget _content(List<AcademicTask> items) {
     final now = bogotaNow();
-    final visible = applyTaskFilters(
-      items,
-      status: _status,
-      search: _search.text,
-      date: _date,
-      pickedDay: _pickedDay,
-      now: now,
-    );
+    final visible = items;
     final groups = groupTasks(visible, now);
-    final unfinished = unfinishedCount(items);
+    final unfinished = _unfinished;
 
     final MascotExpression expression;
     if (_celebrating) {
@@ -220,15 +307,16 @@ class TasksScreenState extends State<TasksScreen> {
           const SizedBox(height: 20),
           TasksFilterBar(
             searchController: _search,
-            onSearchChanged: (_) => setState(() {}),
+            onSearchChanged: (_) => _searchChanged(),
             dateFilter: _date,
             pickedDay: _pickedDay,
-            onDateChanged: (filter, day) => setState(() {
+            onDateChanged: (filter, day) => _filtersChanged(() {
               _date = filter;
               _pickedDay = day;
             }),
             status: _status,
-            onStatusChanged: (filter) => setState(() => _status = filter),
+            onStatusChanged: (filter) =>
+                _filtersChanged(() => _status = filter),
           ),
           const SizedBox(height: 16),
           if (groups.isEmpty)
@@ -252,6 +340,18 @@ class TasksScreenState extends State<TasksScreen> {
               ],
               const SizedBox(height: 8),
             ],
+          if (items.length < _total)
+            Center(
+              child: _loadingMore
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(),
+                    )
+                  : TextButton(
+                      onPressed: _loadMore,
+                      child: Text('Ver más (${_total - items.length})'),
+                    ),
+            ),
         ],
       ),
     );

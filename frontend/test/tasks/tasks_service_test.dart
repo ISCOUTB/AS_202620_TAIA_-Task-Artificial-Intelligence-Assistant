@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taia/core/api_error.dart';
 import 'package:taia/features/tasks/task.dart';
@@ -52,6 +53,25 @@ void main() {
       expect(query['due_from'], '2026-10-05T00:00:00-05:00');
       expect(query['due_to'], '2026-10-05T23:59:59-05:00');
     });
+  });
+
+  test('RF-TAR-04 · varios estados viajan como status=a&status=b', () async {
+    final api = FakeApi(
+      (_) => const FakeResponse(200, {
+        'items': [],
+        'total': 0,
+        'limit': 50,
+        'offset': 0,
+      }),
+    );
+    final dio = api.dio();
+
+    await TasksService(dio)
+        .list(statuses: const [TaskStatus.pending, TaskStatus.overdue]);
+
+    expect(api.requests.single.query['status'], ['pending', 'overdue']);
+    // Dio repite la clave por cada valor de la lista.
+    expect(dio.options.listFormat, ListFormat.multi);
   });
 
   test('un error de la API llega con el detail en español', () async {

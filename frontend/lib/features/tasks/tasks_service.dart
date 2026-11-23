@@ -21,6 +21,7 @@ class TasksService {
   /// GET /academic/tasks. Viene ordenada por fecha límite.
   Future<TaskPage> list({
     TaskStatus? status,
+    List<TaskStatus> statuses = const [],
     DateTime? dueFrom,
     DateTime? dueTo,
     String? query,
@@ -31,7 +32,9 @@ class TasksService {
     final response = await _dio.get<Map<String, dynamic>>(
       '/academic/tasks',
       queryParameters: {
-        if (status != null) 'status': status.name,
+        // Varios estados viajan como `status=a&status=b` (RF-TAR-04).
+        if (status != null || statuses.isNotEmpty)
+          'status': [?status?.name, for (final s in statuses) s.name],
         if (dueFrom != null) 'due_from': formatApiDateTime(dueFrom),
         if (dueTo != null) 'due_to': formatApiDateTime(dueTo),
         if (query != null && query.isNotEmpty) 'q': query,
@@ -47,19 +50,6 @@ class TasksService {
           .toList(),
       total: data['total'] as int,
     );
-  });
-
-  /// Todas las tareas del usuario, pidiendo páginas de 100 (hasta 500).
-  Future<List<AcademicTask>> listAll() => apiGuard(() async {
-    final all = <AcademicTask>[];
-    var offset = 0;
-    while (true) {
-      final page = await list(limit: 100, offset: offset);
-      all.addAll(page.items);
-      offset += page.items.length;
-      if (page.items.isEmpty || offset >= page.total || offset >= 500) break;
-    }
-    return all;
   });
 
   /// POST /academic/tasks. La fecha límite debe ser posterior a ahora.

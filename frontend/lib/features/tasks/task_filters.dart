@@ -27,79 +27,80 @@ enum DateFilter {
   final String label;
 }
 
-/// Minúsculas y sin tildes, para buscar sin importar cómo se escribió.
-String normalizeText(String text) {
-  const from = 'áàäâéèëêíìïîóòöôúùüûñ';
-  const to = 'aaaaeeeeiiiioooouuuun';
-  final buffer = StringBuffer();
-  for (final rune in text.toLowerCase().runes) {
-    final char = String.fromCharCode(rune);
-    final index = from.indexOf(char);
-    buffer.write(index >= 0 ? to[index] : char);
-  }
-  return buffer.toString();
-}
-
 DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
-/// Aplica búsqueda, estado y fecha. La búsqueda mira título, descripción y
-/// nombre de la materia.
+/// Filtros de la lista traducidos a `GET /academic/tasks` (RF-TAR-04, H-15).
+class TaskListQuery {
+  const TaskListQuery({
+    this.statuses = const [],
+    this.dueFrom,
+    this.dueTo,
+    this.text,
+  });
+
+  final List<TaskStatus> statuses;
+  final DateTime? dueFrom;
+  final DateTime? dueTo;
+  final String? text;
+}
+
+/// El servidor filtra; la app solo arma los parámetros. La búsqueda del
+/// servidor mira título, descripción y nombre de la materia.
 ///
-/// - Pendientes: todo lo que no está completado (incluye las atrasadas).
-/// - Urgentes: pendientes con prioridad alta (menos de 48 h).
-List<AcademicTask> applyTaskFilters(
-  List<AcademicTask> tasks, {
+/// - Pendientes: pendientes y atrasadas juntas (las no completadas).
+/// - Urgentes: pendientes que vencen en menos de 48 h, que es la prioridad
+///   alta de RF-TAR-03.
+TaskListQuery taskQueryFor({
   required TaskFilter status,
   required String search,
   required DateFilter date,
   required DateTime now,
   DateTime? pickedDay,
 }) {
-  final needle = normalizeText(search.trim());
   final today = _day(now);
-  final tomorrow = DateTime(today.year, today.month, today.day + 1);
-  final weekStart = DateTime(
-    today.year,
-    today.month,
-    today.day - (today.weekday - 1),
+  DateTime endOf(DateTime day) =>
+      DateTime(day.year, day.month, day.day, 23, 59, 59);
+
+  final (DateTime?, DateTime?) range = switch (date) {
+    DateFilter.any => (null, null),
+    DateFilter.today => (today, endOf(today)),
+    DateFilter.tomorrow => (
+      DateTime(today.year, today.month, today.day + 1),
+      endOf(DateTime(today.year, today.month, today.day + 1)),
+    ),
+    DateFilter.thisWeek => (
+      DateTime(today.year, today.month, today.day - (today.weekday - 1)),
+      endOf(DateTime(today.year, today.month, today.day + (7 - today.weekday))),
+    ),
+    DateFilter.thisMonth => (
+      DateTime(today.year, today.month),
+      endOf(DateTime(today.year, today.month + 1, 0)),
+    ),
+    DateFilter.day =>
+      pickedDay == null ? (null, null) : (_day(pickedDay), endOf(pickedDay)),
+  };
+  var (dueFrom, dueTo) = range;
+
+  final statuses = switch (status) {
+    TaskFilter.all => const <TaskStatus>[],
+    TaskFilter.pending => const [TaskStatus.pending, TaskStatus.overdue],
+    TaskFilter.completed => const [TaskStatus.completed],
+    TaskFilter.overdue => const [TaskStatus.overdue],
+    TaskFilter.urgent => const [TaskStatus.pending],
+  };
+  if (status == TaskFilter.urgent) {
+    final limit = now.add(const Duration(hours: 48));
+    if (dueTo == null || limit.isBefore(dueTo)) dueTo = limit;
+  }
+
+  final text = search.trim();
+  return TaskListQuery(
+    statuses: statuses,
+    dueFrom: dueFrom,
+    dueTo: dueTo,
+    text: text.isEmpty ? null : text,
   );
-  final weekEnd = DateTime(weekStart.year, weekStart.month, weekStart.day + 7);
-
-  return tasks.where((task) {
-    final statusOk = switch (status) {
-      TaskFilter.all => true,
-      TaskFilter.pending => task.status != TaskStatus.completed,
-      TaskFilter.completed => task.status == TaskStatus.completed,
-      TaskFilter.overdue => task.status == TaskStatus.overdue,
-      TaskFilter.urgent => task.isUrgent,
-    };
-    if (!statusOk) return false;
-
-    if (needle.isNotEmpty) {
-      final text = normalizeText(
-        '${task.title} ${task.subjectName} ${task.description ?? ''}',
-      );
-      if (!text.contains(needle)) return false;
-    }
-
-    final due = task.dueAt;
-    final dueDay = _day(due);
-    return switch (date) {
-      DateFilter.any => true,
-      DateFilter.today => dueDay == today,
-      DateFilter.tomorrow => dueDay == tomorrow,
-      DateFilter.thisWeek =>
-        !dueDay.isBefore(weekStart) && dueDay.isBefore(weekEnd),
-      DateFilter.thisMonth =>
-        due.year == today.year && due.month == today.month,
-      DateFilter.day => pickedDay != null && dueDay == _day(pickedDay),
-    };
-  }).toList();
 }
-
-/// Tareas sin completar (pendientes y atrasadas).
-int unfinishedCount(List<AcademicTask> tasks) =>
-    tasks.where((t) => t.status != TaskStatus.completed).length;
 
 class TaskGroup {
   const TaskGroup(this.title, this.tasks);

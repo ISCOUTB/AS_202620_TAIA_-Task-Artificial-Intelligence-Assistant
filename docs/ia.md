@@ -1632,3 +1632,35 @@ En la prueba en el teléfono, TAIA respondía seco: "Hola taia" caía en la resp
 * Evaluación con `tools/eval_llm.py` sobre 116 mensajes ([resultado de Gemini](evaluacion_ia/resultado_gemini_voz.json), `gemini-3.5-flash-lite`): intención 93,97 % (antes 92,93 % sobre 99), p95 3 572 ms, 4 errores de llamada. En los 110 campos que también midió la corrida de octubre, 102 correctos frente a 105, uno de ellos perdido por un error de llamada.
 * Groq queda sin medir: la corrida del prompt final falló en 68 de 116 llamadas porque las dos claves agotaron su cuota diaria de tokens, y se descartó. RF-AGT-22 queda *Parcial* hasta medirlo.
 * Una primera corrida, con el prompt anterior al ajuste de `greeting` y `system_help`, se descartó sin versionar: Groq confundía "ok", "ayúdame" y el pulgar arriba con `greeting`, y la de Gemini usó por error `gemini-3.5-flash` y falló casi todas las llamadas.
+
+## Entrada 038
+
+**Fecha:** 2026-11-23
+
+**Herramienta:** Claude Code (Anthropic), modelo Claude Opus 5.5
+
+**Objetivo:** Que la lista de tareas de la app filtre en el servidor (H-15) en lugar de traer hasta 500 actividades y filtrar en el teléfono.
+
+### Solicitud realizada
+
+El equipo eligió que el servidor permita pedir las no completadas (pendientes y atrasadas juntas) y que la búsqueda también encuentre por el nombre de la asignatura (RF-TAR-04).
+
+### Resultado generado
+
+* Backend: `GET /academic/tasks` acepta `status` repetido (`?status=pending&status=overdue`), sin valores nuevos en el diccionario, y `q` busca también en el nombre de la asignatura. `TaskQuery.status` pasa a `statuses`.
+* App: la pantalla de tareas pide la primera página con los filtros elegidos, espera 350 ms a que se deje de escribir para buscar, ofrece "Ver más" para la siguiente página y saca el contador de pendientes de una consulta aparte. Se quita `listAll`.
+* "Urgentes" se traduce a pendientes que vencen en las próximas 48 h, que es la prioridad alta de RF-TAR-03.
+
+### Aceptado
+
+* (lo completa el equipo)
+
+### Rechazado o modificado
+
+* (lo completa el equipo)
+
+### Verificación realizada
+
+* Backend: prueba HTTP de varios estados y de búsqueda por asignatura, y prueba del repositorio SQLAlchemy con pendientes y atrasadas juntas.
+* App: `task_filters_test.dart` (traducción de cada filtro a parámetros) y prueba de que varios estados viajan como `status=a&status=b`. `flutter analyze` sin avisos.
+* Límite: la búsqueda del servidor no ignora tildes ("matematicas" no encuentra "Matemáticas"); en el teléfono sí las ignoraba.
