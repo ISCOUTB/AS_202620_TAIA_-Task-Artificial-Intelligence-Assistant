@@ -25,17 +25,8 @@ Color subjectColor(List<Subject> subjects, String subjectId) {
   return subjectPalette[(index < 0 ? 0 : index) % subjectPalette.length];
 }
 
-/// Franjas frecuentes para elegir la hora con un toque.
-const _quickSlots = [
-  (TimeOfDay(hour: 7, minute: 0), TimeOfDay(hour: 9, minute: 0)),
-  (TimeOfDay(hour: 9, minute: 0), TimeOfDay(hour: 11, minute: 0)),
-  (TimeOfDay(hour: 11, minute: 0), TimeOfDay(hour: 13, minute: 0)),
-  (TimeOfDay(hour: 14, minute: 0), TimeOfDay(hour: 16, minute: 0)),
-  (TimeOfDay(hour: 16, minute: 0), TimeOfDay(hour: 18, minute: 0)),
-  (TimeOfDay(hour: 18, minute: 0), TimeOfDay(hour: 20, minute: 0)),
-];
-
-/// Atajos de días que se repiten en muchos horarios.
+/// Atajos de días que se repiten en muchos horarios. Tocar uno agrega sus
+/// días a los ya marcados; si ya estaban todos, los quita.
 const _dayPresets = {
   'Lun y Mié': {Weekday.monday, Weekday.wednesday},
   'Mar y Jue': {Weekday.tuesday, Weekday.thursday},
@@ -117,8 +108,10 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
       ? null
       : widget.subjects.first.id;
   final Set<Weekday> _days = {};
-  TimeOfDay _start = _quickSlots.first.$1;
-  TimeOfDay _end = _quickSlots.first.$2;
+  // Sin hora por defecto: cada clase empieza y termina cuando el estudiante
+  // diga, a cualquier hora y minuto (RF-ASG-06).
+  TimeOfDay? _start;
+  TimeOfDay? _end;
   final _room = TextEditingController();
   bool _saving = false;
   String? _error;
@@ -129,30 +122,45 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
     super.dispose();
   }
 
-  bool get _validTime => blockTimeError(_start, _end) == null;
+  String? get _timeError {
+    final start = _start, end = _end;
+    return start == null || end == null ? null : blockTimeError(start, end);
+  }
 
-  bool get _ready => _subjectId != null && _days.isNotEmpty && _validTime;
+  bool get _ready =>
+      _subjectId != null &&
+      _days.isNotEmpty &&
+      _start != null &&
+      _end != null &&
+      _timeError == null;
 
+  /// El reloj abre en la hora ya elegida; el fin, si falta, dos horas después
+  /// del inicio. Es solo el punto de partida del reloj, no un valor guardado.
   Future<void> _pick({required bool start}) async {
+    final from = _start;
+    final initial = start
+        ? from ?? const TimeOfDay(hour: 7, minute: 0)
+        : _end ??
+              (from == null
+                  ? const TimeOfDay(hour: 9, minute: 0)
+                  : TimeOfDay(hour: (from.hour + 2) % 24, minute: from.minute));
     final picked = await showTimePicker(
       context: context,
-      initialTime: start ? _start : _end,
+      initialTime: initial,
+      helpText: start ? '¿A qué hora empieza?' : '¿A qué hora termina?',
     );
-    if (picked == null) return;
-    setState(() {
-      if (start) {
-        // Al mover el inicio se conserva la duración.
-        final length =
-            (_end.hour * 60 + _end.minute) - (_start.hour * 60 + _start.minute);
-        _start = picked;
-        final end =
-            picked.hour * 60 + picked.minute + (length > 0 ? length : 60);
-        _end = TimeOfDay(hour: (end ~/ 60).clamp(0, 23), minute: end % 60);
-      } else {
-        _end = picked;
-      }
-    });
+    if (picked == null || !mounted) return;
+    setState(() => start ? _start = picked : _end = picked);
   }
+
+  /// Agrega los días del atajo, o los quita si ya estaban todos.
+  void _togglePreset(Set<Weekday> preset) => setState(() {
+    if (_days.containsAll(preset)) {
+      _days.removeAll(preset);
+    } else {
+      _days.addAll(preset);
+    }
+  });
 
   Future<void> _save() async {
     setState(() {
@@ -167,8 +175,8 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
         await widget.service.create(
           subjectId: _subjectId!,
           weekday: day,
-          start: _start,
-          end: _end,
+          start: _start!,
+          end: _end!,
           room: _room.text.trim(),
         );
         created++;
@@ -270,55 +278,35 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 for (final preset in _dayPresets.entries)
-                  ActionChip(
+                  FilterChip(
                     label: Text(preset.key),
-                    onPressed: () => setState(
-                      () => _days
-                        ..clear()
-                        ..addAll(preset.value),
-                    ),
+                    selected: _days.containsAll(preset.value),
+                    showCheckmark: false,
+                    selectedColor: color.withValues(alpha: 0.25),
+                    onSelected: (_) => _togglePreset(preset.value),
                   ),
               ],
             ),
             const SizedBox(height: 18),
             const FormLabel('¿A qué hora?'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final slot in _quickSlots)
-                  ChoiceChip(
-                    label: Text(
-                      '${formatBlockTime(slot.$1)} – ${formatBlockTime(slot.$2)}',
-                    ),
-                    selected: slot.$1 == _start && slot.$2 == _end,
-                    showCheckmark: false,
-                    selectedColor: TaiaColors.softPeach,
-                    onSelected: (_) => setState(() {
-                      _start = slot.$1;
-                      _end = slot.$2;
-                    }),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pick(start: true),
-                    icon: const Icon(Icons.schedule, size: 18),
-                    label: Text('Desde ${formatBlockTime(_start)}'),
+                  child: _TimeField(
+                    label: 'Desde',
+                    time: _start,
+                    onTap: () => _pick(start: true),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pick(start: false),
-                    icon: const Icon(Icons.schedule, size: 18),
-                    label: Text('Hasta ${formatBlockTime(_end)}'),
+                  child: _TimeField(
+                    label: 'Hasta',
+                    time: _end,
+                    onTap: () => _pick(start: false),
                   ),
                 ),
               ],
@@ -343,18 +331,23 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
                     ? 'Primero agrega una asignatura.'
                     : days.isEmpty
                     ? '${subject.name}: elige los días.'
+                    : _start == null || _end == null
+                    ? '${subject.name} · '
+                          '${days.map((d) => d.label).join(', ')}: '
+                          'elige la hora.'
                     : '${subject.name} · '
                           '${days.map((d) => d.label).join(', ')} · '
-                          '${formatBlockTime(_start)} – ${formatBlockTime(_end)}',
+                          '${formatBlockTime(_start!)} – '
+                          '${formatBlockTime(_end!)}',
                 style: const TextStyle(
                   color: taiaInk,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            if (!_validTime) ...[
+            if (_timeError != null) ...[
               const SizedBox(height: 8),
-              AuthErrorText(blockTimeError(_start, _end)!),
+              AuthErrorText(_timeError!),
             ],
             if (_error != null) ...[
               const SizedBox(height: 8),
@@ -387,6 +380,44 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
                     ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Campo de hora: muestra la hora elegida o "Elegir" y abre el reloj.
+class _TimeField extends StatelessWidget {
+  const _TimeField({
+    required this.label,
+    required this.time,
+    required this.onTap,
+  });
+
+  final String label;
+  final TimeOfDay? time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = time;
+    return Semantics(
+      button: true,
+      label: '$label: ${value == null ? 'sin elegir' : formatBlockTime(value)}',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: InputDecorator(
+          decoration: taskFieldDecoration(
+            suffix: const Icon(Icons.schedule, color: TaiaColors.fieryRose),
+          ).copyWith(labelText: label),
+          child: Text(
+            value == null ? 'Elegir' : formatBlockTime(value),
+            style: value == null
+                ? taskValueStyle.copyWith(color: taiaInk.withValues(alpha: 0.4))
+                : taskValueStyle,
+          ),
         ),
       ),
     );

@@ -51,6 +51,68 @@ Future<void> _pump(WidgetTester tester, FakeApi api) async {
 List<RecordedRequest> _writes(FakeApi api) =>
     api.requests.where((r) => r.method != 'GET').toList();
 
+/// Abre el reloj del campo [label] ("Desde" o "Hasta") y acepta la hora con
+/// la que abre: 07:00 para el inicio y dos horas después para el fin.
+Future<void> _acceptTime(WidgetTester tester, String label) async {
+  final field = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(InkWell),
+  );
+  await tester.ensureVisible(field.first);
+  await tester.tap(field.first);
+  await pumpFrames(tester);
+  await tester.tap(find.text('OK'));
+  await pumpFrames(tester);
+}
+
+/// Escribe la hora en el reloj del campo [label] en modo texto.
+Future<void> _typeTime(
+  WidgetTester tester,
+  String label, {
+  required String hour,
+  required String minute,
+  required bool pm,
+}) async {
+  final field = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(InkWell),
+  );
+  await tester.ensureVisible(field.first);
+  await tester.tap(field.first);
+  await pumpFrames(tester);
+  await tester.tap(find.byIcon(Icons.keyboard_outlined));
+  await pumpFrames(tester);
+  final fields = find.descendant(
+    of: find.byType(Dialog),
+    matching: find.byType(TextField),
+  );
+  await tester.enterText(fields.at(0), hour);
+  await tester.enterText(fields.at(1), minute);
+  await tester.tap(find.text(pm ? 'PM' : 'AM'));
+  await pumpFrames(tester);
+  await tester.tap(find.text('OK'));
+  await pumpFrames(tester);
+}
+
+Map<String, FakeResponse Function(RequestOptions)> _emptySchedule(
+  FakeResponse Function(RequestOptions) post,
+) => {
+  'GET /academic/schedule-blocks': (_) => const FakeResponse(200, []),
+  'GET /academic/period': _noPeriod,
+  'GET /academic/subjects': _subjects,
+  'POST /academic/schedule-blocks': post,
+};
+
+FakeResponse _created(RequestOptions r) => FakeResponse(201, {
+  'id': 'b9',
+  'subject_id': 's1',
+  'subject_name': 'Física',
+  'weekday': (r.data as Map)['weekday'],
+  'start_time': (r.data as Map)['start_time'],
+  'end_time': (r.data as Map)['end_time'],
+  'room': null,
+});
+
 void main() {
   // 10:00 del 5 de octubre de 2026 en Colombia.
   setUp(() => clock = () => DateTime.utc(2026, 10, 5, 15));
@@ -125,6 +187,8 @@ void main() {
       await pumpFrames(tester);
       await tester.tap(find.byTooltip('Lunes'));
       await tester.tap(find.byTooltip('Martes'));
+      await _acceptTime(tester, 'Desde');
+      await _acceptTime(tester, 'Hasta');
       await tester.enterText(
         find.widgetWithText(TextField, 'Aula (opcional)'),
         'B-3',
@@ -175,7 +239,8 @@ void main() {
     await tester.tap(find.text('Nuevo bloque'));
     await pumpFrames(tester);
     await tester.tap(find.byTooltip('Lunes'));
-    await pumpFrames(tester);
+    await _acceptTime(tester, 'Desde');
+    await _acceptTime(tester, 'Hasta');
     await tester.ensureVisible(find.text('Agregar clase'));
     await tester.tap(find.text('Agregar clase'));
     await pumpFrames(tester);
@@ -185,6 +250,74 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'RF-ASG-06 · la clase se agrega a cualquier hora y minuto, sin hora por defecto',
+    (tester) async {
+      final api = FakeApi(routes(_emptySchedule(_created)));
+      await _pump(tester, api);
+
+      await tester.tap(find.text('Nuevo bloque'));
+      await pumpFrames(tester);
+      await tester.tap(find.byTooltip('Jueves'));
+      await pumpFrames(tester);
+
+      // Sin hora elegida no se puede guardar.
+      expect(find.text('Elegir'), findsNWidgets(2));
+      final button = find.widgetWithText(FilledButton, 'Agregar clase');
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+
+      await _typeTime(tester, 'Desde', hour: '6', minute: '30', pm: true);
+      await _typeTime(tester, 'Hasta', hour: '8', minute: '15', pm: true);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await pumpFrames(tester);
+
+      expect(
+        [for (final r in _writes(api)) r.body],
+        [
+          {
+            'subject_id': 's1',
+            'weekday': 'thursday',
+            'start_time': '18:30:00',
+            'end_time': '20:15:00',
+          },
+        ],
+      );
+    },
+  );
+
+  testWidgets(
+    'RF-ASG-10 · los atajos de días suman a lo marcado, se ven elegidos y se quitan',
+    (tester) async {
+      final api = FakeApi(routes(_emptySchedule(_created)));
+      await _pump(tester, api);
+
+      await tester.tap(find.text('Nuevo bloque'));
+      await pumpFrames(tester);
+      await tester.tap(find.byTooltip('Sábado'));
+      await tester.tap(find.text('Lun y Mié'));
+      await pumpFrames(tester);
+
+      // El sábado se conserva y el atajo queda marcado.
+      expect(find.text('Agregar en 3 días'), findsOneWidget);
+      FilterChip chip(String label) =>
+          tester.widget<FilterChip>(find.widgetWithText(FilterChip, label));
+      expect(chip('Lun y Mié').selected, isTrue);
+      expect(chip('Lun a Vie').selected, isFalse);
+
+      await tester.tap(find.text('Lun a Vie'));
+      await pumpFrames(tester);
+      expect(find.text('Agregar en 6 días'), findsOneWidget);
+      expect(chip('Lun a Vie').selected, isTrue);
+
+      // Tocarlo otra vez quita sus días y deja el sábado.
+      await tester.tap(find.text('Lun a Vie'));
+      await pumpFrames(tester);
+      expect(chip('Lun a Vie').selected, isFalse);
+      expect(find.text('Agregar clase'), findsOneWidget);
+    },
+  );
 
   test('RF-ASG-06 · un fin anterior o igual al inicio no se envía', () {
     const ten = TimeOfDay(hour: 10, minute: 0);
