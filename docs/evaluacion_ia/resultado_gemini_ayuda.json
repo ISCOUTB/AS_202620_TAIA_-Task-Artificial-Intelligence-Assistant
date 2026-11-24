@@ -1,0 +1,1903 @@
+{
+  "integridad": {
+    "casos": 120,
+    "por_intencion": {
+      "complete_task": 6,
+      "create_task": 39,
+      "greeting": 7,
+      "query_schedule": 4,
+      "query_tasks": 19,
+      "summary": 4,
+      "system_help": 9,
+      "unknown": 17,
+      "update_task": 15
+    },
+    "vacios": 1
+  },
+  "procedencia": {
+    "fecha_utc": "2026-11-24T02:52:17.008536+00:00",
+    "commit_base": "080aa51ef0c06e62f57930a72971fc4e9a4dbbe4",
+    "arbol_modificado": true,
+    "dataset_sha256": "d36f99629ec712fdecbddde45bc77b0762b8d5b9c7c11434fe4f474f121d41ec",
+    "arnes_sha256": "19ac62cbfb21b50ce552f36c61e242960c859092ed0dd7ed8b38075283f2d336",
+    "proveedor": "gemini",
+    "modelo": "gemini-3.5-flash-lite",
+    "reloj_interpretacion": "2026-09-10T12:00:00-05:00"
+  },
+  "alcance": "adaptador LLM; sin confirmación, persistencia ni canal",
+  "excluidos": [
+    {
+      "id": "x002",
+      "motivo": "texto vacío; no llega al modelo"
+    }
+  ],
+  "casos": [
+    {
+      "id": "c001",
+      "latencia_ms": 1231.091900030151,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "taller de arquitectura",
+          "obtenido": "taller",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "c002",
+      "error": "LLMError",
+      "latencia_ms": 951.8246001098305,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "ensayo de métodos",
+          "obtenido": null,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "c003",
+      "latencia_ms": 5730.536399874836,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "lectura del capitulo 4",
+          "obtenido": "lectura del capitulo 4",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c004",
+      "latencia_ms": 1580.7765000499785,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "tp2 de base de datos",
+          "obtenido": "TP2",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "c005",
+      "latencia_ms": 1303.311700001359,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "staller 3",
+          "obtenido": "staller 3",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c006",
+      "latencia_ms": 4137.060899985954,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "cotización de ellas",
+          "obtenido": "cotización deElles",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "c007",
+      "latencia_ms": 882.5355998706073,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "c008",
+      "latencia_ms": 1247.2453999798745,
+      "intencion_correcta": false,
+      "campos": []
+    },
+    {
+      "id": "q001",
+      "error": "LLMError",
+      "latencia_ms": 1699.0117998793721,
+      "campos": []
+    },
+    {
+      "id": "q002",
+      "error": "LLMError",
+      "latencia_ms": 1446.6800999362022,
+      "campos": []
+    },
+    {
+      "id": "q003",
+      "latencia_ms": 2117.6205000374466,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q004",
+      "latencia_ms": 1699.0912000183016,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q005",
+      "latencia_ms": 1392.9703999310732,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q006",
+      "latencia_ms": 3269.515800056979,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "arquitectura",
+          "obtenido": "arquitectura",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q007",
+      "error": "LLMError",
+      "latencia_ms": 1381.5648998133838,
+      "campos": []
+    },
+    {
+      "id": "q008",
+      "latencia_ms": 2246.5343999210745,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.status",
+          "esperado": "completed",
+          "obtenido": "completed",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q009",
+      "error": "LLMError",
+      "latencia_ms": 7416.32890002802,
+      "campos": [
+        {
+          "campo": "filters.status",
+          "esperado": "overdue",
+          "obtenido": null,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "u001",
+      "latencia_ms": 3462.7445000223815,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "taller",
+          "obtenido": "taller",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u002",
+      "latencia_ms": 1537.2110998723656,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "taller",
+          "obtenido": "taller",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u003",
+      "latencia_ms": 1445.2370000071824,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "ensayo de métodos",
+          "obtenido": "ensayo de métodos",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u004",
+      "latencia_ms": 1443.2210999075323,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "taller",
+          "obtenido": "taller",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u005",
+      "latencia_ms": 1168.5688998550177,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "lectura",
+          "obtenido": "lectura",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "h001",
+      "latencia_ms": 1226.1153000872582,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h002",
+      "latencia_ms": 866.3417999632657,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h003",
+      "latencia_ms": 1307.2414000052959,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h004",
+      "error": "LLMError",
+      "latencia_ms": 2494.0311000682414,
+      "campos": []
+    },
+    {
+      "id": "x001",
+      "latencia_ms": 970.7270001526922,
+      "intencion_correcta": false,
+      "campos": []
+    },
+    {
+      "id": "x003",
+      "error": "LLMError",
+      "latencia_ms": 1268.063899828121,
+      "campos": []
+    },
+    {
+      "id": "x004",
+      "latencia_ms": 1168.6133001931012,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x005",
+      "latencia_ms": 1020.3273000661284,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x006",
+      "latencia_ms": 8073.369099991396,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x007",
+      "latencia_ms": 1065.601099980995,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x008",
+      "latencia_ms": 1255.505699897185,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s001",
+      "latencia_ms": 7974.8786999844015,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s002",
+      "latencia_ms": 949.2700002156198,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s003",
+      "latencia_ms": 1251.5869000926614,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "taller",
+          "obtenido": "taller",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "s004",
+      "latencia_ms": 3681.972600053996,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s005",
+      "latencia_ms": 1545.3701000660658,
+      "intencion_correcta": false,
+      "campos": []
+    },
+    {
+      "id": "c009",
+      "latencia_ms": 1314.7291000932455,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "informe de laboratorio",
+          "obtenido": "informe de laboratorio",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-14T23:59:00-05:00",
+          "obtenido": "2026-09-14T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c010",
+      "error": "LLMError",
+      "latencia_ms": 1246.6003000736237,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "mapa conceptual",
+          "obtenido": null,
+          "correcto": false
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T20:00:00-05:00",
+          "obtenido": null,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "c011",
+      "latencia_ms": 1324.029500130564,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "quiz de repaso",
+          "obtenido": "quiz de repaso",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T07:00:00-05:00",
+          "obtenido": "2026-09-11T07:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c012",
+      "latencia_ms": 1578.1116001307964,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "ensayo final",
+          "obtenido": "ensayo final",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-25T23:59:00-05:00",
+          "obtenido": "2026-09-25T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "ética",
+          "obtenido": "ética",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c013",
+      "latencia_ms": 2076.359200058505,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "proyecto integrador",
+          "obtenido": "proyecto integrador",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-10-01T23:59:00-05:00",
+          "obtenido": "2026-10-01T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "arquitectura de software",
+          "obtenido": "arquitectura de software",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c014",
+      "latencia_ms": 1413.8164001051337,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "exposición de redes",
+          "obtenido": "Exposición",
+          "correcto": false
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-16T23:59:00-05:00",
+          "obtenido": "2026-09-16T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c015",
+      "latencia_ms": 1139.091500081122,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "resumen del artículo de fowler",
+          "obtenido": "resumen del artículo de Fowler",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-13T23:59:00-05:00",
+          "obtenido": "2026-09-13T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c016",
+      "latencia_ms": 1193.8581999856979,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "guía de ejercicios 3",
+          "obtenido": "guía de ejercicios 3",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-10T18:00:00-05:00",
+          "obtenido": "2026-09-10T18:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c017",
+      "latencia_ms": 1243.5684998054057,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "presentación del sprint",
+          "obtenido": "presentación del sprint",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-18T12:00:00-05:00",
+          "obtenido": "2026-09-18T12:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c018",
+      "latencia_ms": 1680.1044999156147,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "laboratorio de péndulo",
+          "obtenido": "laboratorio de péndulo",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-14T10:00:00-05:00",
+          "obtenido": "2026-09-14T10:00:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "física ii",
+          "obtenido": "física II",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c019",
+      "latencia_ms": 1373.5708999447525,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "leer capítulo 7",
+          "obtenido": "leer capítulo 7",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-12T23:59:00-05:00",
+          "obtenido": "2026-09-12T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c020",
+      "latencia_ms": 1268.9113998785615,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "parcial práctico",
+          "obtenido": "Parcial práctico",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-15T14:00:00-05:00",
+          "obtenido": "2026-09-15T14:00:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "bases de datos",
+          "obtenido": "Bases de Datos",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c021",
+      "latencia_ms": 1274.6170000173151,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "taller de normalización",
+          "obtenido": "taller de normalización",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c022",
+      "latencia_ms": 1163.577000144869,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "cuestionario de inglés",
+          "obtenido": "cuestionario de inglés",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T21:30:00-05:00",
+          "obtenido": "2026-09-11T21:30:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c023",
+      "latencia_ms": 8847.199199954048,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "practica de sockets",
+          "obtenido": "Practica de sockets",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-16T23:59:00-05:00",
+          "obtenido": "2026-09-16T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c024",
+      "latencia_ms": 1475.2193000167608,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "informe de avance",
+          "obtenido": "Informe de avance",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-14T08:00:00-05:00",
+          "obtenido": "2026-09-14T08:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c025",
+      "latencia_ms": 1781.4249000512064,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "video de la exposición",
+          "obtenido": "video de la exposición",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-12T23:59:00-05:00",
+          "obtenido": "2026-09-12T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "comunicación",
+          "obtenido": "comunicación",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c026",
+      "latencia_ms": 1167.8711001295596,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "diagrama de clases",
+          "obtenido": "diagrama de clases",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-10-05T23:59:00-05:00",
+          "obtenido": "2026-10-05T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c027",
+      "latencia_ms": 1474.2846000008285,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "acta de la reunión del grupo",
+          "obtenido": "acta de la reunión del grupo",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T19:00:00-05:00",
+          "obtenido": "2026-09-11T19:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c028",
+      "latencia_ms": 1372.817400144413,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "revisión de pares",
+          "obtenido": "revisión de pares",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-16T23:59:00-05:00",
+          "obtenido": "2026-09-16T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "ingeniería de requisitos",
+          "obtenido": "ingeniería de requisitos",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c029",
+      "latencia_ms": 1167.7301998715848,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "taller de pruebas",
+          "obtenido": "taller de pruebas",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c030",
+      "latencia_ms": 11124.182200059295,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "simulacro saber pro",
+          "obtenido": "simulacro saber pro",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-25T07:00:00-05:00",
+          "obtenido": "2026-09-25T07:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c031",
+      "latencia_ms": 1023.4505999833345,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "entregable 2",
+          "obtenido": "entregable 2",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-13T23:00:00-05:00",
+          "obtenido": "2026-09-13T23:00:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c032",
+      "latencia_ms": 3145.9940001368523,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "foro de discusión",
+          "obtenido": "foro de discusión",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-10T23:59:00-05:00",
+          "obtenido": "2026-09-10T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c033",
+      "latencia_ms": 1369.8940998874605,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "práctica de sql",
+          "obtenido": "Práctica de SQL",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-15T23:59:00-05:00",
+          "obtenido": "2026-09-15T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c034",
+      "latencia_ms": 1373.147200094536,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "lectura de bass cap 2",
+          "obtenido": "lectura de Bass cap 2",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-14T23:59:00-05:00",
+          "obtenido": "2026-09-14T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "arquitectura de software",
+          "obtenido": "arquitectura de software",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c035",
+      "latencia_ms": 1168.1925999000669,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "maqueta del puente",
+          "obtenido": "maqueta del puente",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c036",
+      "latencia_ms": 3931.3898000400513,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "taller de derivadas",
+          "obtenido": "taller de derivadas",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": null,
+          "obtenido": null,
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c037",
+      "latencia_ms": 1782.044499879703,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": null,
+          "obtenido": "Tarea para el viernes",
+          "correcto": false
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:00-05:00",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "c038",
+      "latencia_ms": 2472.4231001455337,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "tesis capítulo 1",
+          "obtenido": "tesis capítulo 1",
+          "correcto": true
+        },
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-10-01T23:59:00-05:00",
+          "obtenido": "2026-10-01T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "seminario de investigación",
+          "obtenido": "seminario de investigación",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q010",
+      "latencia_ms": 1808.4061997942626,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "bases de datos",
+          "obtenido": "bases de datos",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q011",
+      "latencia_ms": 6697.471600025892,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.status",
+          "esperado": "pending",
+          "obtenido": "pending",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q012",
+      "latencia_ms": 4119.577999925241,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "ética",
+          "obtenido": "ética",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q013",
+      "latencia_ms": 987.6496000215411,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.status",
+          "esperado": "completed",
+          "obtenido": "completed",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q014",
+      "latencia_ms": 1463.6240999680012,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q015",
+      "latencia_ms": 2419.9956997763366,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.status",
+          "esperado": "overdue",
+          "obtenido": "overdue",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q016",
+      "latencia_ms": 1166.8237999547273,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q017",
+      "latencia_ms": 1358.9594000950456,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "arquitectura de software",
+          "obtenido": "arquitectura de software",
+          "correcto": true
+        },
+        {
+          "campo": "filters.status",
+          "esperado": "pending",
+          "obtenido": "pending",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "q018",
+      "latencia_ms": 1471.6540998779237,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "q019",
+      "latencia_ms": 1372.726900037378,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "física ii",
+          "obtenido": "FÍSICA II",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u006",
+      "latencia_ms": 2327.8315998613834,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-15T23:59:00-05:00",
+          "obtenido": "2026-09-15T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "informe de laboratorio",
+          "obtenido": "informe de laboratorio",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u007",
+      "latencia_ms": 2096.7687000520527,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-14T09:00:00-05:00",
+          "obtenido": "2026-09-14T09:00:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "quiz de repaso",
+          "obtenido": "quiz de repaso",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u008",
+      "latencia_ms": 1782.3634000960737,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-10-02T23:59:00-05:00",
+          "obtenido": "2026-10-02T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "ensayo final",
+          "obtenido": "ensayo final",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u009",
+      "latencia_ms": 2384.929899824783,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "mapa mental",
+          "obtenido": "mapa mental",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "mapa conceptual",
+          "obtenido": "mapa conceptual",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u010",
+      "latencia_ms": 1572.6675000041723,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-10-08T23:59:00-05:00",
+          "obtenido": "2026-10-08T23:59:59-05:00",
+          "correcto": false
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "proyecto integrador",
+          "obtenido": "proyecto integrador",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u011",
+      "latencia_ms": 1022.465200163424,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.subject",
+          "esperado": "bases de datos ii",
+          "obtenido": "bases de datos II",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "parcial práctico",
+          "obtenido": "parcial práctico",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u012",
+      "latencia_ms": 1255.0736998673528,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T16:00:00-05:00",
+          "obtenido": "2026-09-11T16:00:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "exposición de redes",
+          "obtenido": "exposición de redes",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u013",
+      "latencia_ms": 1023.8467999733984,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-10T22:00:00-05:00",
+          "obtenido": "2026-09-10T22:00:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "foro de discusión",
+          "obtenido": "foro de discusión",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u014",
+      "latencia_ms": 1568.5270999092609,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-13T23:59:00-05:00",
+          "obtenido": "2026-09-13T23:59:59-05:00",
+          "correcto": false
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "maqueta del puente",
+          "obtenido": "maqueta del puente",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "u015",
+      "latencia_ms": 1421.3493999559432,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.title",
+          "esperado": "guía de ejercicios 3 y 4",
+          "obtenido": "guía de ejercicios 3 y 4",
+          "correcto": true
+        },
+        {
+          "campo": "task_hint",
+          "esperado": "guía de ejercicios 3",
+          "obtenido": "guía de ejercicios 3",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "h005",
+      "latencia_ms": 939.8926000576466,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h006",
+      "latencia_ms": 1134.822899941355,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h007",
+      "latencia_ms": 962.4715000391006,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x009",
+      "error": "LLMError",
+      "latencia_ms": 15125.758999958634,
+      "campos": []
+    },
+    {
+      "id": "x010",
+      "error": "LLMError",
+      "latencia_ms": 1331.8876000121236,
+      "campos": []
+    },
+    {
+      "id": "x011",
+      "latencia_ms": 901.1503998190165,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "x012",
+      "latencia_ms": 816.6407998651266,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s006",
+      "latencia_ms": 3352.241799933836,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "guía de ejercicios 3",
+          "obtenido": "guía de ejercicios 3",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "s007",
+      "latencia_ms": 1031.947699841112,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s008",
+      "latencia_ms": 1167.9834998212755,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "s009",
+      "latencia_ms": 1006.4038001000881,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "k001",
+      "error": "LLMError",
+      "latencia_ms": 1021.5493999421597,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "taller de física",
+          "obtenido": null,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "k002",
+      "latencia_ms": 1066.3132001645863,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "ensayo de historia",
+          "obtenido": "ensayo de historia",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "k003",
+      "latencia_ms": 1167.1554001513869,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "quiz de redes",
+          "obtenido": "quiz de redes",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "k004",
+      "latencia_ms": 1066.5131001733243,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task_hint",
+          "esperado": "informe de laboratorio",
+          "obtenido": "informe de laboratorio",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "r001",
+      "latencia_ms": 1053.1602997798473,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-01",
+          "obtenido": "2026-09-01",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-30",
+          "obtenido": "2026-09-01",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "r002",
+      "latencia_ms": 1012.7117999363691,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-01",
+          "obtenido": "2026-09-01",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-30",
+          "obtenido": "2026-09-01",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "r003",
+      "latencia_ms": 1437.0923999231309,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-07",
+          "obtenido": "2026-09-07",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-13",
+          "obtenido": "2026-09-07",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "r004",
+      "latencia_ms": 1399.3683001026511,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-10-01",
+          "obtenido": "2026-10-01",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-10-31",
+          "obtenido": "2026-10-01",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "hs001",
+      "latencia_ms": 1141.6015999857336,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-11",
+          "obtenido": "2026-09-11",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-11",
+          "obtenido": "2026-09-11",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "hs002",
+      "latencia_ms": 1120.8623999264091,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "filters.subject",
+          "esperado": "Física",
+          "obtenido": "Física",
+          "correcto": true
+        },
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-14",
+          "obtenido": "2026-09-14",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-14",
+          "obtenido": "2026-09-14",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "hs003",
+      "latencia_ms": 987.2369000222534,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-10",
+          "obtenido": "2026-09-10",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-10",
+          "obtenido": "2026-09-10",
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "hs004",
+      "latencia_ms": 6924.9011001084,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "period.start",
+          "esperado": "2026-09-07",
+          "obtenido": "2026-09-07",
+          "correcto": true
+        },
+        {
+          "campo": "period.end",
+          "esperado": "2026-09-13",
+          "obtenido": "2026-09-07",
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "g001",
+      "latencia_ms": 1679.9842999316752,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:59-05:00",
+          "correcto": false
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "física",
+          "obtenido": "física",
+          "correcto": true
+        },
+        {
+          "campo": "task.title_generated",
+          "esperado": true,
+          "obtenido": false,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "g002",
+      "latencia_ms": 4552.030500024557,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-15T23:59:00-05:00",
+          "obtenido": "2026-09-15T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.type",
+          "esperado": "exam",
+          "obtenido": "exam",
+          "correcto": true
+        },
+        {
+          "campo": "task.title_generated",
+          "esperado": true,
+          "obtenido": true,
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "id": "g003",
+      "latencia_ms": 1572.1271999645978,
+      "intencion_correcta": true,
+      "campos": [
+        {
+          "campo": "task.due_at",
+          "esperado": "2026-09-11T23:59:00-05:00",
+          "obtenido": "2026-09-11T23:59:00-05:00",
+          "correcto": true
+        },
+        {
+          "campo": "task.subject",
+          "esperado": "redes",
+          "obtenido": "redes",
+          "correcto": true
+        },
+        {
+          "campo": "task.title_generated",
+          "esperado": true,
+          "obtenido": false,
+          "correcto": false
+        }
+      ]
+    },
+    {
+      "id": "w001",
+      "latencia_ms": 856.7829001694918,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "w002",
+      "latencia_ms": 1429.5365000143647,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h008",
+      "latencia_ms": 1112.7998000010848,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h009",
+      "latencia_ms": 917.7250999491662,
+      "intencion_correcta": true,
+      "campos": []
+    },
+    {
+      "id": "h010",
+      "latencia_ms": 8738.453599857166,
+      "intencion_correcta": true,
+      "campos": []
+    }
+  ],
+  "S1_campos": {
+    "esperados": 142,
+    "correctos": 122,
+    "exactitud": 0.8591549295774648,
+    "umbral": 0.9,
+    "supera_umbral_extraccion": false,
+    "por_campo": {
+      "filters.status": {
+        "esperados": 6,
+        "correctos": 5,
+        "exactitud": 0.8333
+      },
+      "filters.subject": {
+        "esperados": 6,
+        "correctos": 6,
+        "exactitud": 1.0
+      },
+      "period.end": {
+        "esperados": 8,
+        "correctos": 3,
+        "exactitud": 0.375
+      },
+      "period.start": {
+        "esperados": 8,
+        "correctos": 8,
+        "exactitud": 1.0
+      },
+      "task.due_at": {
+        "esperados": 40,
+        "correctos": 36,
+        "exactitud": 0.9
+      },
+      "task.subject": {
+        "esperados": 11,
+        "correctos": 11,
+        "exactitud": 1.0
+      },
+      "task.title": {
+        "esperados": 38,
+        "correctos": 31,
+        "exactitud": 0.8158
+      },
+      "task.title_generated": {
+        "esperados": 3,
+        "correctos": 1,
+        "exactitud": 0.3333
+      },
+      "task.type": {
+        "esperados": 1,
+        "correctos": 1,
+        "exactitud": 1.0
+      },
+      "task_hint": {
+        "esperados": 21,
+        "correctos": 20,
+        "exactitud": 0.9524
+      }
+    },
+    "mensajes_evaluados": 119,
+    "mensajes_requeridos": 100,
+    "cumple_escenario": null,
+    "motivo": "S1 exige campos registrados en PostgreSQL en 100 mensajes representativos; este arnés solo mide extracción."
+  },
+  "S1_exactitud_intencion": 0.8824,
+  "S1_matriz_de_confusion": {
+    "complete_task->complete_task": 5,
+    "complete_task->error:LLMError": 1,
+    "create_task->create_task": 37,
+    "create_task->error:LLMError": 2,
+    "greeting->error:LLMError": 1,
+    "greeting->greeting": 6,
+    "query_schedule->query_schedule": 4,
+    "query_tasks->error:LLMError": 4,
+    "query_tasks->query_tasks": 15,
+    "summary->summary": 4,
+    "system_help->system_help": 9,
+    "unknown->create_task": 2,
+    "unknown->error:LLMError": 3,
+    "unknown->greeting": 1,
+    "unknown->unknown": 10,
+    "update_task->update_task": 15
+  },
+  "S1_por_intencion": {
+    "complete_task": {
+      "casos": 6,
+      "aciertos": 5,
+      "exactitud": 0.8333
+    },
+    "create_task": {
+      "casos": 39,
+      "aciertos": 37,
+      "exactitud": 0.9487
+    },
+    "greeting": {
+      "casos": 7,
+      "aciertos": 6,
+      "exactitud": 0.8571
+    },
+    "query_schedule": {
+      "casos": 4,
+      "aciertos": 4,
+      "exactitud": 1.0
+    },
+    "query_tasks": {
+      "casos": 19,
+      "aciertos": 15,
+      "exactitud": 0.7895
+    },
+    "summary": {
+      "casos": 4,
+      "aciertos": 4,
+      "exactitud": 1.0
+    },
+    "system_help": {
+      "casos": 9,
+      "aciertos": 9,
+      "exactitud": 1.0
+    },
+    "unknown": {
+      "casos": 16,
+      "aciertos": 10,
+      "exactitud": 0.625
+    },
+    "update_task": {
+      "casos": 15,
+      "aciertos": 15,
+      "exactitud": 1.0
+    }
+  },
+  "S1_fallos": [
+    {
+      "id": "c002",
+      "esperado": "create_task",
+      "error": "LLMError"
+    },
+    {
+      "id": "c008",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    },
+    {
+      "id": "q001",
+      "esperado": "query_tasks",
+      "error": "LLMError"
+    },
+    {
+      "id": "q002",
+      "esperado": "query_tasks",
+      "error": "LLMError"
+    },
+    {
+      "id": "q007",
+      "esperado": "query_tasks",
+      "error": "LLMError"
+    },
+    {
+      "id": "q009",
+      "esperado": "query_tasks",
+      "error": "LLMError"
+    },
+    {
+      "id": "h004",
+      "esperado": "unknown",
+      "error": "LLMError"
+    },
+    {
+      "id": "x001",
+      "esperado": "unknown",
+      "obtenido": "greeting"
+    },
+    {
+      "id": "x003",
+      "esperado": "unknown",
+      "error": "LLMError"
+    },
+    {
+      "id": "s005",
+      "esperado": "unknown",
+      "obtenido": "create_task"
+    },
+    {
+      "id": "c010",
+      "esperado": "create_task",
+      "error": "LLMError"
+    },
+    {
+      "id": "x009",
+      "esperado": "greeting",
+      "error": "LLMError"
+    },
+    {
+      "id": "x010",
+      "esperado": "unknown",
+      "error": "LLMError"
+    },
+    {
+      "id": "k001",
+      "esperado": "complete_task",
+      "error": "LLMError"
+    }
+  ],
+  "S3_latencia_ms": {
+    "muestras": 119,
+    "errores": 11,
+    "p50": 1372.8,
+    "p95": 7974.9,
+    "maximo": 15125.8,
+    "metodo": "rango más próximo, todos los intentos incluidos",
+    "umbral_ms": 7000,
+    "dentro_presupuesto_llamada": false,
+    "cumple_escenario": null,
+    "motivo": "No mide backend hasta envío al canal."
+  },
+  "S5_tokens": {
+    "prompt": 153723,
+    "candidates": 10894,
+    "costo_usd": null,
+    "cobertura_tokens_completa": false,
+    "precio_declarado": {
+      "input_por_millon_usd": null,
+      "output_por_millon_usd": null
+    }
+  }
+}
