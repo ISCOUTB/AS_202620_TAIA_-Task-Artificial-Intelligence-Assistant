@@ -398,6 +398,7 @@ Al entrar por primera vez, la aplicación debe pedir al estudiante, en pasos, su
 - No se puede saltar. La configuración está completa cuando el estudiante tiene un período académico y al menos una asignatura activa; se deduce de esos datos y no se guarda aparte.
 - El botón de atrás regresa al paso anterior; desde el primer paso no sale de la configuración.
 - Una clase se agrega de una vez en todos los días en que se dicta: se crea un bloque por día (RF-ASG-06). Si un día choca con otra clase, los demás se agregan y se informa cuál falló.
+- Cada día marcado tiene su propia hora de inicio y de fin, a cualquier hora y minuto, porque una materia puede verse a horas distintas según el día. La primera hora que se elige se copia a los días que todavía no tienen.
 - El horario de clases es opcional dentro de la configuración, porque un estudiante de un curso puede no tener clases fijas.
 - Una cuenta que entra sin la configuración completa, también una existente, pasa primero por ella.
 

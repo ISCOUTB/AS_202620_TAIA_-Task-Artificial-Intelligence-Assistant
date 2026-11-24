@@ -64,9 +64,12 @@ Todo eso lo haces desde la aplicación.
 - Crear (el botón "+" del centro): Nueva actividad (tarea o examen con sus recordatorios), Nueva
   clase y Nueva asignatura.
 - Nueva clase: eliges la asignatura, tocas todos los días en que la ves (o un atajo como "Lun y
-  Mié", "Mar y Jue" o "Lun a Vie", que suman días a los que ya marcaste) y pones la hora de
-  inicio y la de fin, a cualquier hora y minuto. Se crea un bloque por día; si un día choca con
-  otra clase, los demás se agregan igual y te digo cuál falló.
+  Mié", "Mar y Jue" o "Lun a Vie", que suman días a los que ya marcaste) y cada día aparece con
+  su propia hora de inicio y de fin, a cualquier hora y minuto. Así registras de una vez una
+  materia que ves el lunes de 1:00 a 2:50 p. m. y el martes de 9:00 a 9:50 a. m. La primera hora
+  que eliges se copia a los días que todavía no tienen, y luego cambias solo el que sea distinto.
+  Se crea un bloque por día; si un día choca con otra clase, los demás se agregan igual y te digo
+  cuál falló.
 - Agenda: tiene tres vistas. Día muestra la línea de tiempo del día que elijas en la barra de la
   semana; Semana muestra la semana de lunes a viernes, y el sábado y el domingo solo si tienen
   algo; Mes marca los días con entregas. Las horas se ajustan a lo que tienes. Desde la Agenda

@@ -107,11 +107,10 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
   late String? _subjectId = widget.subjects.isEmpty
       ? null
       : widget.subjects.first.id;
-  final Set<Weekday> _days = {};
-  // Sin hora por defecto: cada clase empieza y termina cuando el estudiante
-  // diga, a cualquier hora y minuto (RF-ASG-06).
-  TimeOfDay? _start;
-  TimeOfDay? _end;
+  // Cada día marcado tiene su propia hora: una materia puede verse el lunes
+  // de 1:00 a 2:50 p. m. y el martes de 9:00 a 9:50 a. m. (RF-ASG-06). Sin hora
+  // por defecto: cada clase empieza y termina cuando el estudiante diga.
+  final Map<Weekday, _DayTime> _times = {};
   final _room = TextEditingController();
   bool _saving = false;
   String? _error;
@@ -122,45 +121,79 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
     super.dispose();
   }
 
-  String? get _timeError {
-    final start = _start, end = _end;
-    return start == null || end == null ? null : blockTimeError(start, end);
-  }
+  /// Días marcados, de lunes a domingo.
+  List<Weekday> get _days => Weekday.values.where(_times.containsKey).toList();
 
   bool get _ready =>
       _subjectId != null &&
-      _days.isNotEmpty &&
-      _start != null &&
-      _end != null &&
-      _timeError == null;
+      _times.isNotEmpty &&
+      _times.values.every((t) => t.complete && t.error == null);
+
+  /// Un día nuevo toma la hora del primer día que ya la tiene completa, así
+  /// "Lun a Vie de 7 a 9" se llena con una sola hora.
+  void _addDays(Iterable<Weekday> days) {
+    final template = _days
+        .map((d) => _times[d]!)
+        .where((t) => t.complete)
+        .firstOrNull;
+    for (final day in days) {
+      _times.putIfAbsent(
+        day,
+        () => _DayTime(start: template?.start, end: template?.end),
+      );
+    }
+  }
+
+  void _toggleDay(Weekday day) => setState(() {
+    if (_times.containsKey(day)) {
+      _times.remove(day);
+    } else {
+      _addDays([day]);
+    }
+  });
+
+  /// Agrega los días del atajo, o los quita si ya estaban todos.
+  void _togglePreset(Set<Weekday> preset) => setState(() {
+    if (preset.every(_times.containsKey)) {
+      preset.forEach(_times.remove);
+    } else {
+      _addDays(Weekday.values.where(preset.contains));
+    }
+  });
 
   /// El reloj abre en la hora ya elegida; el fin, si falta, dos horas después
   /// del inicio. Es solo el punto de partida del reloj, no un valor guardado.
-  Future<void> _pick({required bool start}) async {
-    final from = _start;
+  /// La hora elegida se copia a los demás días que todavía no la tienen.
+  Future<void> _pick(Weekday day, {required bool start}) async {
+    final times = _times[day]!;
+    final from = times.start;
     final initial = start
         ? from ?? const TimeOfDay(hour: 7, minute: 0)
-        : _end ??
+        : times.end ??
               (from == null
                   ? const TimeOfDay(hour: 9, minute: 0)
                   : TimeOfDay(hour: (from.hour + 2) % 24, minute: from.minute));
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
-      helpText: start ? '¿A qué hora empieza?' : '¿A qué hora termina?',
+      helpText: start
+          ? '¿A qué hora empieza el ${day.label.toLowerCase()}?'
+          : '¿A qué hora termina el ${day.label.toLowerCase()}?',
     );
     if (picked == null || !mounted) return;
-    setState(() => start ? _start = picked : _end = picked);
+    setState(() {
+      for (final entry in _times.entries) {
+        final t = entry.value;
+        if (entry.key == day) {
+          start ? t.start = picked : t.end = picked;
+        } else if (start && t.start == null) {
+          t.start = picked;
+        } else if (!start && t.end == null) {
+          t.end = picked;
+        }
+      }
+    });
   }
-
-  /// Agrega los días del atajo, o los quita si ya estaban todos.
-  void _togglePreset(Set<Weekday> preset) => setState(() {
-    if (_days.containsAll(preset)) {
-      _days.removeAll(preset);
-    } else {
-      _days.addAll(preset);
-    }
-  });
 
   Future<void> _save() async {
     setState(() {
@@ -169,14 +202,13 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
     });
     var created = 0;
     final failed = <Weekday, String>{};
-    final ordered = Weekday.values.where(_days.contains);
-    for (final day in ordered) {
+    for (final day in _days) {
       try {
         await widget.service.create(
           subjectId: _subjectId!,
           weekday: day,
-          start: _start!,
-          end: _end!,
+          start: _times[day]!.start!,
+          end: _times[day]!.end!,
           room: _room.text.trim(),
         );
         created++;
@@ -204,7 +236,8 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
     final color = subject == null
         ? TaiaColors.fieryRose
         : subjectColor(widget.subjects, subject.id);
-    final days = Weekday.values.where(_days.contains).toList();
+    final days = _days;
+    final missingTime = _times.values.any((t) => !t.complete);
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -265,13 +298,9 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
                   _DayToggle(
                     letter: _short(day),
                     tooltip: day.label,
-                    selected: _days.contains(day),
+                    selected: _times.containsKey(day),
                     color: color,
-                    onTap: () => setState(
-                      () => _days.contains(day)
-                          ? _days.remove(day)
-                          : _days.add(day),
-                    ),
+                    onTap: () => _toggleDay(day),
                   ),
               ],
             ),
@@ -283,34 +312,27 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
                 for (final preset in _dayPresets.entries)
                   FilterChip(
                     label: Text(preset.key),
-                    selected: _days.containsAll(preset.value),
+                    selected: preset.value.every(_times.containsKey),
                     showCheckmark: false,
                     selectedColor: color.withValues(alpha: 0.25),
                     onSelected: (_) => _togglePreset(preset.value),
                   ),
               ],
             ),
-            const SizedBox(height: 18),
-            const FormLabel('¿A qué hora?'),
-            Row(
-              children: [
-                Expanded(
-                  child: _TimeField(
-                    label: 'Desde',
-                    time: _start,
-                    onTap: () => _pick(start: true),
-                  ),
+            if (days.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              FormLabel(
+                days.length == 1 ? '¿A qué hora?' : '¿A qué hora cada día?',
+              ),
+              for (final day in days)
+                _DayTimeRow(
+                  day: day,
+                  times: _times[day]!,
+                  showDay: days.length > 1,
+                  onPickStart: () => _pick(day, start: true),
+                  onPickEnd: () => _pick(day, start: false),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _TimeField(
-                    label: 'Hasta',
-                    time: _end,
-                    onTap: () => _pick(start: false),
-                  ),
-                ),
-              ],
-            ),
+            ],
             const SizedBox(height: 12),
             TextField(
               controller: _room,
@@ -331,24 +353,18 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
                     ? 'Primero agrega una asignatura.'
                     : days.isEmpty
                     ? '${subject.name}: elige los días.'
-                    : _start == null || _end == null
+                    : missingTime
                     ? '${subject.name} · '
                           '${days.map((d) => d.label).join(', ')}: '
-                          'elige la hora.'
+                          '${days.length == 1 ? 'elige la hora.' : 'elige la hora de cada día.'}'
                     : '${subject.name} · '
-                          '${days.map((d) => d.label).join(', ')} · '
-                          '${formatBlockTime(_start!)} – '
-                          '${formatBlockTime(_end!)}',
+                          '${days.map((d) => '${days.length == 1 ? d.label : d.label.substring(0, 3)} ${_times[d]!.describe()}').join(' · ')}',
                 style: const TextStyle(
                   color: taiaInk,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            if (_timeError != null) ...[
-              const SizedBox(height: 8),
-              AuthErrorText(_timeError!),
-            ],
             if (_error != null) ...[
               const SizedBox(height: 8),
               AuthErrorText(_error!),
@@ -386,15 +402,101 @@ class _ClassComposerSheetState extends State<_ClassComposerSheet> {
   }
 }
 
+/// Hora de inicio y de fin de un día de la clase.
+class _DayTime {
+  _DayTime({this.start, this.end});
+
+  TimeOfDay? start;
+  TimeOfDay? end;
+
+  bool get complete => start != null && end != null;
+
+  /// El mensaje de RF-ASG-06 si el fin no es posterior al inicio.
+  String? get error => complete ? blockTimeError(start!, end!) : null;
+
+  String describe() => '${formatBlockTime(start!)} – ${formatBlockTime(end!)}';
+}
+
+/// Fila de un día: su nombre (si hay varios días), Desde, Hasta y el error.
+class _DayTimeRow extends StatelessWidget {
+  const _DayTimeRow({
+    required this.day,
+    required this.times,
+    required this.showDay,
+    required this.onPickStart,
+    required this.onPickEnd,
+  });
+
+  final Weekday day;
+  final _DayTime times;
+  final bool showDay;
+  final VoidCallback onPickStart;
+  final VoidCallback onPickEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = times.error;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showDay)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6, left: 2),
+              child: Text(
+                day.label,
+                style: const TextStyle(
+                  color: taiaInk,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: _TimeField(
+                  key: ValueKey('start-${day.name}'),
+                  label: 'Desde',
+                  day: day,
+                  time: times.start,
+                  onTap: onPickStart,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _TimeField(
+                  key: ValueKey('end-${day.name}'),
+                  label: 'Hasta',
+                  day: day,
+                  time: times.end,
+                  onTap: onPickEnd,
+                ),
+              ),
+            ],
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 6),
+            AuthErrorText(error),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Campo de hora: muestra la hora elegida o "Elegir" y abre el reloj.
 class _TimeField extends StatelessWidget {
   const _TimeField({
+    super.key,
     required this.label,
+    required this.day,
     required this.time,
     required this.onTap,
   });
 
   final String label;
+  final Weekday day;
   final TimeOfDay? time;
   final VoidCallback onTap;
 
@@ -403,7 +505,9 @@ class _TimeField extends StatelessWidget {
     final value = time;
     return Semantics(
       button: true,
-      label: '$label: ${value == null ? 'sin elegir' : formatBlockTime(value)}',
+      label:
+          '${day.label}, $label: '
+          '${value == null ? 'sin elegir' : formatBlockTime(value)}',
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,

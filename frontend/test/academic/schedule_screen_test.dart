@@ -51,9 +51,15 @@ Future<void> _pump(WidgetTester tester, FakeApi api) async {
 List<RecordedRequest> _writes(FakeApi api) =>
     api.requests.where((r) => r.method != 'GET').toList();
 
-/// Abre el reloj del campo [label] ("Desde" o "Hasta") y acepta la hora con
-/// la que abre: 07:00 para el inicio y dos horas después para el fin.
+/// Campo "Desde" ([start]) o "Hasta" de [day].
+Finder _timeField(Weekday day, {required bool start}) =>
+    find.byKey(ValueKey('${start ? 'start' : 'end'}-${day.name}'));
+
+/// Abre el reloj del campo [label] ("Desde" o "Hasta") del primer día marcado
+/// y acepta la hora con la que abre: 07:00 para el inicio y dos horas después
+/// para el fin.
 Future<void> _acceptTime(WidgetTester tester, String label) async {
+  await pumpFrames(tester);
   final field = find.ancestor(
     of: find.text(label),
     matching: find.byType(InkWell),
@@ -65,20 +71,18 @@ Future<void> _acceptTime(WidgetTester tester, String label) async {
   await pumpFrames(tester);
 }
 
-/// Escribe la hora en el reloj del campo [label] en modo texto.
+/// Escribe la hora en el reloj del campo [label] de [day] en modo texto.
 Future<void> _typeTime(
   WidgetTester tester,
   String label, {
+  Weekday day = Weekday.monday,
   required String hour,
   required String minute,
   required bool pm,
 }) async {
-  final field = find.ancestor(
-    of: find.text(label),
-    matching: find.byType(InkWell),
-  );
-  await tester.ensureVisible(field.first);
-  await tester.tap(field.first);
+  final field = _timeField(day, start: label == 'Desde');
+  await tester.ensureVisible(field);
+  await tester.tap(field);
   await pumpFrames(tester);
   await tester.tap(find.byIcon(Icons.keyboard_outlined));
   await pumpFrames(tester);
@@ -267,8 +271,22 @@ void main() {
       final button = find.widgetWithText(FilledButton, 'Agregar clase');
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
 
-      await _typeTime(tester, 'Desde', hour: '6', minute: '30', pm: true);
-      await _typeTime(tester, 'Hasta', hour: '8', minute: '15', pm: true);
+      await _typeTime(
+        tester,
+        'Desde',
+        day: Weekday.thursday,
+        hour: '6',
+        minute: '30',
+        pm: true,
+      );
+      await _typeTime(
+        tester,
+        'Hasta',
+        day: Weekday.thursday,
+        hour: '8',
+        minute: '15',
+        pm: true,
+      );
       await tester.ensureVisible(button);
       await tester.tap(button);
       await pumpFrames(tester);
@@ -284,6 +302,99 @@ void main() {
           },
         ],
       );
+    },
+  );
+
+  testWidgets(
+    'RF-ASG-06 · una materia con hora distinta cada día se agrega de una vez',
+    (tester) async {
+      final api = FakeApi(routes(_emptySchedule(_created)));
+      await _pump(tester, api);
+
+      await tester.tap(find.text('Nuevo bloque'));
+      await pumpFrames(tester);
+      await tester.tap(find.byTooltip('Lunes'));
+      await tester.tap(find.byTooltip('Martes'));
+      await pumpFrames(tester);
+
+      // Lunes de 1:00 a 2:50 p. m.: la hora se copia al martes, que aún no
+      // tiene, y luego el martes se cambia a 9:00 - 9:50 a. m.
+      await _typeTime(tester, 'Desde', hour: '1', minute: '00', pm: true);
+      await _typeTime(tester, 'Hasta', hour: '2', minute: '50', pm: true);
+      expect(find.text('02:50 p. m.'), findsNWidgets(2));
+      await _typeTime(
+        tester,
+        'Desde',
+        day: Weekday.tuesday,
+        hour: '9',
+        minute: '00',
+        pm: false,
+      );
+      await _typeTime(
+        tester,
+        'Hasta',
+        day: Weekday.tuesday,
+        hour: '9',
+        minute: '50',
+        pm: false,
+      );
+      expect(
+        find.textContaining(
+          'Lun 01:00 p. m. – 02:50 p. m. · '
+          'Mar 09:00 a. m. – 09:50 a. m.',
+        ),
+        findsOneWidget,
+      );
+
+      final button = find.text('Agregar en 2 días');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await pumpFrames(tester);
+
+      expect(
+        [
+          for (final r in _writes(api))
+            [
+              (r.body as Map)['weekday'],
+              (r.body as Map)['start_time'],
+              (r.body as Map)['end_time'],
+            ],
+        ],
+        [
+          ['monday', '13:00:00', '14:50:00'],
+          ['tuesday', '09:00:00', '09:50:00'],
+        ],
+      );
+    },
+  );
+
+  testWidgets(
+    'RF-ASG-06 · un día con el fin antes del inicio no deja guardar',
+    (tester) async {
+      final api = FakeApi(routes(_emptySchedule(_created)));
+      await _pump(tester, api);
+
+      await tester.tap(find.text('Nuevo bloque'));
+      await pumpFrames(tester);
+      await tester.tap(find.byTooltip('Lunes'));
+      await tester.tap(find.byTooltip('Miércoles'));
+      await _acceptTime(tester, 'Desde');
+      await _acceptTime(tester, 'Hasta');
+      await _typeTime(
+        tester,
+        'Hasta',
+        day: Weekday.wednesday,
+        hour: '6',
+        minute: '00',
+        pm: false,
+      );
+
+      expect(
+        find.text('La hora de fin debe ser posterior a la hora de inicio.'),
+        findsOneWidget,
+      );
+      final button = find.widgetWithText(FilledButton, 'Agregar en 2 días');
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
     },
   );
 
