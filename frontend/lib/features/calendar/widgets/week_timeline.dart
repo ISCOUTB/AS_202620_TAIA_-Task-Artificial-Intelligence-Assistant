@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/spanish_dates.dart';
 import '../../../theme/taia_colors.dart';
 import '../../academic/widgets/class_composer.dart' show subjectPalette;
 import '../../auth/auth_shell.dart';
@@ -9,8 +10,10 @@ import '../../tasks/task.dart';
 import '../calendar_logic.dart';
 import '../calendar_service.dart';
 
-/// Línea de tiempo de la semana: clases, sesiones de estudio y actividades en
-/// la misma grilla (RF-TAR-11, vista de semana de la Agenda).
+/// Línea de tiempo de la Agenda: clases, sesiones de estudio y actividades en
+/// la misma grilla (RF-TAR-11). Con un solo día ocupa todo el ancho y muestra
+/// los nombres completos (vista de día); con varios, una columna por día
+/// (vista de semana). Las horas se ajustan a lo que hay en esos días.
 class WeekTimeline extends StatelessWidget {
   const WeekTimeline({
     super.key,
@@ -23,7 +26,7 @@ class WeekTimeline extends StatelessWidget {
     required this.onTapTask,
   });
 
-  /// Los siete días, de lunes a domingo.
+  /// Los días que se muestran, en orden.
   final List<DateTime> days;
   final List<ClassOccurrence> classes;
   final List<AcademicTask> tasks;
@@ -32,25 +35,12 @@ class WeekTimeline extends StatelessWidget {
   final ValueChanged<DateTime> onSelectDay;
   final ValueChanged<AcademicTask> onTapTask;
 
-  static const hourHeight = 46.0;
   static const _hoursWidth = 30.0;
   static const _headerHeight = 34.0;
 
-  /// Horas visibles: de 7 a 22 como mínimo, y más si hay algo fuera.
-  (int, int) _hourRange() {
-    var first = 7;
-    var last = 22;
-    for (final c in classes) {
-      first = math.min(first, c.startsAt.hour);
-      last = math.max(last, c.endsAt.hour + (c.endsAt.minute > 0 ? 1 : 0));
-    }
-    for (final t in tasks) {
-      first = math.min(first, t.dueAt.hour);
-      // Una entrega a las 23:59 se ve al final del día, no en la línea de las 22.
-      last = math.max(last, t.dueAt.hour + 1);
-    }
-    return (first, math.min(last, 24));
-  }
+  bool get _single => days.length == 1;
+
+  double get _hourHeight => _single ? 56.0 : 40.0;
 
   /// Un color por materia, estable dentro de la semana.
   Map<String, Color> _colors() {
@@ -63,18 +53,24 @@ class WeekTimeline extends StatelessWidget {
 
   double _y(DateTime t, int firstHour, int lastHour) {
     final hours = t.hour + t.minute / 60 - firstHour;
-    return (hours.clamp(0, (lastHour - firstHour).toDouble())) * hourHeight;
+    return (hours.clamp(0, (lastHour - firstHour).toDouble())) * _hourHeight;
   }
 
   @override
   Widget build(BuildContext context) {
-    final (firstHour, lastHour) = _hourRange();
+    final (firstHour, lastHour) = timelineHours(days, classes, tasks);
     final colors = _colors();
-    final gridHeight = (lastHour - firstHour) * hourHeight;
+    final header = _single ? 0.0 : _headerHeight;
+    final gridHeight = (lastHour - firstHour) * _hourHeight;
+    final pinHeight = _single ? 26.0 : 18.0;
+    final empty =
+        !classes.any((c) => days.any((d) => isSameDay(d, c.startsAt))) &&
+        !tasks.any((t) => days.any((d) => isSameDay(d, t.dueAt)));
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnWidth = (constraints.maxWidth - _hoursWidth) / 7;
+        final columnWidth =
+            (constraints.maxWidth - _hoursWidth) / math.max(1, days.length);
         double x(DateTime day) =>
             _hoursWidth +
             days.indexWhere((d) => isSameDay(d, day)) * columnWidth;
@@ -83,7 +79,7 @@ class WeekTimeline extends StatelessWidget {
           // Líneas de cada hora y su etiqueta.
           for (var h = firstHour; h <= lastHour; h++)
             Positioned(
-              top: _headerHeight + (h - firstHour) * hourHeight,
+              top: header + (h - firstHour) * _hourHeight,
               left: 0,
               right: 0,
               child: Row(
@@ -108,46 +104,47 @@ class WeekTimeline extends StatelessWidget {
               ),
             ),
           // Cabecera de cada día: tocarla elige el día.
-          for (final day in days)
-            Positioned(
-              top: 0,
-              left: x(day),
-              width: columnWidth,
-              height: gridHeight + _headerHeight,
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () => onSelectDay(day),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSameDay(day, selected)
-                        ? TaiaColors.softPeach.withValues(alpha: 0.45)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.topCenter,
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '${_weekdayInitial(day)}\n${day.day}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isSameDay(day, today)
-                          ? TaiaColors.fieryRose
-                          : taiaInk,
-                      fontSize: 11,
-                      height: 1.15,
-                      fontWeight: isSameDay(day, today)
-                          ? FontWeight.w900
-                          : FontWeight.w600,
+          if (!_single)
+            for (final day in days)
+              Positioned(
+                top: 0,
+                left: x(day),
+                width: columnWidth,
+                height: gridHeight + header,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => onSelectDay(day),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSameDay(day, selected)
+                          ? TaiaColors.softPeach.withValues(alpha: 0.45)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.topCenter,
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${_weekdayInitial(day)}\n${day.day}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isSameDay(day, today)
+                            ? TaiaColors.fieryRose
+                            : taiaInk,
+                        fontSize: 11,
+                        height: 1.15,
+                        fontWeight: isSameDay(day, today)
+                            ? FontWeight.w900
+                            : FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           // Clases y sesiones de estudio.
           for (final item in classes)
             if (days.any((d) => isSameDay(d, item.startsAt)))
               Positioned(
-                top: _headerHeight + _y(item.startsAt, firstHour, lastHour),
+                top: header + _y(item.startsAt, firstHour, lastHour),
                 left: x(item.startsAt) + 2,
                 width: columnWidth - 4,
                 height: math.max(
@@ -157,6 +154,7 @@ class WeekTimeline extends StatelessWidget {
                 ),
                 child: _ClassBlock(
                   item: item,
+                  wide: _single,
                   color: colors[item.subjectName] ?? subjectPalette.first,
                 ),
               ),
@@ -165,17 +163,40 @@ class WeekTimeline extends StatelessWidget {
             if (days.any((d) => isSameDay(d, task.dueAt)))
               Positioned(
                 top:
-                    _headerHeight +
-                    math.max(0, _y(task.dueAt, firstHour, lastHour) - 9),
+                    header +
+                    math.max(
+                      0,
+                      _y(task.dueAt, firstHour, lastHour) - pinHeight / 2,
+                    ),
                 left: x(task.dueAt) + 3,
                 width: columnWidth - 6,
-                height: 18,
-                child: _TaskPin(task: task, onTap: () => onTapTask(task)),
+                height: pinHeight,
+                child: _TaskPin(
+                  task: task,
+                  wide: _single,
+                  onTap: () => onTapTask(task),
+                ),
               ),
+          if (empty && !_single)
+            Positioned(
+              top: header,
+              left: _hoursWidth,
+              right: 0,
+              height: gridHeight,
+              child: Center(
+                child: Text(
+                  'Aquí aparecerán tus clases',
+                  style: TextStyle(
+                    color: taiaInk.withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
         ];
 
         return SizedBox(
-          height: gridHeight + _headerHeight + 8,
+          height: gridHeight + header + 8,
           child: Stack(clipBehavior: Clip.none, children: children),
         );
       },
@@ -187,49 +208,89 @@ class WeekTimeline extends StatelessWidget {
 }
 
 class _ClassBlock extends StatelessWidget {
-  const _ClassBlock({required this.item, required this.color});
+  const _ClassBlock({
+    required this.item,
+    required this.wide,
+    required this.color,
+  });
 
   final ClassOccurrence item;
+  final bool wide;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final study = item.isStudy;
     final label = study ? item.studyTitle! : item.subjectName;
+    final room = item.room;
+    final hours =
+        '${formatClockTime(item.startsAt)} – ${formatClockTime(item.endsAt)}';
+    final textColor = study ? taiaInk : Colors.white;
     return Semantics(
-      label:
-          '${study ? 'Estudio' : 'Clase'}: $label, '
-          '${_hm(item.startsAt)} a ${_hm(item.endsAt)}',
+      label: '${study ? 'Estudio' : 'Clase'}: $label, $hours',
+      excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+        padding: wide
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 6)
+            : const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
         decoration: BoxDecoration(
           color: study ? color.withValues(alpha: 0.22) : color,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(wide ? 12 : 8),
           border: study ? Border.all(color: color, width: 1.2) : null,
         ),
-        child: Text(
-          study ? '\u{1F4D6} $label' : label,
-          maxLines: 3,
-          overflow: TextOverflow.fade,
-          style: TextStyle(
-            color: study ? taiaInk : Colors.white,
-            fontSize: 9.5,
-            height: 1.1,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: wide
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    study ? 'Estudiar: $label' : label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      [
+                        hours,
+                        if (study) item.subjectName,
+                        if (!study && room != null) room,
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                label,
+                maxLines: 3,
+                overflow: TextOverflow.fade,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 9.5,
+                  height: 1.1,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }
-
-  static String _hm(DateTime t) =>
-      '${t.hour}:${t.minute.toString().padLeft(2, '0')}';
 }
 
 class _TaskPin extends StatelessWidget {
-  const _TaskPin({required this.task, required this.onTap});
+  const _TaskPin({required this.task, required this.wide, required this.onTap});
 
   final AcademicTask task;
+  final bool wide;
   final VoidCallback onTap;
 
   @override
@@ -247,23 +308,45 @@ class _TaskPin extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
+          padding: EdgeInsets.symmetric(horizontal: wide ? 10 : 3),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(wide ? 10 : 6),
             border: Border.all(color: color, width: 1.4),
           ),
           alignment: Alignment.centerLeft,
-          child: Text(
-            task.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: color,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              decoration: done ? TextDecoration.lineThrough : null,
-            ),
+          child: Row(
+            children: [
+              if (wide) ...[
+                Icon(
+                  exam ? Icons.assignment_late_outlined : Icons.flag_outlined,
+                  size: 14,
+                  color: color,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${formatClockTime(task.dueAt)} · ',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+              Expanded(
+                child: Text(
+                  task.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: wide ? 12 : 9,
+                    fontWeight: FontWeight.w800,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

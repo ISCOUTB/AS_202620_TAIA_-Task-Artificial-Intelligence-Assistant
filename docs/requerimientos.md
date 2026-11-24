@@ -561,12 +561,17 @@ La aplicación usa esta consulta para la **Agenda**, que reemplaza a la pestaña
 
 **Reglas**
 - El rango incluye el día inicial y el final, y abarca como máximo 31 días.
-- La Agenda tiene una vista de semana, con los bloques de clase y las actividades de cada día en la misma línea de tiempo, y una vista de mes.
+- La Agenda tiene tres vistas: día, semana y mes. Abre en la vista de día.
+  - Día: la barra de la semana elige el día, y debajo van las clases, las sesiones de estudio y las actividades de ese día en una línea de tiempo a todo el ancho, con el nombre completo, la hora y el aula.
+  - Semana: los mismos elementos en una línea de tiempo por día, de lunes a viernes; el sábado y el domingo aparecen solo si esa semana tienen algo. Tocar un día muestra su agenda debajo.
+  - Mes: marca los días con entregas.
+- La línea de tiempo muestra desde una hora antes de lo primero hasta una hora después de lo último de los días visibles, para que se ajuste al horario de cada estudiante.
 - El horario (RF-ASG-06 y RF-ASG-07) se consulta y se edita desde la Agenda.
 
 **Criterios de aceptación**
 - Un rango con el final antes del inicio, o de más de 31 días → `422`.
 - En la vista de semana, un día con una clase y una actividad muestra las dos.
+- Un día con una clase de 08:00 a 10:00 y nada más muestra la línea de tiempo de 07:00 a 11:00.
 
 ---
 

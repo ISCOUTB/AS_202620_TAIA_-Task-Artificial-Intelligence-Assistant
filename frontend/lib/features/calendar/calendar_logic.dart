@@ -1,8 +1,8 @@
 import '../tasks/task.dart';
 import 'calendar_service.dart';
 
-/// Vista del calendario: el mes completo o una sola semana.
-enum CalendarMode { month, week }
+/// Vista de la Agenda: un día, una semana o el mes completo (RF-TAR-11).
+enum CalendarMode { day, week, month }
 
 /// Solo la fecha, sin la hora.
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -46,7 +46,8 @@ List<List<DateTime?>> monthRows(DateTime month) {
   return [for (var i = 0; i < cells.length; i += 7) cells.sublist(i, i + 7)];
 }
 
-/// Días que se piden al servidor: el mes completo o la semana (RF-TAR-11).
+/// Días que se piden al servidor: el mes completo o la semana (RF-TAR-11). La
+/// vista de día pide su semana, porque la barra de días muestra la semana.
 ({DateTime start, DateTime end}) visibleRange(
   CalendarMode mode,
   DateTime focused,
@@ -95,4 +96,47 @@ DayMarker markerFor(List<AcademicTask>? tasks) {
   return tasks.any((t) => t.status != TaskStatus.completed)
       ? DayMarker.pending
       : DayMarker.doneOnly;
+}
+
+/// Días que muestra la vista de semana: de lunes a viernes, y el sábado y el
+/// domingo solo si tienen una clase o una actividad (RF-TAR-11).
+List<DateTime> compactWeek(
+  List<DateTime> week,
+  List<ClassOccurrence> classes,
+  List<AcademicTask> tasks,
+) {
+  bool busy(DateTime day) =>
+      classes.any((c) => isSameDay(c.startsAt, day)) ||
+      tasks.any((t) => isSameDay(t.dueAt, day));
+  return [
+    for (final day in week)
+      if (day.weekday <= DateTime.friday || busy(day)) day,
+  ];
+}
+
+/// Horas visibles de la línea de tiempo de [days]: desde una hora antes de lo
+/// primero hasta una hora después de lo último, así el rango se ajusta al
+/// horario de cada estudiante. Sin nada en esos días, de 8 a 12 (RF-TAR-11).
+(int, int) timelineHours(
+  List<DateTime> days,
+  List<ClassOccurrence> classes,
+  List<AcademicTask> tasks,
+) {
+  bool shown(DateTime t) => days.any((d) => isSameDay(d, t));
+  int? first;
+  int? last;
+  void include(int start, int end) {
+    first = first == null || start < first! ? start : first;
+    last = last == null || end > last! ? end : last;
+  }
+
+  for (final c in classes.where((c) => shown(c.startsAt))) {
+    include(c.startsAt.hour, c.endsAt.hour + (c.endsAt.minute > 0 ? 1 : 0));
+  }
+  // Una entrega ocupa su hora: la de las 23:59 se ve antes de medianoche.
+  for (final t in tasks.where((t) => shown(t.dueAt))) {
+    include(t.dueAt.hour, t.dueAt.hour + 1);
+  }
+  if (first == null) return (8, 12);
+  return ((first! - 1).clamp(0, 23), (last! + 1).clamp(1, 24));
 }

@@ -25,9 +25,11 @@ import 'widgets/calendar_mode_toggle.dart';
 import 'widgets/week_timeline.dart';
 
 /// Pestaña Agenda: el horario y las actividades juntos (RF-TAR-11). La vista
-/// de semana pone clases, sesiones de estudio y actividades en la misma línea
-/// de tiempo; la de mes marca los días con entregas. Al tocar una actividad se
-/// abre la hoja de edición, y el horario se edita desde aquí.
+/// de día, la principal, pone las clases, las sesiones de estudio y las
+/// actividades del día elegido en una línea de tiempo a todo el ancho; la de
+/// semana hace lo mismo con la semana compacta, y la de mes marca los días con
+/// entregas. Al tocar una actividad se abre la hoja de edición, y el horario se
+/// edita desde aquí.
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({
     super.key,
@@ -53,7 +55,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   String? _error;
   bool _loading = true;
 
-  CalendarMode _mode = CalendarMode.week;
+  CalendarMode _mode = CalendarMode.day;
   late DateTime _selected = dateOnly(bogotaNow());
   late DateTime _focused = _selected;
 
@@ -311,21 +313,31 @@ class CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          CalendarCard(
-            mode: _mode,
-            focused: _focused,
-            selected: _selected,
-            today: today,
-            tasksByDay: byDay,
-            onSelect: (day) => setState(() => _selected = day),
-            onPrevious: () => _go(-1),
-            onNext: () => _go(1),
-            onToday: _goToday,
-          ),
+          // En la semana, la cabecera de la grilla ya elige el día: solo
+          // quedan las flechas.
+          if (_mode == CalendarMode.week)
+            _WeekNavigation(
+              showToday: !isSameDay(_selected, today),
+              onPrevious: () => _go(-1),
+              onNext: () => _go(1),
+              onToday: _goToday,
+            )
+          else
+            CalendarCard(
+              mode: _mode,
+              focused: _focused,
+              selected: _selected,
+              today: today,
+              tasksByDay: byDay,
+              onSelect: (day) => setState(() => _selected = day),
+              onPrevious: () => _go(-1),
+              onNext: () => _go(1),
+              onToday: _goToday,
+            ),
           if (_mode == CalendarMode.week) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             WeekTimeline(
-              days: weekDays(_focused),
+              days: compactWeek(weekDays(_focused), _classes, items),
               classes: _classes,
               tasks: items,
               selected: _selected,
@@ -337,18 +349,95 @@ class CalendarScreenState extends State<CalendarScreen> {
           const SizedBox(height: 24),
           // RNF-14: al cambiar de día, su agenda vuelve a entrar.
           KeyedSubtree(
-            key: ValueKey(_selected),
-            child: AgendaSection(
-              day: _selected,
-              today: today,
-              tasks: dayTasks,
-              classes: dayClasses,
-              expression: expression,
-              onTapTask: _edit,
-            ).appear(context, index: 2),
+            key: ValueKey((_selected, _mode)),
+            child:
+                _mode == CalendarMode.day &&
+                    (dayTasks.isNotEmpty || dayClasses.isNotEmpty)
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Agenda del ${formatDayMonth(_selected)}',
+                        style: const TextStyle(
+                          color: taiaInk,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      WeekTimeline(
+                        days: [_selected],
+                        classes: dayClasses,
+                        tasks: dayTasks,
+                        selected: _selected,
+                        today: today,
+                        onSelectDay: (_) {},
+                        onTapTask: _edit,
+                      ),
+                    ],
+                  ).appear(context, index: 2)
+                : AgendaSection(
+                    day: _selected,
+                    today: today,
+                    tasks: dayTasks,
+                    classes: dayClasses,
+                    expression: expression,
+                    onTapTask: _edit,
+                  ).appear(context, index: 2),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Flechas de la vista de semana, sin repetir los días de la grilla.
+class _WeekNavigation extends StatelessWidget {
+  const _WeekNavigation({
+    required this.showToday,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onToday,
+  });
+
+  final bool showToday;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onToday;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          tooltip: 'Semana anterior',
+          color: taiaInk,
+          onPressed: onPrevious,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: Center(
+            child: showToday
+                ? TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: TaiaColors.fieryRose,
+                    ),
+                    onPressed: onToday,
+                    child: const Text(
+                      'Ir a hoy',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  )
+                : const SizedBox(height: 48),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Semana siguiente',
+          color: taiaInk,
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
     );
   }
 }

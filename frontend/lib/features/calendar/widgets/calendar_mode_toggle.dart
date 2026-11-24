@@ -4,7 +4,7 @@ import '../../../theme/taia_colors.dart';
 import '../../auth/auth_shell.dart';
 import '../calendar_logic.dart';
 
-/// Selector "Mes | Semana".
+/// Selector "Día | Semana | Mes" (RF-TAR-11).
 class CalendarModeToggle extends StatelessWidget {
   const CalendarModeToggle({
     super.key,
@@ -26,16 +26,16 @@ class CalendarModeToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _Segment(
-            label: 'Mes',
-            selected: mode == CalendarMode.month,
-            onTap: () => onChanged(CalendarMode.month),
-          ),
-          _Segment(
-            label: 'Semana',
-            selected: mode == CalendarMode.week,
-            onTap: () => onChanged(CalendarMode.week),
-          ),
+          for (final (value, label) in const [
+            (CalendarMode.day, 'Día'),
+            (CalendarMode.week, 'Semana'),
+            (CalendarMode.month, 'Mes'),
+          ])
+            _Segment(
+              label: label,
+              selected: mode == value,
+              onTap: () => onChanged(value),
+            ),
         ],
       ),
     );

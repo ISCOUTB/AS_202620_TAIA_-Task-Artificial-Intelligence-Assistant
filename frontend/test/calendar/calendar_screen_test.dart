@@ -62,19 +62,39 @@ void main() {
   tearDown(() => clock = DateTime.now);
 
   testWidgets(
-    'RF-TAR-11 · la Agenda abre en la semana y junta clases y tareas',
+    'RF-TAR-11 · la Agenda abre en el día de hoy y junta clases y tareas',
     (tester) async {
       final api = await _pump(tester);
 
+      // La vista de día pide la semana que muestra la barra de días.
       expect(_ranges(api), [
         {'start': '2026-10-05', 'end': '2026-10-11'},
       ]);
       expect(find.text('Tu agenda'), findsOneWidget);
-      // En la línea de tiempo de la semana y en la agenda del día.
-      expect(find.text('Cálculo'), findsWidgets);
-      expect(find.text('Clase hasta las 10:00 a. m. · A-201'), findsOneWidget);
-      expect(find.text('Informe'), findsWidgets);
+      expect(find.text('Agenda del 5 de octubre'), findsOneWidget);
+      // Línea de tiempo del día a todo el ancho, con el aula.
+      expect(find.text('Cálculo'), findsOneWidget);
+      expect(find.textContaining('A-201'), findsOneWidget);
+      expect(find.text('Informe'), findsOneWidget);
       expect(find.text('Editar horario'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'RF-TAR-11 · la semana es compacta y la agenda del día va debajo',
+    (tester) async {
+      await _pump(tester);
+      await tester.tap(find.text('Semana'));
+      await pumpFrames(tester);
+
+      // Sin la barra de días: solo las flechas.
+      expect(find.byTooltip('Semana siguiente'), findsOneWidget);
+      // Lunes a viernes; el fin de semana no tiene nada.
+      expect(find.text('V\n9'), findsOneWidget);
+      expect(find.text('S\n10'), findsNothing);
+      // En la grilla y en la agenda del día.
+      expect(find.text('Cálculo'), findsNWidgets(2));
+      expect(find.text('Clase hasta las 10:00 a. m. · A-201'), findsOneWidget);
     },
   );
 

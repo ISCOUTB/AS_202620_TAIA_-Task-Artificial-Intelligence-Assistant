@@ -20,14 +20,17 @@ void main() {
     room: 'A-101',
   );
 
-  Future<List<AcademicTask>> pump(WidgetTester tester) async {
+  Future<List<AcademicTask>> pump(
+    WidgetTester tester, {
+    List<DateTime>? days,
+  }) async {
     final tapped = <AcademicTask>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: SingleChildScrollView(
             child: WeekTimeline(
-              days: weekDays(monday),
+              days: days ?? weekDays(monday),
               classes: [physics],
               tasks: [task],
               selected: friday,
@@ -62,5 +65,39 @@ void main() {
     await tester.tap(find.text('Taller 3'));
 
     expect(tapped.single.title, 'Taller 3');
+  });
+
+  testWidgets(
+    'RF-TAR-11 · la vista de día muestra el nombre, la hora y el aula a todo el ancho',
+    (tester) async {
+      await pump(tester, days: [friday]);
+
+      expect(find.text('Física'), findsOneWidget);
+      expect(find.textContaining('A-101'), findsOneWidget);
+      expect(find.textContaining('Taller 3'), findsOneWidget);
+    },
+  );
+
+  group('RF-TAR-11 · rango de horas', () {
+    test('va de una hora antes de lo primero a una después de lo último', () {
+      expect(timelineHours([friday], [physics], const []), (7, 11));
+      // La entrega de las 23:59 alarga el día hasta medianoche.
+      expect(timelineHours([friday], [physics], [task]), (7, 24));
+    });
+
+    test('solo cuenta los días que se muestran', () {
+      expect(timelineHours([monday], [physics], [task]), (8, 12));
+    });
+
+    test('la semana compacta solo agrega el fin de semana si tiene algo', () {
+      final week = weekDays(monday);
+      expect(compactWeek(week, const [], const []), week.sublist(0, 5));
+      final saturday = ClassOccurrence(
+        subjectName: 'Inglés',
+        startsAt: DateTime(2026, 10, 10, 9),
+        endsAt: DateTime(2026, 10, 10, 11),
+      );
+      expect(compactWeek(week, [saturday], const []), week.sublist(0, 6));
+    });
   });
 }
