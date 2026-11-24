@@ -129,3 +129,25 @@ def test_help_instructions_carry_the_versioned_knowledge_base_rf_agt_14():
     assert "maximo 3 frases" in HELP_INSTRUCTIONS
     assert "di que no lo sabes" in HELP_INSTRUCTIONS
     assert "solo puedes ayudar con TAIA" in HELP_INSTRUCTIONS
+
+
+def test_knowledge_base_explains_notifications_and_app_sections_rf_agt_14():
+    # Alguien preguntó por las notificaciones y TAIA dijo que no sabía
+    # (2026-11-23): la base cubre recordatorios, notificaciones y cada sección.
+    knowledge = KNOWLEDGE_BASE.read_text(encoding="utf-8")
+
+    for section in (
+        "## Notificaciones y recordatorios",
+        "## Dónde está cada cosa en la aplicación",
+        "## Plan de estudio",
+        "## Tutorial",
+    ):
+        assert section in knowledge
+    for fact in ("bandeja", "Marcar todas como leídas", "18:00", "permiso", "Ver el tutorial"):
+        assert fact in knowledge
+
+
+def test_questions_about_how_the_app_works_are_system_help_rf_agt_14():
+    rules = interpretation_instructions(NOW)
+
+    assert '"como funcionan\n  las notificaciones?"' in rules

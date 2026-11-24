@@ -906,6 +906,10 @@ El agente responde preguntas sobre cómo usar TAIA **solo** a partir de una base
 - Si la respuesta llega cortada por el límite de tokens (`finishReason = MAX_TOKENS`), no se muestra a medias: se responde un mensaje fijo.
 - La base de conocimiento explica qué recuerda TAIA: la lista de mensajes del chat se borra al salir (RF-AGT-01) y el contexto se limita a los últimos mensajes de los últimos 30 minutos (RF-AGT-15). Así, "¿no tienes memoria?" o "¿qué te dije en el otro chat?" se responden como ayuda.
 - La respuesta sigue la voz de TAIA (RF-AGT-22).
+- La base de conocimiento también explica cómo funcionan las notificaciones y los recordatorios (RF-REC, RF-NOT), dónde está cada sección de la aplicación, el plan de estudio (RF-EST) y el tutorial (RF-USR-12). Una pregunta sobre cómo funciona una parte de la aplicación ("¿cómo funcionan las notificaciones?") se responde como ayuda.
+
+**Criterio de aceptación**
+- "¿Cómo funcionan las notificaciones?" se clasifica como ayuda y la base de conocimiento tiene la respuesta.
 
 ### RF-AGT-15 · Contexto conversacional acotado
 **Prioridad:** MVP · **Estado:** Implementado

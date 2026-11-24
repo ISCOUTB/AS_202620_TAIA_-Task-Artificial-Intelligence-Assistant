@@ -279,7 +279,10 @@ Intenciones posibles:
 - system_help: pregunta como funciona TAIA, que puede hacer o que recuerda de la
   conversacion (por ejemplo "no tienes memoria?" o "que te dije en el otro chat?").
   Tambien cuando pregunta si TAIA puede hacer algo o como hacerlo con ella ("puedes
-  borrar tareas?", "como creo una tarea contigo?"), aunque TAIA no lo haga.
+  borrar tareas?", "como creo una tarea contigo?"), aunque TAIA no lo haga, y cuando
+  pregunta como funciona una parte de la aplicacion: las notificaciones, los
+  recordatorios, la Agenda, el plan de estudio o la configuracion ("como funcionan
+  las notificaciones?", "por que no me llego el recordatorio?").
 - greeting: solo saluda ("hola", "buenos dias"), agradece ("gracias"), se despide
   ("chao") o da un acuse corto ("ok", "vale", un emoji suelto), sin pedir nada mas.
   Si ademas pide algo, usa la intencion de lo que pide. Un pedido de ayuda sin decir

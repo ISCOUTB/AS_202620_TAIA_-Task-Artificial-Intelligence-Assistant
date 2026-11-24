@@ -115,3 +115,6 @@
 {"id": "g003", "text": "para mañana debo leer el capítulo 5 de redes", "intent": "create_task", "generated_title": true, "subject": "redes", "due_at": "2026-09-11T23:59:00-05:00", "note": "titulo generado a partir del contenido"}
 {"id": "w001", "text": "Hola taia", "intent": "greeting", "note": "saludo real de la prueba en el telefono (2026-11-22)"}
 {"id": "w002", "text": "chao, nos vemos mañana", "intent": "greeting", "note": "despedida, no es peticion"}
+{"id": "h008", "text": "cómo funcionan las notificaciones?", "intent": "system_help", "note": "pregunta de uso sobre notificaciones (caso real 2026-11-23)"}
+{"id": "h009", "text": "por qué no me llegó el recordatorio de la tarea", "intent": "system_help", "note": "duda sobre recordatorios, no pide crear uno"}
+{"id": "h010", "text": "cómo hago para que me salga el plan de estudio", "intent": "system_help", "note": "pregunta de uso sobre el plan de estudio"}
