@@ -118,7 +118,7 @@ ConfirmTelegramLinkUseCase
    ├── Telegram ya vinculado a otra cuenta ──► 200: "Esta cuenta de Telegram ya está vinculada..."
    ├── la cuenta TAIA ya tiene otro Telegram ► 200: "Tu cuenta de TAIA ya tiene otro Telegram..."
    ▼
-Guarda telegram_user_id (message.from.id) ──► 200: "¡Listo, ya estamos conectadas!..."
+Guarda telegram_user_id (message.from.id) ──► 200: "¡Listo, tu Telegram ya quedó vinculado!..."
 ```
 
 El webhook responde siempre `2xx`, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). El resultado de la vinculación va en el cuerpo como `method: sendMessage`, así que el estudiante lo lee en el mismo chat (RF-TEL-01), con la voz de TAIA (RF-AGT-22).

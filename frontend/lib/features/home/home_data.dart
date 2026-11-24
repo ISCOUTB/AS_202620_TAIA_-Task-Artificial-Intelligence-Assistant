@@ -74,8 +74,8 @@ class HomeData {
   String get taiaBubble {
     if (overdueCount > 0) {
       return overdueCount == 1
-          ? 'Tienes 1 actividad vencida. ¿La organizamos juntas?'
-          : 'Tienes $overdueCount actividades vencidas. ¿Las organizamos juntas?';
+          ? 'Tienes 1 actividad vencida. ¿Te ayudo a organizarla?'
+          : 'Tienes $overdueCount actividades vencidas. ¿Te ayudo a organizarlas?';
     }
     if (todayPending > 0) {
       return todayPending == 1

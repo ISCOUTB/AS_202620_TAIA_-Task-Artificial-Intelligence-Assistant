@@ -132,6 +132,26 @@ def test_fixed_texts_have_accents_rf_agt_22(module):
             assert not _UNACCENTED.search(text.lower()), text
 
 
+# Formas que concuerdan en género con el estudiante (o con TAIA y el estudiante
+# juntos). El femenino es solo de TAIA (RF-AGT-22).
+_GENDERED_TO_STUDENT = re.compile(
+    r"(juntas|juntos|conectadas|conectados|bienvenida|bienvenido|"
+    r"estás lista|estás listo|nosotras)"
+)
+
+
+@pytest.mark.parametrize("module", _FIXED_TEXT_SOURCES, ids=lambda m: m.__name__.rsplit(".", 1)[-1])
+def test_fixed_texts_never_assume_the_student_gender_rf_agt_22(module):
+    for text in _literals(module):
+        assert not _GENDERED_TO_STUDENT.search(text.lower()), text
+
+
+def test_help_prompt_tells_the_model_not_to_assume_gender_rf_agt_22():
+    from app.modules.ai.adapters.outbound.interpretation_contract import HELP_INSTRUCTIONS
+
+    assert "nunca asumas el genero del estudiante" in HELP_INSTRUCTIONS
+
+
 def test_fixed_texts_have_at_most_one_emoji_rf_agt_22():
     emoji = re.compile("[\U0001F300-\U0001FAFF]")
     texts = [

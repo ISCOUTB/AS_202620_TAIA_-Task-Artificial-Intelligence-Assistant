@@ -53,7 +53,7 @@ INACTIVE_ACCOUNT_MESSAGE = "Lo siento, por ahora no puedo ayudarte con esta cuen
 
 # RF-TEL-01: el resultado de la vinculación se cuenta en el chat, con la voz de TAIA (RF-AGT-22).
 LINKED_MESSAGE = (
-    f"¡Listo, ya estamos conectadas! {_OCTOPUS} Desde aquí puedes pedirme que cree, "
+    f"¡Listo, tu Telegram ya quedó vinculado! {_OCTOPUS} Desde aquí puedes pedirme que cree, "
     "consulte o complete tus tareas."
 )
 LINK_INVALID_MESSAGE = (

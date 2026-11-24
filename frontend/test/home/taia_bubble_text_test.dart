@@ -16,7 +16,7 @@ void main() {
   test('con vencidas, la burbuja las menciona primero', () {
     expect(
       data(overdue: 2, today: 3).taiaBubble,
-      'Tienes 2 actividades vencidas. ¿Las organizamos juntas?',
+      'Tienes 2 actividades vencidas. ¿Te ayudo a organizarlas?',
     );
     expect(data(overdue: 1).taiaBubble, contains('1 actividad vencida'));
   });

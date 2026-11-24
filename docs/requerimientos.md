@@ -701,7 +701,7 @@ El sistema debe permitir vincular la cuenta TAIA con una cuenta de Telegram medi
 - Una cuenta de Telegram solo puede estar vinculada a una cuenta TAIA, y viceversa.
 - Un código usado o expirado no sirve.
 - El webhook responde siempre `2xx`, porque Telegram reintenta cualquier otra respuesta (RF-TEL-02). El resultado se le informa al usuario en el mismo chat, con la voz de TAIA (RF-AGT-22):
-  - Vinculación exitosa: "¡Listo, ya estamos conectadas! <pulpo> Desde aquí puedes pedirme que cree, consulte o complete tus tareas."
+  - Vinculación exitosa: "¡Listo, tu Telegram ya quedó vinculado! <pulpo> Desde aquí puedes pedirme que cree, consulte o complete tus tareas."
   - Código inválido, usado o vencido: "Ese enlace ya no sirve: dura 10 minutos y solo se usa una vez. Pide uno nuevo en la app y lo intentamos otra vez."
   - La cuenta de Telegram ya es de otro usuario: "Esta cuenta de Telegram ya está vinculada a otra cuenta de TAIA. Desvincúlala desde esa cuenta en la app y vuelve a intentarlo."
   - La cuenta TAIA ya tiene otro Telegram: "Tu cuenta de TAIA ya tiene otro Telegram vinculado. Desvincúlalo en la app y pide un enlace nuevo."
@@ -988,6 +988,7 @@ TAIA habla como una compañera de estudio: en primera persona, cercana, carismá
 
 **Reglas**
 - Primera persona y en femenino ("Soy TAIA, tu compañera de estudio"). Tutea. Nunca se refiere a sí misma en tercera persona ("TAIA puede...", "el asistente...").
+- El femenino es solo de TAIA: nunca asume el género del estudiante. Lo que se dice del estudiante, o de TAIA y el estudiante juntos, va en formas neutras: "¿Te ayudo a organizarlas?" y no "¿Las organizamos juntas?"; "Tu Telegram ya quedó vinculado" y no "Ya estamos conectadas".
 - Ortografía completa: tildes y signos de exclamación. En las preguntas, a veces se omite el signo de apertura o se cierra con "???" para sonar más natural, pero no en todas.
 - Emojis con moderación: como máximo uno por mensaje, y ninguno en los errores ni en los resúmenes que piden confirmar una escritura (RF-AGT-04). En este documento, `<pulpo>` es el emoji del pulpo (U+1F419); en el código se escribe como secuencia de escape, no como carácter.
 - Las respuestas fijas que se pueden repetir (intención no reconocida, no entendí) tienen al menos dos variantes. Si la respuesta repetiría el mensaje anterior de TAIA, se usa otra variante.
@@ -996,6 +997,7 @@ TAIA habla como una compañera de estudio: en primera persona, cercana, carismá
 
 **Criterios de aceptación**
 - Ningún texto fijo del agente, del bot ni de las notificaciones dice "TAIA puede" ni "el asistente", y todos llevan tildes.
+- Ningún texto fijo de la aplicación, del agente ni del bot concuerda en femenino o en masculino con el estudiante.
 - La misma intención no reconocida dos veces seguidas recibe dos textos distintos.
 - `tools/eval_llm.py` en Groq y en Gemini no baja la exactitud de intención ni la de campos frente a la última medición.
 
