@@ -1,6 +1,6 @@
 # TAIA - Task Artificial Intelligence Assistant
 
-Sistema de gestión académica para estudiantes universitarios, apoyado por inteligencia artificial y comunicación mediante lenguaje natural.
+Asistente académico para estudiantes universitarios: organiza asignaturas, horario, tareas y exámenes, avisa con recordatorios y entiende mensajes en lenguaje natural desde la aplicación móvil o desde Telegram.
 
 ## Sistema desplegado
 
@@ -13,9 +13,7 @@ Sistema de gestión académica para estudiantes universitarios, apoyado por inte
 | CI y CD (GitHub Actions) | https://github.com/ISCOUTB/AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant/actions |
 | Análisis estático y Quality Gate (SonarCloud, público) | https://sonarcloud.io/project/overview?id=ISCOUTB_AS_202620_TAIA_-Task-Artificial-Intelligence-Assistant |
 
-SonarCloud analiza cada commit con su análisis automático, configurado en [`.sonarcloud.properties`](.sonarcloud.properties). El job `quality-gate` del [CI](.github/workflows/ci.yml) espera el análisis del mismo commit y falla si el Quality Gate no está en OK.
-
-La API corre en un dominio Dokploy con Docker y usa Supabase PostgreSQL. Cada push a `main` que pasa al workflow de testeo CI, quien posteriormente al pasar todas las pruebas arranca el workflow de despliegue CD y se despliega automáticamente.
+La API corre en Dokploy con Docker Compose y usa Supabase PostgreSQL. Cada push a `main` ejecuta el CI; si queda en verde, el CD le pide a Dokploy que despliegue.
 
 Comprobación desde cualquier red:
 
@@ -32,161 +30,132 @@ curl -sS -o /dev/null -w 'http=%{http_code} tiempo=%{time_total}s\n' https://tai
 
 ## Descripción
 
-El Asistente Académico Inteligente busca facilitar la organización de la vida académica de los estudiantes universitarios mediante una interfaz móvil y un bot de Telegram.
-
-El estudiante podrá registrar información académica utilizando mensajes en lenguaje natural. Por ejemplo:
+El estudiante registra su vida académica con formularios en la aplicación o con mensajes en lenguaje natural, por ejemplo:
 
 > "Tengo que entregar el proyecto de programación el próximo lunes."
 
-El sistema utilizará Gemini para interpretar el mensaje, identificar la intención y transformar la información en datos estructurados. Posteriormente, el backend validará la información y la almacenará en PostgreSQL.
+El agente interpreta el mensaje con un modelo de lenguaje (Groq como proveedor principal y Gemini como respaldo), propone la acción y solo la guarda cuando el estudiante responde "sí". El modelo nunca escribe en la base de datos: el backend valida los datos y los guarda en PostgreSQL. Si ningún proveedor responde, TAIA avisa y no hace nada.
 
-La información registrada podrá ser consultada y gestionada desde la aplicación desarrollada en Flutter.
+## Funcionalidades
 
-## Funcionalidades del MVP
+- **Cuenta:** registro con autorización de datos, inicio de sesión, recuperación de contraseña por correo, configuración y desactivación de la cuenta.
+- **Configuración inicial:** período académico, asignaturas y horario de clases, en pasos.
+- **Asignaturas y horario:** asignaturas con alias para el chat; una clase se registra de una vez en varios días, cada uno con su hora.
+- **Actividades:** tareas y exámenes con prioridad calculada por la fecha límite y estado vencido.
+- **Recordatorios y notificaciones:** recordatorios por defecto o personalizados, notificaciones push con Firebase y bandeja de notificaciones.
+- **Agenda:** vistas de día, semana y mes con clases, sesiones de estudio y actividades.
+- **Plan de estudio:** plan de 7 días a partir del horario, las actividades pendientes y un formulario de preferencias.
+- **Perfil:** estadísticas de rendimiento.
+- **Agente conversacional:** crear, consultar, editar y completar actividades, resúmenes, horario y ayuda sobre la aplicación, desde la app y desde Telegram.
+- **Tutorial:** recorrido de la aplicación la primera vez, que se puede repetir.
 
-- Gestión de materias.
-- Registro de tareas.
-- Registro de exámenes.
-- Calendario académico.
-- Recordatorios.
-- Dashboard académico.
-- Captura de información mediante Telegram.
-- Interpretación de lenguaje natural mediante Gemini.
+El estado de cada requerimiento está en [`docs/requerimientos.md`](docs/requerimientos.md).
 
 ## Tecnologías
 
-- **Flutter:** aplicación móvil.
-- **FastAPI:** backend y API del sistema.
-- **PostgreSQL:** almacenamiento de información académica (Supabase en el despliegue).
-- **Gemini:** interpretación de lenguaje natural y asistencia conversacional.
-- **Telegram Bot API:** canal de captura rápida de información.
-- **Docker Compose, Dokploy y GitHub Actions:** despliegue.
-
-## Estado actual
-
-El backend es un **monolito modular con organización hexagonal selectiva** con los módulos **Usuario, Academic, Reminders y AI**, persistido en PostgreSQL con migraciones de Alembic.
-
-| Integración | Estado |
-|---|---|
-| PostgreSQL | Integrada. Supabase en el despliegue y PostgreSQL local en desarrollo y CI. |
-| Telegram | Integrada. Vinculación de cuenta y conversación con el asistente. |
-| Groq y Gemini | Integradas. Groq es el proveedor principal y Gemini el respaldo (ADR-0013). |
-| Firebase Cloud Messaging | Integrada. Notificaciones push de los recordatorios. |
-| Resend | Integrada. Correo de recuperación de contraseña. |
-| Flutter | Integrada. Aplicación móvil en `frontend/`. |
-
-El estado por requerimiento está en `docs/requerimientos.md`. Las rutas de la API están en `/docs` y en el contrato `docs/api/openapi.json`.
+- **Flutter:** aplicación móvil (`frontend/`).
+- **FastAPI, Pydantic, SQLAlchemy y Alembic:** backend (`backend/`).
+- **PostgreSQL:** Supabase en el despliegue, PostgreSQL local en desarrollo y CI.
+- **Groq y Gemini:** interpretación de lenguaje natural, ayuda y plan de estudio.
+- **Telegram Bot API:** canal conversacional.
+- **Firebase Cloud Messaging:** notificaciones push.
+- **Resend:** correo de recuperación de contraseña.
+- **Docker Compose, Dokploy, GitHub Actions y SonarCloud:** integración y despliegue continuos.
 
 ## Arquitectura
 
-Los módulos están en `backend/app/modules/`:
+El backend es un **monolito modular con organización hexagonal selectiva**. Los módulos están en `backend/app/modules/`:
 
-- `usuario`: identidad, JWT y vinculación con Telegram.
-- `academic`: materias, períodos, horarios y tareas.
-- `reminders`: recordatorios y notificaciones.
-- `ai`: conversaciones y abstracción del proveedor LLM.
+- `usuario`: identidad, sesión con JWT, perfil, dispositivos para push, recuperación de contraseña y vinculación con Telegram.
+- `academic`: asignaturas, período, horario, actividades, calendario, estadísticas y plan de estudio.
+- `reminders`: recordatorios, envío periódico de notificaciones push y bandeja.
+- `ai`: agente conversacional, contrato con el modelo de lenguaje y respaldo entre proveedores (`FallbackLLM`).
 
-Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters`. Decisiones:
+Cada módulo separa `domain`, `application` (puertos y casos de uso) y `adapters`. Los módulos solo se comunican por los puertos de entrada del módulo dueño, y cada tabla tiene un único módulo que la escribe.
 
-- [ADR-0001 — Estilo arquitectónico](docs/adr/0001-estilo-arquitectonico.md)
-- [ADR-0002 — Integración HTTP síncrona con OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
-- [ADR-0003 — Plataforma de despliegue de la API: VM de OCI con Docker](docs/adr/0003-plataforma-despliegue-api.md) (reemplazado por ADR-0010)
-- [ADR-0004 — Plataforma de la base de datos](docs/adr/0004-plataforma-base-de-datos.md)
-- [ADR-0005 — Normalización de la confirmación escrita en español](docs/adr/0005-normalizacion-confirmacion-espanol.md)
-- [ADR-0006 — Fronteras y evaluación verificable](docs/adr/0006-fronteras-y-evaluacion-verificable.md)
-- [ADR-0007 — Comportamiento ante fallo del proveedor LLM](docs/adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md)
-- [ADR-0008 — Mantener el monolito sin extraer módulos](docs/adr/0008-mantener-monolito-sin-extraer-modulos.md)
-- [ADR-0009 — Base PostgreSQL compartida con referencias lógicas entre módulos](docs/adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md)
-- [ADR-0010 — Plataforma de despliegue de la API: Dokploy con Docker Compose](docs/adr/0010-despliegue-con-dokploy-y-docker-compose.md)
+La documentación de arquitectura está en [`docs/arc42/`](docs/arc42/) y los diagramas C4 en [`docs/c4/`](docs/c4/).
 
-## Documentación
+### Decisiones arquitectónicas
 
-- [Despliegue con Docker Compose y Dokploy](docs/despliegue-dokploy.md):
-  configuración del servicio, variables, dominio HTTPS y CD mediante la API de Dokploy.
+- [ADR-0001: Monolito modular con organización hexagonal selectiva](docs/adr/0001-estilo-arquitectonico.md)
+- [ADR-0002: Integración HTTP síncrona con contrato OpenAPI](docs/adr/0002-estrategia-integracion-api-sincrona.md)
+- [ADR-0003: Despliegue en una VM de OCI con Docker](docs/adr/0003-plataforma-despliegue-api.md) (reemplazado por ADR-0010)
+- [ADR-0004: Base de datos en Supabase PostgreSQL](docs/adr/0004-plataforma-base-de-datos.md)
+- [ADR-0005: Normalización de la confirmación escrita en español](docs/adr/0005-normalizacion-confirmacion-espanol.md)
+- [ADR-0006: Fronteras y evaluación verificable](docs/adr/0006-fronteras-y-evaluacion-verificable.md)
+- [ADR-0007: Comportamiento ante fallo del proveedor LLM](docs/adr/0007-comportamiento-ante-fallo-del-proveedor-llm.md) (punto 4 reemplazado por ADR-0011)
+- [ADR-0008: Mantener el monolito sin extraer módulos](docs/adr/0008-mantener-monolito-sin-extraer-modulos.md)
+- [ADR-0009: Base compartida con referencias lógicas entre módulos](docs/adr/0009-base-compartida-con-referencias-logicas-entre-modulos.md)
+- [ADR-0010: Despliegue con Dokploy y Docker Compose](docs/adr/0010-despliegue-con-dokploy-y-docker-compose.md)
+- [ADR-0011: Groq como proveedor LLM de respaldo](docs/adr/0011-usar-groq-como-proveedor-llm-de-respaldo.md) (orden reemplazado por ADR-0013)
+- [ADR-0012: Recordatorios con un proceso periódico dentro de la API](docs/adr/0012-enviar-recordatorios-con-un-proceso-dentro-de-la-api.md)
+- [ADR-0013: Groq como proveedor principal y Gemini como respaldo](docs/adr/0013-usar-groq-como-proveedor-llm-principal.md)
 
-La documentación del proyecto se encuentra en la carpeta docs/.
+## Ejecución local
 
-- docs/ficha_problema.md — descripción del problema y propuesta de solución.
-- docs/aspectos.md — aspectos arquitectónicos y trazabilidad.
-- docs/ia.md — registro del uso de inteligencia artificial.
-- docs/arc42/ — documentación de arquitectura mediante arc42.
-- docs/c4/ — diagramas de arquitectura C4.
-- docs/calidad/ — atributos y escenarios de calidad.
-- docs/adr/ — decisiones arquitectónicas.
+### Backend
 
-La API desplegada está disponible en:
+Requisitos: Python 3.12 (la versión de la imagen Docker y del CI) y PostgreSQL.
 
-- API: https://taia-sistema.iscoutb.dev
-- Documentación interactiva: https://taia-sistema.iscoutb.dev/docs
-- Health check: https://taia-sistema.iscoutb.dev/health
+```bash
+pip install -r backend/requirements.txt
+```
 
-## Requisitos
+En Windows, desde la raíz del repositorio:
 
-### Docker Compose / Dokploy
+```bat
+copy .env.example backend\.env
+.\run.bat
+```
 
-El despliegue actual de la API está publicado en
-`https://taia-sistema.iscoutb.dev`.
+`run.bat` no fija ninguna credencial. Lee la configuración de `backend/.env`, comprueba que exista y que `GEMINI_API_KEY` tenga valor, aplica las migraciones y levanta Uvicorn en http://127.0.0.1:8000. Las variables y su significado están en [`.env.example`](.env.example).
 
-El archivo `docker-compose.yml` construye `backend/Dockerfile`. Configurar
-`DATABASE_URL` (PostgreSQL) y `TAIA_JWT_SECRET` siguiendo `.env.example`.
-Para Dokploy, seleccionar `./docker-compose.yml` y configurar el dominio del
-servicio `backend` en el puerto interno `8000`.
+La API exige `DATABASE_URL`, `TAIA_JWT_SECRET` y `GEMINI_API_KEY`, y no arranca sin ellas. La clave de Gemini se obtiene en https://aistudio.google.com/apikey. Las demás variables son opcionales:
 
-Para ejecutar localmente, copiar `.env.example` a `.env`, completar los valores, crear el
-`docker-compose.local.yml` personal que publica el puerto (no se versiona; su contenido está en la
-[guía de despliegue](docs/despliegue-dokploy.md#ejecutar-con-compose-localmente)) y usar:
+| Variables | Sin ellas |
+|---|---|
+| `GROQ_API_KEY_1`, `GROQ_API_KEY_2`, `GROQ_MODEL` | Solo se usa Gemini. |
+| `TAIA_TELEGRAM_BOT_TOKEN`, `TAIA_TELEGRAM_BOT_USERNAME`, `TAIA_WEBHOOK_SECRET` | No hay canal de Telegram. |
+| `RESEND_API`, `RESEND_FROM` | La recuperación de contraseña responde `503`. |
+| `FIREBASE_CREDENTIALS_JSON` | No hay notificaciones push; quedan en la bandeja. |
+
+Con Docker Compose: copiar `.env.example` a `.env`, crear el `docker-compose.local.yml` personal que publica el puerto (su contenido está en la [guía de despliegue](docs/despliegue-dokploy.md#ejecutar-con-compose-localmente)) y ejecutar:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
 ```
 
-La API estará en `http://127.0.0.1:8000/docs`. PostgreSQL se configura por separado.
-Consultar la [guía de despliegue](docs/despliegue-dokploy.md) para redes, secrets y CI/CD.
+### Aplicación móvil
 
-### Ejecución directa con Python
+Requisitos: Flutter con Dart 3.13 o superior.
 
-Para ejecutar el proyecto se requiere:
-
-Python 3.14 o compatible.
-Las dependencias especificadas en backend/requirements.txt.
-
-### Instalar las dependencias:
-
-pip install -r backend/requirements.txt
-
-### Ejecución
-
-El proyecto cuenta con un backend ejecutable del monolito modular.
-
-Desde la raíz del repositorio, en Windows:
-
-```bat
-.\run.bat
+```bash
+cd frontend
+flutter pub get
+flutter run
 ```
 
-`run.bat` no fija ninguna credencial. Lee la configuración de `backend/.env`, comprueba que exista y que `GEMINI_API_KEY` tenga valor, aplica las migraciones y levanta Uvicorn en http://127.0.0.1:8000. Las variables y su significado están en [`.env.example`](.env.example), que sí se versiona porque no contiene secretos.
+Por defecto la aplicación usa la API desplegada. Para usar la API local desde el emulador de Android:
 
-La plantilla se copia una vez:
-
-```bat
-copy .env.example backend\.env
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
-Si el arranque se rechaza con `GEMINI_API_KEY vacío`, la clave se obtiene en https://aistudio.google.com/apikey. Es obligatoria: la composición del adaptador de Gemini ocurre en `app/main.py`, así que sin ella el proceso no arranca en lugar de servir un servicio inservible.
+APK de release para Android, con las arquitecturas arm64-v8a, armeabi-v7a y x86_64:
+
+```bash
+flutter build apk --release
+```
 
 ## Pruebas
 
-```bash
-python -m pytest
-```
-
-Las pruebas de integración con PostgreSQL se omiten si no está `TEST_DATABASE_URL`:
+Backend, desde la raíz (requiere una base de pruebas distinta de la de desarrollo, porque se vacía en cada prueba):
 
 ```bash
-TEST_DATABASE_URL=postgresql+psycopg://usuario@localhost:5432/taia_test python -m pytest
+TEST_DATABASE_URL=postgresql+psycopg://taia:taia@localhost:5432/taia_test GEMINI_API_KEY=test python -m pytest
 ```
 
-`TEST_DATABASE_URL` debe apuntar a una base distinta de la de desarrollo: `backend/tests/conftest.py` ejecuta `alembic downgrade base` y `TRUNCATE` al iniciar la sesión.
+Ninguna prueba llama a un modelo de lenguaje real: Gemini y Groq se prueban con respuestas simuladas.
 
 Contrato de la API (lo mismo que ejecuta el CI):
 
@@ -196,68 +165,62 @@ python tools/generate_api_client.py
 git diff --exit-code -- backend/generated/taia_api_client.py
 ```
 
+Aplicación móvil:
+
+```bash
+cd frontend
+flutter analyze
+flutter test
+```
+
+Evaluación del modelo de lenguaje contra el dataset de [`docs/evaluacion_ia/`](docs/evaluacion_ia/) (usa las claves reales y consume cuota):
+
+```bash
+python tools/eval_llm.py --dry-run          # valida el dataset sin llamar al modelo
+python tools/eval_llm.py                    # Gemini
+python tools/eval_llm.py --proveedor groq   # Groq
+```
+
 ## Despliegue
 
-El entorno se recrea con estos pasos. Los valores reales de las variables nunca se guardan en el repositorio.
+Los valores reales de las variables nunca se guardan en el repositorio. El procedimiento completo está en la [guía de despliegue](docs/despliegue-dokploy.md).
 
-### 1. Base de datos
-
-1. Crear un proyecto en Supabase (plan Free) y copiar la cadena de conexión del *pooler* (Project Settings > Database).
-2. Esa cadena es el valor de `DATABASE_URL`. Las tablas las crea la API al arrancar con `alembic upgrade head`.
-
-### 2. Dokploy
-
-1. Crear y configurar un entorno en dokploy para que construya por medio del Dockerfile la api
-2. Crear y configurar el dominio que usará la api, exponiendo el puerto 8000 y asegurando que la conexión sea https.
-
-
-### 3. Secretos de GitHub Actions
-
-En *Settings > Secrets and variables > Actions* del repositorio:
-
-| Secreto | Valor |
-|---|---|
-| `DOKPLOY_WEBHOOK_URL` | Webhook URL del servicio Compose en Dokploy; la usa `cd.yml` para solicitar el despliegue |
-
-Las variables de la aplicación (`DATABASE_URL`, `TAIA_JWT_SECRET`, `GEMINI_API_KEY` y las de Telegram) no van en GitHub: se configuran en **Environment** de Dokploy. El CI usa su propio PostgreSQL efímero.
-
-
-### 4. Desplegar
-
-Hacer push a `main`. El workflow [CI](.github/workflows/ci.yml) ejecuta las pruebas y, si queda en verde, [CD](.github/workflows/cd.yml) hace lo siguiente:
- 
-1. por medio de `DOKPLOY_WEBHOOK_URL` hace una petición http para solicitar a Dokploy que realice el despliegue.
-
-posteriormente en dokploy:
-
-1. Construye el Dockerfile y posteriormente despliega la api en el dominio asignado
-
-
-```
+1. **Base de datos:** crear un proyecto en Supabase y copiar la cadena de conexión del *pooler* como `DATABASE_URL`. Las tablas las crea la API al arrancar con `alembic upgrade head`.
+2. **Dokploy:** crear un servicio Docker Compose con `./docker-compose.yml`, publicar el dominio del servicio `backend` en el puerto interno `8000` con HTTPS y configurar las variables de la aplicación en **Environment**.
+3. **GitHub Actions:** guardar en *Settings > Secrets and variables > Actions* el secreto `DOKPLOY_WEBHOOK_URL`, el webhook del servicio en Dokploy. Las variables de la aplicación no van en GitHub.
+4. **Desplegar:** hacer push a `main`.
+   - El [CI](.github/workflows/ci.yml) ejecuta las pruebas contra un PostgreSQL efímero, construye y arranca la imagen, compara el contrato de la API, audita las dependencias y espera el Quality Gate de SonarCloud.
+   - Si el CI queda en verde y su commit sigue siendo el último de `main`, el [CD](.github/workflows/cd.yml) llama al webhook y Dokploy clona `main`, construye y despliega.
+   - Un CD en verde solo significa que Dokploy recibió el aviso. El despliegue se confirma en Dokploy y en `/health`.
 
 ## Observabilidad
 
-- **Logs estructurados:** una línea JSON por petición en stdout, con `timestamp`, `level`, `event`, `method`, `route`, `status`, `duration_ms` y `user_id`. Nunca incluye cuerpos ni tokens (RNF-05). En la VM se consultan con `sudo docker logs taia_backend --tail 20`. Ejemplo:
+- **Logs estructurados:** una línea JSON por petición en la salida estándar, con `timestamp`, `level`, `event`, `method`, `route`, `status`, `duration_ms` y `user_id`. Nunca incluye cuerpos ni tokens (RNF-05). Se consultan en los logs del servicio en Dokploy. Ejemplo:
 
   ```json
   {"timestamp": "2026-09-27T22:31:11.820-05:00", "level": "INFO", "logger": "taia", "event": "http_request", "method": "GET", "route": "/health", "status": 200, "duration_ms": 3.0, "user_id": null}
   ```
 
-- **Métrica:** `GET /metrics` devuelve `http_request_duration_p95_ms` por ruta, comparada con el objetivo de su escenario de calidad: `POST /ai/message` con **S3** (p95 ≤ 7 s) y el resto con **RNF-08** (p95 < 500 ms). Se calcula sobre las últimas 1 000 peticiones por ruta desde el último despliegue.
+- **Métrica:** `GET /metrics` devuelve `http_request_duration_p95_ms` por ruta, comparada con el objetivo de su escenario de calidad: `POST /ai/message` con **S3** (p95 ≤ 7 s) y el resto con **RNF-08** (p95 < 500 ms). Se calcula sobre las últimas 1000 peticiones por ruta desde el último despliegue.
 
 ## Costo
 
-Gratuito.
+Ver la estimación en [`docs/costo_mensual.md`](docs/costo_mensual.md).
 
 ## Documentación
 
-- `docs/requerimientos.md`: requerimientos (fuente de verdad).
-- `docs/diccionario_datos.md`: datos y restricciones.
-- `docs/politica_privacidad.md`: política de tratamiento de datos que se acepta al registrarse.
-- `docs/arc42/`: arquitectura (arc42).
-- `docs/adr/`: decisiones arquitectónicas.
-- `docs/c4/`: diagramas C4.
-- `docs/calidad/`: atributos y escenarios de calidad.
-- `docs/costo_mensual.md`: estimación de costo.
-- `docs/api/openapi.json`: contrato de la API.
-- `docs/ia.md`: registro del uso de inteligencia artificial..
+- [`docs/requerimientos.md`](docs/requerimientos.md): requerimientos, la fuente de verdad del sistema.
+- [`docs/diccionario_datos.md`](docs/diccionario_datos.md): datos y restricciones.
+- [`docs/ficha_problema.md`](docs/ficha_problema.md): problema y propuesta de solución.
+- [`docs/aspectos.md`](docs/aspectos.md): aspectos arquitectónicos y trazabilidad.
+- [`docs/arc42/`](docs/arc42/): arquitectura.
+- [`docs/adr/`](docs/adr/): decisiones arquitectónicas.
+- [`docs/c4/`](docs/c4/): diagramas C4.
+- [`docs/modelo_amenazas.md`](docs/modelo_amenazas.md): amenazas y mitigaciones.
+- [`docs/calidad/`](docs/calidad/): atributos y escenarios de calidad.
+- [`docs/evaluacion_ia/`](docs/evaluacion_ia/): dataset y resultados de la evaluación del modelo de lenguaje.
+- [`docs/politica_privacidad.md`](docs/politica_privacidad.md): política de tratamiento de datos que se acepta al registrarse.
+- [`docs/despliegue-dokploy.md`](docs/despliegue-dokploy.md): despliegue con Docker Compose y Dokploy.
+- [`docs/costo_mensual.md`](docs/costo_mensual.md): estimación de costo.
+- [`docs/api/openapi.json`](docs/api/openapi.json): contrato de la API.
+- [`docs/ia.md`](docs/ia.md): registro del uso de inteligencia artificial.
